@@ -902,6 +902,7 @@
     { id: 'to_ramiaczka', group: 'Topy', name: 'Na cienkich ramiączkach', dl: 25, preset: { gora: 'bez', bk: 'prosta', bh: 8, ram: 'cienkie', ramW: 1, bok: 0, kol: 'brak' } },
     { id: 'to_tshirt_k', group: 'Topy', name: 'T-shirt z krótkim rękawem', dl: 27, preset: { gora: 'ramiona', nk: 'okragly', nkb: 'okragly', nd: 2, nw: 1.5, nb: 1, bok: 0, kol: 'brak', ram: 'brak', rek: 'krotki', fit: 'regular', luzG: 6, luzT: 8, luzB: 4, flare: 0 } },
     { id: 'to_tshirt', group: 'Topy', name: 'T-shirt z długim rękawem', dl: 27, preset: { gora: 'ramiona', nk: 'okragly', nkb: 'okragly', nd: 2, nw: 1.5, nb: 1, bok: 0, kol: 'brak', ram: 'brak', rek: 'dlugi', fit: 'regular', luzG: 6, luzT: 8, luzB: 4, flare: 0 } },
+    { id: 'to_tshirt_s', group: 'Topy', name: 'Top bez rękawów ze stójką', dl: 25, preset: { gora: 'ramiona', nk: 'okragly', nkb: 'okragly', nd: 1, nw: 0.5, nb: 0.5, bok: 0, kol: 'stojka', kolW: 4, ram: 'brak', rek: 'brak', fit: 'slim', luzG: -4, luzT: 0, luzB: -4, flare: 0 } },
     { id: 'to_stanik', group: 'Topy', name: 'Dopasowany do talii', preset: { gora: 'ramiona', nk: 'okragly', nkb: 'okragly', nd: 2, nw: 1, nb: 0, bok: 0, kol: 'brak', ram: 'brak', rek: 'brak' } },
     { id: 'go_pod', group: 'Gorsety', name: 'Pod biust' },
     { id: 'go_nad', group: 'Gorsety', name: 'Nad biust' },
@@ -919,7 +920,7 @@
     const stark = p.baza === 'stark' && /^(su_|to_)/.test(style), mOwn = m; if (stark) m = withStark(m);
     if (style.indexOf('to_tshirt') === 0) { // t-shirt z dzianiny: bez zaszewek (przód tej samej długości co tył), tył ze złożenia, bez zamka
       // krój: slim idzie po talii, regular i oversize mają prosty bok, a dół nie jest węższy niż klatka
-      const straight = p.fit !== 'slim'; m = Object.assign({}, m, { adv: Object.assign({}, m.adv, { Dps: full(m).Dts + 0.5 }) }); p = Object.assign({}, p, straight ? { luzB: Math.max(p.luzB, m.og + p.luzG - m.ob), flare: Math.max(0, p.flare) } : {}, { knitStraight: straight, knit: true, gora: 'ramiona', kop: false, marsz: false, zp: 'bok', fac: 'brak', kol: 'brak', rozp: 0, sciag: false });
+      const straight = p.fit !== 'slim'; m = Object.assign({}, m, { adv: Object.assign({}, m.adv, { Dps: full(m).Dts + 0.5 }) }); p = Object.assign({}, p, straight ? { luzB: Math.max(p.luzB, m.og + p.luzG - m.ob), flare: Math.max(0, p.flare) } : {}, { knitStraight: straight, knit: true, gora: 'ramiona', kop: false, marsz: false, zp: 'bok', fac: 'brak', kol: p.kol === 'stojka' ? 'stojka' : 'brak', rozp: 0, sciag: false }); // z kołnierzy dzianina ma tylko stójkę
     }
     if (style === 'go_pod' || style === 'go_nad') d = draftCorset(m, p, title, style === 'go_nad');
     else if (style === 'sk_polkole') d = draftCircle(m, p, 0.5, title);
@@ -977,7 +978,7 @@
       d.pieces = d.pieces.concat(facingPieces(d.bod[0], true, p, m), facingPieces(d.bod[1], false, p, m));
       d.info.cut = d.info.cut.concat(sep ? [['Odszycie dekoltu przód', '1 × ze złożenia'], ['Odszycie dekoltu tył', '2 ×'], ['Odszycia pach', 'przód 2 ×, tył 2 ×']] : [['Odszycie przód', '1 × ze złożenia'], ['Odszycie tył', '2 ×']]);
     }
-    if (d.bod && !strapless && !wrapOn && (p.kol === 'stojka' || p.kol === 'bebe')) {
+    if (d.bod && !strapless && !wrapOn && !p.knit && (p.kol === 'stojka' || p.kol === 'bebe')) {
       const F = d.bod[0], Bk = d.bod[1], Lf = plen(F.neck), Ln = Lf + plen(Bk.neck);
       if (p.kol === 'stojka') { // stójka: pasek długości dekoltu, podniesiony na końcu, żeby górna krawędź była krótsza
         const h = Math.max(2, Math.min(6, p.kolW || 3)); let base = cubic([0, 0], [Ln * 0.45, 0], [Ln * 0.75, -0.4], [Ln, -1.5], 24);
@@ -1100,9 +1101,17 @@
     }
     if (['sk_prosta', 'sk_olowkowa', 'sk_trapez'].includes(style) && m.ot + p.luzT > m.ob + p.luzB + 0.2) d.info.warn = 'Talia z luzem wychodzi szersza niż biodra z luzem, więc wykrój trzyma szerokość bioder i nie zgadza się w talii. Zmniejsz luz w talii albo zwiększ luz w biodrach. ' + (d.info.warn || '');
     if (p.knit && d.bod) { // ściągacz dekoltu: pasek krótszy od krawędzi, wszywany z naciągiem
-      const Ln = d.bases.dekolt * 0.85, pc = rectPc('sciagacz-dekolt', 'ŚCIĄGACZ DEKOLTU', Ln + 2, 5, 'wytnij 1× w poprzek dzianiny · wszyć z naciągiem'); pc.part = 'top'; d.pieces.push(pc);
-      d.info.cut = d.info.cut.map((c) => (c[0] === 'Tył' ? ['Tył', '1 × ze złożenia'] : c)); d.info.cut.push(['Ściągacz dekoltu', '1 × ' + fmt(Ln + 2, 0) + ' × 5 cm']);
-      d.info.warn = 'Wykrój na dzianinę: bez zaszewek i bez zamka, przód i tył ze złożenia. Luz 0 albo ujemny dla elastycznej dzianiny. Szyj ściegiem elastycznym albo na overlocku. ' + (d.info.warn || '').replace(/Góra korzysta[^.]*\.\s*/, '');
+      const neckL = 2 * (plen(d.bod[0].neck) + plen(d.bod[1].neck)), stand = p.kol === 'stojka'; let note = '';
+      d.info.cut = d.info.cut.map((c) => (c[0] === 'Tył' ? ['Tył', '1 × ze złożenia'] : c));
+      if (stand) { // stójka z dzianiny: pas złożony na pół wzdłuż, nieco krótszy od dekoltu
+        const h = Math.max(2, Math.min(12, p.kolW || 4)), Ln = neckL * 0.9, pc = rectPc('stanik-kolnierz', 'STÓJKA', Ln + 2, 2 * h + 2, 'wytnij 1× w poprzek dzianiny · złóż na pół wzdłuż · wszyć z lekkim naciągiem'); d.pieces.push(pc);
+        d.info.cut.push(['Stójka', '1 × ' + fmt(Ln + 2, 0) + ' × ' + fmt(2 * h + 2, 0) + ' cm']); d.sil.collar = { type: 'stojka', w: h };
+        if (neckL < 56) note = 'Dekolt ma ' + fmt(neckL, 0) + ' cm, a głowa około 56 cm, więc dzianina musi się rozciągać co najmniej o ' + Math.ceil(((56 / neckL - 1) * 100) / 5) * 5 + '%. Przy sztywniejszej poszerz dekolt albo dodaj rozcięcie na karku. ';
+      } else { const Ln = d.bases.dekolt * 0.85, pc = rectPc('sciagacz-dekolt', 'ŚCIĄGACZ DEKOLTU', Ln + 2, 5, 'wytnij 1× w poprzek dzianiny · wszyć z naciągiem'); d.pieces.push(pc); d.info.cut.push(['Ściągacz dekoltu', '1 × ' + fmt(Ln + 2, 0) + ' × 5 cm']); }
+      if (!d.pieces.some((q) => q.id === 'stanik-rekaw')) { // bez rękawów: pachy wykańcza lamówka z tej samej dzianiny
+        const La = (plen(d.bod[0].arm) + plen(d.bod[1].arm)) * 0.9, pc = rectPc('lamowka-pachy', 'LAMÓWKA PACHY', La + 2, 4, 'wytnij 2× w poprzek dzianiny · wszyć z naciągiem'); d.pieces.push(pc); d.info.cut.push(['Lamówka pachy', '2 × ' + fmt(La + 2, 0) + ' × 4 cm']);
+      }
+      d.info.warn = 'Wykrój na dzianinę: bez zaszewek i bez zamka, przód i tył ze złożenia. Luz 0 albo ujemny dla elastycznej dzianiny. Szyj ściegiem elastycznym albo na overlocku. ' + note + (d.info.warn || '').replace(/Góra korzysta[^.]*\.\s*/, '');
       d.knit = true;
     }
     if (stark && d.bod) { const sb = starkBase(mOwn), a2 = full(m); d.info.rows.push(['Głębokość pachy od karku (podręcznik)', a2.Gp - (a2.Dts - a2.Dt), sb.SP], ['Szerokość tyłu, połowa (podręcznik)', a2.St / 2, null], ['Szerokość przodu, połowa (podręcznik)', a2.Sp / 2, null]); d.baza = 'stark'; }
