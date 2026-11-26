@@ -23,13 +23,18 @@ Wykroje wczytane z własnych plików PDF też zostają tylko u Ciebie. Kupionych
 
 | Plik | Rola |
 |---|---|
-| `index.html`, `app.js` | interfejs, projekty, podgląd 3D |
+| `index.html`, `app.js` | interfejs, projekty, podgląd 3D; `app.js` powstaje z części w `src/app` |
+| `src/app/*.js` | źródła interfejsu podzielone tematycznie (formularz, projekty, rysunek, druk, 3D, inspiracja, pulpit) |
 | `engine.js` | konstrukcja wykrojów z wymiarów, układ na kartkach, PDF |
 | `cloth.js` | zszywanie elementów i układanie tkaniny na sylwetce |
 | `figure.js` | siatka sylwetki |
 | `prints.js` | wzory tkanin |
 | `przymiarka.html` | pracownia importu własnych wykrojów z PDF |
 | `tools/check.js` | kontrola spójności wykrojów (`node tools/check.js`) |
+| `tools/types.d.ts` | typy wymiarów i parametrów fasonu, używane tylko do sprawdzania kodu |
+| `tools/build.sh` | składa `app.js` z części, sprawdza typy i wykroje (`sh tools/build.sh`) |
+
+Zmiany w interfejsie rób w `src/app`, nie w `app.js`, a potem uruchom `sh tools/build.sh`. Nowy parametr fasonu dopisz też w `tools/types.d.ts`.
 
 ## Czego ta wersja nie ma
 

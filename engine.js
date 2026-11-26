@@ -103,6 +103,7 @@
       if (Math.hypot(a[0] - b[0], a[1] - b[1]) < 1e-6) continue;
       pts.push(a); sa.push(e.sa);
     }
+    /** @type {WPrim[]} */
     const prims = [{ t: 'poly', s: 'cut', closed: true, pts: offsetClosed(pts, sa) }];
     for (const e of o.edges) prims.push({ t: 'poly', s: e.fold ? 'fold' : 'sew', pts: e.pts });
     for (const q of o.extra || []) prims.push(q);
@@ -204,6 +205,7 @@
     const dartW = c.darts.reduce((s, d) => s + d.w, 0);
     return { waist, side, hem, xs, measure: plen(waist) - dartW, hemLen: plen(hem), sideLen: plen(side) };
   }
+  /** @param {WMeas} m @param {WParams} p */
   function skirtPiece(g, c, isFront, m, p, title) {
     const extra = [], sa = p.saTalia;
     for (const d of c.darts) {
@@ -232,6 +234,7 @@
     for (let i = 0; i < 50; i++) { const mid = (lo + hi) / 2; if (f(mid) > 0) lo = mid; else hi = mid; }
     return (lo + hi) / 2;
   }
+  /** @param {WMeas} m @param {WParams} p */
   function draftSkirt(m, p, trapez, title) {
     const H = (m.ob + p.luzB) / 2, T = (m.ot + p.luzT) / 2, hw = H / 2, diff = Math.max(0, H - T);
     let fd = 0, bd = 0;
@@ -268,6 +271,7 @@
   }
 
   // ---------- klosz: element z koła (ćwiartka na złożeniu) ----------
+  /** @param {WMeas} m @param {WParams} p @param {string} [nameOv] @param {string} [idOv] */
   function circlePiece(T, D, frac, m, p, title, zipAt, nameOv, idOv) {
     const r = T / (2 * Math.PI * frac), R = r + D, arc = (rad, rev) => {
       const o = []; for (let i = 0; i <= 40; i++) { const a = ((rev ? 40 - i : i) / 40) * Math.PI / 2; o.push([rad * Math.sin(a), rad * Math.cos(a)]); } return o;
@@ -284,6 +288,7 @@
     });
     return { piece: pc, r, waist: (Math.PI / 2) * r * 4 * frac, hemC: 2 * Math.PI * R * frac };
   }
+  /** @param {WMeas} m @param {WParams} p */
   function draftCircle(m, p, frac, title) {
     const T = m.ot + p.luzT, c = circlePiece(T, p.dl, frac, m, p, title, Math.min(m.wb, p.dl - 5));
     const pasek = p.pasek > 0 ? [T + 3 + 2 * p.saSzew, 2 * p.pasek + 2 * p.saTalia] : null;
@@ -345,6 +350,7 @@
     }
     return cubic(C, [xn * 0.55, yc], [xn - 0.3, NP[1] + h * 0.45], NP, 20);
   }
+  /** @param {WMeas} m @param {WParams} p */
   function bodice(m, a, p, isFront, toHip) {
     const q = (m.og + p.luzG) / 4, e = p.luzG / 8, lower = Math.min(2, Math.max(0, p.luzG / 2));
     const top = isFront ? -a.Dps : -a.Dts, yg = -(a.Dps - a.Wg), yp = Math.min(yg - 0.5, -(a.Dts - a.Gp) + lower);
@@ -420,6 +426,7 @@
     }
     return out;
   }
+  /** @param {WMeas} m @param {WParams} p */
   function topPiece(m, a, p, isFront, toHip, title) {
     const wrap = isFront && !toHip && !!p.kop && p.gora !== 'bez';
     if (wrap) p = Object.assign({}, p, { zp: 'bok' });
@@ -486,6 +493,7 @@
     });
     return { pc, b, hemLen, kEff, cropW };
   }
+  /** @param {WMeas} m @param {WParams} p */
   function draftDress(m, p, lower, title) {
     const a = full(m), toHip = lower === 'straight', none = lower === 'none';
     let F = topPiece(m, a, p, true, toHip, title), Bk = topPiece(m, a, p, false, toHip, title);
@@ -540,6 +548,7 @@
   }
 
   // ---------- princeska: cięcia pionowe przez biust zamiast zaszewek; mer = rybka z klinów ----------
+  /** @param {WMeas} m @param {WParams} p */
   function draftPrincess(m, p, title, mer) {
     p = Object.assign({}, p, { zp: 'bok' }); // w princesce zaszewka piersiowa znika w cięciu
     const a = full(m), D = p.dl, pieces = [], rows = [];
@@ -568,6 +577,7 @@
       const hx = xAtY(b.sideRaw, m.wb), lines = (n) => [n, title, m.name];
       const seamC = up.concat(dc.slice(1)), seamS = upS.concat(ds.slice(1)), cEnd = dc[dc.length - 1], sEnd = ds[ds.length - 1];
       // panel środkowy
+      /** @type {WPrim[]} */
       const exC = [notch([pos - w / 2, 0], [1, 0], nsa), notch(apex, [1, 0], nsa), { t: 'poly', s: 'aux', pts: [[0, 0], [pos - w / 2, 0]] }, { t: 'poly', s: 'aux', pts: [[0, m.wb], [pos, m.wb]] }];
       if (!isFront) exC.push(notch([0, m.wb], [-1, 0], nsa), txt(0.6, m.wb + 0.9, 'koniec zamka', 'start'), ...zipMark(b.C, [0, m.wb], [1, 0]));
       if (mer) exC.push(notch([pos, kn], [1, 0], nsa), { t: 'poly', s: 'aux', pts: [[0, kn], [pos, kn]] }, txt(pos * 0.5, kn - 0.4, 'linia kolan'));
@@ -612,6 +622,7 @@
   }
 
   // ---------- empire: odcięcie pod biustem ----------
+  /** @param {WMeas} m @param {WParams} p */
   function draftEmpire(m, p, title) {
     const a = full(m), drop = 7.5, pieces = [], tops = [];
     const under = (isFinite(m.opx) ? m.opx : m.og - 14) + Math.max(2, p.luzT);
@@ -664,6 +675,7 @@
   }
 
   // ---------- rybka: dopasowana do kolan, niżej falbana z koła ----------
+  /** @param {WMeas} m @param {WParams} p */
   function draftMermaid(m, p, title) {
     const a = full(m), kn = Math.max(35, Math.min(p.kn || 55, p.dl - 12)), ps = Object.assign({}, p, { dl: kn, flare: Math.min(p.flare, 2), saDol: p.saSzew, rozp: 0, tren: 0 });
     const F = topPiece(m, a, ps, true, true, title), Bk = topPiece(m, a, ps, false, true, title);
@@ -691,6 +703,7 @@
     6: { t: [0.17, 0.165, 0.165, 0.17, 0.17, 0.16], w: [0.19, 0.16, 0.15, 0.15, 0.165, 0.185], h: [0.16, 0.165, 0.18, 0.18, 0.165, 0.15] },
   };
   const CNAME = { 5: ['środek przodu', 'przód bok', 'bok', 'tył bok', 'środek tyłu'], 6: ['środek przodu', 'przód bok', 'bok przód', 'bok tył', 'tył bok', 'środek tyłu'] };
+  /** @param {WMeas} m @param {WParams} p */
   function draftCorset(m, p, title, over) {
     const a = full(m), n = p.gp === 5 ? 5 : 6, Wt = CW[n];
     const gr = Math.max(0, Math.min(15, p.gr == null ? 5 : p.gr)), gg = Math.max(0, Math.min(10, p.gg == null ? 5 : p.gg));
@@ -732,7 +745,7 @@
       const L = edge(q, false, TL[i], q.b0, i), R = edge(q, true, TR[i], q.b1, i), sh = i === 0 ? q.ww / 2 : i === n - 1 ? -q.ww / 2 : 0;
       const mv = (pts) => pts.map((c) => [c[0] + sh, c[1]]), Lm = mv(L), Rm = mv(R);
       const wi = (pts) => { let b = 0; for (let j = 1; j < pts.length; j++) if (Math.abs(pts[j][1]) < Math.abs(pts[b][1])) b = j; return pts[b][0]; }, xl = wi(Lm), xr = wi(Rm), x0 = i === 0 ? Lm[0][0] : xl, x1 = i === n - 1 ? Rm[0][0] : xr;
-      const extra = [{ t: 'poly', s: 'aux', pts: [[x0, 0], [x1, 0]] }].concat(over && Math.min(TL[i], TR[i]) > hb + 1 ? [{ t: 'poly', s: 'aux', pts: [[Lm.reduce((b, c) => (Math.abs(c[1] + hb) < Math.abs(b[1] + hb) ? c : b))[0], -hb], [Rm.reduce((b, c) => (Math.abs(c[1] + hb) < Math.abs(b[1] + hb) ? c : b))[0], -hb]] }, txt(x1 - 0.5, -hb - 0.4, 'biust', 'end')] : []).concat([ notch([x1, 0], [1, 0], Math.min(0.7, p.saSzew)), notch([x0, 0], [-1, 0], Math.min(0.7, p.saSzew)), txt(x1 - 0.5, -0.4, 'talia', 'end')]);
+      const extra = /** @type {WPrim[]} */ ([{ t: 'poly', s: 'aux', pts: [[x0, 0], [x1, 0]] }]).concat(over && Math.min(TL[i], TR[i]) > hb + 1 ? [{ t: 'poly', s: 'aux', pts: [[Lm.reduce((b, c) => (Math.abs(c[1] + hb) < Math.abs(b[1] + hb) ? c : b))[0], -hb], [Rm.reduce((b, c) => (Math.abs(c[1] + hb) < Math.abs(b[1] + hb) ? c : b))[0], -hb]] }, txt(x1 - 0.5, -hb - 0.4, 'biust', 'end')] : []).concat([ notch([x1, 0], [1, 0], Math.min(0.7, p.saSzew)), notch([x0, 0], [-1, 0], Math.min(0.7, p.saSzew)), txt(x1 - 0.5, -0.4, 'talia', 'end')]);
       if (i === n - 1) { // oczka wzdłuż środka tyłu
         for (let y = -TR[i] + 1.5; y <= q.b1 - 1.2; y += 2.5) extra.push({ t: 'poly', s: 'notch', pts: [[x1 - 1.5, y], [x1 - 1.1, y]] });
         extra.push(lab(x1 - 2.6, (q.b1 - TR[i]) / 2 + 3, 'oczka co 2,5 cm', -90));
@@ -783,6 +796,7 @@
     }
     return out;
   }
+  /** @param {WMeas} m @param {WParams} p */
   function facingPieces(b, isFront, p, m) {
     const w = Math.max(3, Math.min(p.facW || 5, 8)), out = [], csa = isFront ? 0 : p.saSzew, side0 = b.alpha ? b.edgesSide[0].pts : b.sideRaw;
     const sideTop = alongPts(side0, Math.min(w, 4)), S2 = sideTop[sideTop.length - 1], Ue = side0[0], who = isFront ? 'PRZÓD' : 'TYŁ', cutN = isFront ? 'wytnij 1× ze złożenia' : 'wytnij 2×';
@@ -818,6 +832,7 @@
     wierzch: 'Wierzch', podszewka: 'Podszewka', narzutka: 'Warstwa wierzchnia', halka: 'Halka z tiulu', usztywnienie: 'Usztywnienie stanika',
   };
   function partOf(id) { return id.indexOf('odsz') === 0 ? 'facing' : id.indexOf('stanik') === 0 ? 'top' : id.indexOf('dol') === 0 || id === 'klosz' ? 'bottom' : 'both'; }
+  /** @param {WMeas} m @param {WParams} p */
   function buildLayers(layers, d, m, p, fabName) {
     const isDress = !!d.bod, pieces = d.pieces, out = { cut: [], steps: [], notes: {} };
     const scope = (L) => (!isDress ? 'dol' : L.role === 'usztywnienie' ? 'gora' : L.role === 'halka' ? 'dol' : L.zakres || 'calosc');
@@ -891,6 +906,7 @@
     { id: 'go_pod', group: 'Gorsety', name: 'Pod biust' },
     { id: 'go_nad', group: 'Gorsety', name: 'Nad biust' },
   ];
+  /** @param {WMeas} m @param {WParams} p */
   function draft(m, p, style) {
     const st = STYLES.find((s) => s.id === style) || STYLES[0];
     const title = (st.group === 'Spódnice' ? 'spódnica ' : st.group === 'Gorsety' ? 'gorset ' : st.group === 'Topy' ? 'top ' : 'sukienka ') + st.name.toLowerCase().replace(/ \(.*\)/, '');
@@ -1119,6 +1135,7 @@
 
   // ---------- dodatki krawieckie ----------
   const ZIPS = [12, 16, 18, 20, 22, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80];
+  /** @param {WMeas} m @param {WParams} p */
   function notions(d, m, p) {
     if (d.knit) return [['Nici elastyczne albo overlock', '1 komplet'], ['Igła do dzianin (jersey albo stretch)', '1 szt.'], ['Taśma stabilizująca na szwy ramion', fmt(Math.round(2 * d.bod[0].r + 6), 0) + ' cm']];
     if (d.corset) {

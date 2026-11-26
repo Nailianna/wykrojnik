@@ -1,9 +1,10 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.71.0', n: 71, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
-  const W = window.Wykroj, $ = (id) => document.getElementById(id);
+  const BUILD = { v: '0.71.1', n: 72, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
   const f1 = (v) => W.fmt(v, 1);
   const KEY = 'wykrojnik.v3', FILE = '~/Documents/Wykrojnik/wykrojnik.json';
   let desktop = null, downloads = null, fileOk = false;
@@ -18,7 +19,7 @@
       { id: 'p2', name: 'Rozmiar 38', og: 88, ot: 68, ob: 92, wb: 21, wzrost: 168, adv: {} },
     ],
     active: 'p1', style: 'sk_prosta',
-    p: { dl: 58, kn: 55, gf: 9, fac: 'laczone', facW: 5, flare: 0, gora: 'ramiona', bk: 'prosta', bh: 6, gr: 5, gh: 9, gd: 11, gg: 5, gp: 6, ram: 'brak', ramW: 1, rekL: 0, fit: 'regular', baza: 'wlasna', extras: [], falN: false, falR: false, marsz: false, sciag: false, tren: 0, kop: false, pasT: 0, zakK: 2.5, rek: 'brak', mank: false, bok: 0, ff: 1, zp: 'bok', kol: 'brak', kolW: 3, rozp: 0, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, luzG: 4, luzB: 2, luzT: 1, saSzew: 1.5, saTalia: 1, saDol: 4, pasek: 3 },
+    p: /** @type {WParams} */ ({ dl: 58, kn: 55, gf: 9, fac: 'laczone', facW: 5, flare: 0, gora: 'ramiona', bk: 'prosta', bh: 6, gr: 5, gh: 9, gd: 11, gg: 5, gp: 6, ram: 'brak', ramW: 1, rekL: 0, fit: 'regular', baza: 'wlasna', extras: [], falN: false, falR: false, marsz: false, sciag: false, tren: 0, kop: false, pasT: 0, zakK: 2.5, rek: 'brak', mank: false, bok: 0, ff: 1, zp: 'bok', kol: 'brak', kolW: 3, rozp: 0, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, luzG: 4, luzB: 2, luzT: 1, saSzew: 1.5, saTalia: 1, saDol: 4, pasek: 3 }),
     grid: false, tiles: true, view: '2d', color: '#d9447d', fabric: 'bawelna', bust: true, seams: true, figure: false, labels: true, layers: [{ role: 'wierzch' }], print: 'gladka', color2: '#fff4e2', pscale: 100, panel: 'fason', card: true, theme: 'dark',
     inspH: [], wish: [], sim: true, sel: {}, paper: 'a4', pack: true, fabW: 140, printImg: null, projects: [], proj: null,
   };
@@ -123,9 +124,9 @@
     const TOPK = ['gr', 'gh', 'gd', 'gg', 'nd', 'nw', 'nb', 'bh', 'luzG', 'rekL', 'bok', 'ramW', 'kolW'], tg = {};
     for (const [id, cap] of [['top', 'Góra'], ['bot', 'Dół']]) { const w = document.createElement('div'), b = document.createElement('b'), gd = document.createElement('div'); w.className = 'tgrp'; w.id = 'tg_' + id; b.textContent = cap; w.append(b, gd); $('tuneG').appendChild(w); tg[id] = gd; }
     SL.push(['rekL', 'Długość rękawa', 12, 75, 'rekLen'], ['bok', 'Zwężenie ramienia', 0, 12, 'straps'], ['ramW', 'Szerokość ramiączka', 0.5, 4, 'ram'], ['kolW', 'Szerokość kołnierza', 2, 12, 'kol']);
-    for (const [k, name, mn, mx, cond] of SL) {
-      const l = document.createElement('label'); l.className = 'sl'; if (cond) l.dataset.if = cond;
-      const top = document.createElement('span'), o = document.createElement('output'), i = document.createElement('input');
+    for (const [k, name, mn, mx, cond] of /** @type {any[][]} */ (SL)) {
+      const l = mkEl('label'); l.className = 'sl'; if (cond) l.dataset.if = cond;
+      const top = mkEl('span'), o = mkEl('output'), i = mkEl('input');
       top.append(name, o); o.id = 'o_' + k; i.type = 'range'; i.min = mn; i.max = mx; i.step = 0.5; i.id = 's_' + k;
       i.addEventListener('input', () => { state.p[k] = parseFloat(i.value); $('p_' + k).value = state.p[k]; o.textContent = f1(state.p[k]) + ' cm';
         if (k === 'bok' && state.p.bok > 0 && state.p.rek && state.p.rek !== 'brak') { state.p.rek = 'brak'; state.p.falR = false; fillForm(); } // odsłonięte ramiona wykluczają rękawy
@@ -201,8 +202,8 @@
   const CUPS = ['AA', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
   (function () {
     const o0 = () => { const o = document.createElement('option'); o.value = ''; o.textContent = '–'; return o; };
-    $('braB').append(o0()); for (let b = 60; b <= 110; b += 5) { const o = document.createElement('option'); o.value = b; o.textContent = b; $('braB').append(o); }
-    $('braC').append(o0()); CUPS.forEach((c, i) => { const o = document.createElement('option'); o.value = i; o.textContent = c; $('braC').append(o); });
+    $('braB').append(o0()); for (let b = 60; b <= 110; b += 5) { const o = mkEl('option'); o.value = b; o.textContent = b; $('braB').append(o); }
+    $('braC').append(o0()); CUPS.forEach((c, i) => { const o = mkEl('option'); o.value = i; o.textContent = c; $('braC').append(o); });
     const set = () => {
       const m = cur(), hadB = $('braB').value !== '', hadC = $('braC').value !== '';
       const band = hadB ? +$('braB').value : Math.round((isFinite(m.opx) ? m.opx : m.og - 15) / 5) * 5, ci = hadC ? +$('braC').value : 2;
@@ -272,7 +273,7 @@
   // import wykrojów: pracownia Przymiarka otwierana w oknie aplikacji, z wymiarami bieżącej modelki
   function przOpen() {
     const box = $('przBox'), fr = $('przF'); box.hidden = false;
-    const fill = () => { try { const d = fr.contentDocument, m = cur(); const st = d.getElementById('pdfStudio'); if (st) { st.open = true; st.scrollIntoView(); } for (const [k, v] of [['height', m.wzrost], ['bust', m.og], ['waist', m.ot], ['hips', m.ob]]) { const e = d.getElementById('dst_' + k); if (e && isFinite(v)) { e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } } } catch (e) { /* inna domena albo strona jeszcze się ładuje */ } };
+    const fill = () => { try { const d = fr.contentDocument, m = cur(); const st = d.getElementById('pdfStudio'); if (st) { st.open = true; st.scrollIntoView(); } for (const [k, v] of /** @type {any[][]} */ ([['height', m.wzrost], ['bust', m.og], ['waist', m.ot], ['hips', m.ob]])) { const e = d.getElementById('dst_' + k); if (e && isFinite(v)) { e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } } } catch (e) { /* inna domena albo strona jeszcze się ładuje */ } };
     if (!fr.getAttribute('src')) { fr.addEventListener('load', () => setTimeout(fill, 300)); fr.setAttribute('src', 'przymiarka.html'); } else fill();
   }
   $('przX').addEventListener('click', () => { $('przBox').hidden = true; });
@@ -410,7 +411,7 @@
   async function impLoad(file) {
     if (!file) return; say('Czytam wykrój z pliku. Przy dużych arkuszach trwa to kilkanaście sekund.');
     try {
-      await new Promise((r) => { if (window.PatImport) r(); else { const sc = document.createElement('script'); sc.src = 'importer.js'; sc.onload = r; sc.onerror = r; document.head.appendChild(sc); } });
+      await new Promise((r) => { if (window.PatImport) r(undefined); else { const sc = document.createElement('script'); sc.src = 'importer.js'; sc.onload = r; sc.onerror = r; document.head.appendChild(sc); } });
       if (!window.PatImport) throw new Error('Nie udało się wczytać modułu importu.');
       const data = await window.PatImport.load(file), size = data.sizes[Math.floor(data.sizes.length / 2)] || '', pieces = window.PatImport.pick(data, size);
       if (!pieces.length) throw new Error('Nie znalazłam w tym pliku elementów wykroju.');

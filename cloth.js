@@ -233,7 +233,7 @@
       nk(F1, false); nk(B1, true); nk(B2, false); nk(F2, true); if (neck.length > 2 && neck[0] === neck[neck.length - 1]) neck.pop(); }
     const hold = []; for (const I of [F1, F2, B1, B2]) for (const c of I.P.ch) if (c.tag === 'neck' || c.tag === 'arm') for (const i of c.ids) hold.push(sid[I.map[i]]);
     const info = { F: { top: parts.F.top, sideTop: parts.F.sideTop, sideX: parts.F.sideX }, B: { top: parts.B.top, sideTop: parts.B.sideTop, sideX: parts.B.sideX }, S: parts.S ? { box: parts.S.box } : null };
-    return { h, hold, neck, ns, nr: rmap.length, rmap: Int32Array.from(rmap), ruv: Float32Array.from(ruv), tri: Int32Array.from(tri), grp, meta, pin, edges, bends, seams, info, h };
+    return { h, hold, neck, ns, nr: rmap.length, rmap: Int32Array.from(rmap), ruv: Float32Array.from(ruv), tri: Int32Array.from(tri), grp, meta, pin, edges, bends, seams, info };
   }
 
   // układanie tkaniny: XPBD z małymi krokami czasu (wzorem solvera seamer-studio).
