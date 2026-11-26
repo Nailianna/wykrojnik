@@ -322,9 +322,15 @@ footer select{border-radius:8px}
 #home h3{margin:0 0 12px}
 #home section{margin-bottom:32px}
 .hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
-.hcard{display:flex;flex-direction:column;gap:0;padding:0;text-align:left;border-radius:16px;background:var(--glass);border:1px solid var(--line);overflow:hidden}
+.hcard{position:relative;border-radius:16px;background:var(--glass);border:1px solid var(--line);overflow:hidden;transition:transform .15s,border-color .15s}
+.hcard .hgo{display:flex;flex-direction:column;gap:0;width:100%;height:100%;padding:0;text-align:left;border-radius:0;background:none}
+.hcard .hdel{position:absolute;top:8px;right:8px;padding:4px 11px;font-size:12px;background:var(--surface);border:1px solid var(--line);color:var(--mute);opacity:0;transition:opacity .15s}
+.hcard:hover .hdel,.hcard .hdel:focus-visible,.hcard .hdel.sure{opacity:1}
+.hcard .hdel:hover,.hcard .hdel.sure{color:var(--hot);border-color:var(--hot);background:var(--surface)}
 .hcard:hover{border-color:var(--accent);transform:translateY(-2px)}
-.hcard .hth{height:128px;display:grid;place-items:center;background:var(--field);padding:14px}
+.hcard .hth{height:156px;display:flex;align-items:center;justify-content:center;gap:12px;background:var(--field);padding:12px 14px}
+.hcard .hth img{height:100%;width:auto;flex:none}
+.hcard .hth svg{min-width:0;flex:0 1 auto}
 .hcard svg{max-width:100%;max-height:100px}.hcard svg path{fill:color-mix(in srgb,var(--accent) 14%,var(--surface));stroke:var(--ink);stroke-width:1.2;vector-effect:non-scaling-stroke}
 .hcard .hb{padding:12px 14px 14px;display:flex;flex-direction:column;gap:3px}
 .hcard b{font-weight:600;font-size:14.5px}.hcard small{color:var(--mute);font-size:12.5px}

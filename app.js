@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.72.1', n: 74, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.73.0', n: 75, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -75,7 +75,7 @@
     if (!noHist) histPush();
     const json = JSON.stringify(state);
     try { localStorage.setItem(KEY, json); } catch (e) {}
-    uiMark();
+    uiMark(); if (pr && pr.thumbKey !== pr.key) shotPlan();
     if (fileOk) { clearTimeout(saveT); saveT = setTimeout(() => desktop.fs.writeFile(FILE, json, 'utf8').catch(() => {}), 400); }
   }
   const GRP = { 'Spódnice': 'Spódnica: ', 'Sukienki': 'Sukienka: ', 'Gorsety': 'Gorset: ', 'Topy': 'Top: ' };
@@ -1762,10 +1762,18 @@
     const list = state.projects.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)), done = list.filter(projDone), open = list.filter((x) => !projDone(x));
     $('hStat').textContent = (open.length === 1 ? '1 projekt w toku' : open.length + ' projektów w toku') + ' · ' + (done.length === 1 ? '1 gotowy wykrój' : done.length + ' gotowych wykrojów') + ' · ' + (state.profiles.length === 1 ? '1 modelka' : state.profiles.length + ' modelek');
     const card = (pr) => {
-      const b = el('button', null, 'hcard'), th = el('div', null, 'hth'), body = el('div', null, 'hb'), t = projThumb(pr.snap); if (t) th.append(t.svg);
+      const w = el('div', null, 'hcard'), b = el('button', null, 'hgo'), th = el('div', null, 'hth'), body = el('div', null, 'hb'), t = projThumb(pr.snap);
+      if (t && pr.thumb && pr.thumbKey === pr.key && String(pr.thumb).indexOf('data:image/') === 0) { const im = document.createElement('img'); im.src = pr.thumb; im.alt = ''; th.append(im); }
+      if (t) th.append(t.svg);
       body.append(el('b', pr.name || 'Bez nazwy'), el('small', t ? t.title + ' · ' + t.model : ''), el('small', projDone(pr) ? 'PDF zapisany ' + ago(pr.exported) : 'Zmieniany ' + ago(pr.updated)));
       body.append(projDone(pr) ? el('span', 'Gotowy do szycia', 'hchip ok') : pr.exported ? el('span', 'Zmieniony po zapisie PDF', 'hchip ch') : el('span', 'W toku', 'hchip'));
-      b.append(th, body); b.addEventListener('click', () => { if (pr.id !== state.proj) openProj(pr.id); homeShow(false); }); return b;
+      b.append(th, body); b.addEventListener('click', () => { if (pr.id !== state.proj) openProj(pr.id); homeShow(false); }); w.append(b);
+      if (state.projects.length > 1) {
+        const x = el('button', 'Usuń', 'hdel');
+        x.addEventListener('click', () => { if (!x.classList.contains('sure')) { x.classList.add('sure'); x.textContent = 'Na pewno usunąć?'; setTimeout(() => { x.classList.remove('sure'); x.textContent = 'Usuń'; }, 3000); return; } delProj(pr.id); });
+        w.append(x);
+      }
+      return w;
     };
     $('hOpen').textContent = ''; open.forEach((pr) => $('hOpen').append(card(pr))); $('hOpenS').hidden = !open.length;
     $('hDone').textContent = ''; done.forEach((pr) => $('hDone').append(card(pr))); $('hDoneS').hidden = !done.length;
@@ -1774,7 +1782,29 @@
     if (!hi.length) $('hIn').append(el('p', 'Tu pojawią się zdjęcia, z których dobierałaś wykrój.', 'hempty'));
     for (const e of hi) { const b = el('button'), im = document.createElement('img'); im.src = e.img; im.alt = ''; b.setAttribute('aria-label', 'Nowy projekt z tej inspiracji'); b.title = 'Nowy projekt z tej inspiracji'; b.append(im); b.addEventListener('click', () => newFromInsp(e)); $('hIn').append(b); }
   }
-  function homeShow(on) { $('home').hidden = !on; if (on) { homeFill(); $('home').scrollTop = 0; } uiMark(); }
+  function delProj(id) {
+    if (state.projects.length < 2) return;
+    const wasCur = id === state.proj; state.projects = state.projects.filter((x) => x.id !== id);
+    if (wasCur) { state.proj = state.projects[state.projects.length - 1].id; loadSnap(projCur().snap); histReset(); fillForm(); persist(true); draw(true); } else { persist(true); fillProj(); }
+    homeFill();
+  }
+  // miniatura projektu: zdjęcie podglądu 3D z ustalonego kąta, robione chwilę po ostatniej zmianie i przy wyjściu na pulpit
+  let shotT = 0, shotN = 0;
+  function shotPlan() { clearTimeout(shotT); shotN = 0; shotT = setTimeout(() => projShot(false), 2500); }
+  function projShot(now) {
+    const pr = projCur(); if (!pr || !g3 || state.view !== '3d' || state.style === 'pusty' || state.style === 'import' || !$('home').hidden) return;
+    if (pr.thumb && pr.thumbKey === pr.key) return;
+    if (!now && g3.top && !g3.top.ready && !g3.top.fail && shotN++ < 8) { shotT = setTimeout(() => projShot(false), 1500); return; } // tkanina jeszcze się układa
+    try {
+      const keep = Object.assign({}, cam); Object.assign(cam, { yaw: 0.45, pitch: 0.1 }); paint3d();
+      const src = g3.canvas, c = document.createElement('canvas'); c.width = 200; c.height = 264;
+      const sw = Math.min(src.width, (src.height * c.width) / c.height), sx = (src.width - sw) / 2;
+      c.getContext('2d').drawImage(src, sx, 0, sw, src.height, 0, 0, c.width, c.height);
+      Object.assign(cam, keep); paint3d();
+      pr.thumb = c.toDataURL('image/webp', 0.82); pr.thumbKey = pr.key; persist(true);
+    } catch (e) {}
+  }
+  function homeShow(on) { if (on && $('home').hidden) projShot(true); $('home').hidden = !on; if (on) { homeFill(); $('home').scrollTop = 0; } uiMark(); }
   function newFromInsp(e) {
     const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {};
     homeShow(false); addProj('Projekt z inspiracji', sn); goPanel('insp'); if (e) inspOpen(e); else { $('inRes').textContent = ''; $('inMoreBox').hidden = true; }
