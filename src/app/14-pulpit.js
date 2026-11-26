@@ -39,7 +39,7 @@
     if (!hi.length) $('hIn').append(el('p', 'Tu pojawią się zdjęcia, z których dobierałaś wykrój.', 'hempty'));
     for (const e of hi) { const b = el('button'), im = document.createElement('img'); im.src = e.img; im.alt = ''; b.setAttribute('aria-label', 'Nowy projekt z tej inspiracji'); b.title = 'Nowy projekt z tej inspiracji'; b.append(im); b.addEventListener('click', () => newFromInsp(e)); $('hIn').append(b); }
   }
-  function homeShow(on) { $('home').hidden = !on; if (on) { homeFill(); $('home').scrollTop = 0; } }
+  function homeShow(on) { $('home').hidden = !on; if (on) { homeFill(); $('home').scrollTop = 0; } uiMark(); }
   function newFromInsp(e) {
     const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {};
     homeShow(false); addProj('Projekt z inspiracji', sn); goPanel('insp'); if (e) inspOpen(e); else { $('inRes').textContent = ''; $('inMoreBox').hidden = true; }

@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.72.0', n: 73, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.72.1', n: 74, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -65,11 +65,17 @@
     if (!state.profiles.some((x) => x.id === state.active)) state.active = state.profiles[0].id;
     persist(true); fillForm(); layoutUi(); draw(true); histUi();
   }
+  // gdzie byłaś ostatnio: po przeładowaniu (aktualizacja, zgoda na pliki) aplikacja wraca do projektu zamiast na pulpit
+  const UIK = 'wykrojnik.ui';
+  let uiReady = false; // przed startem nie zapisujemy, żeby nie nadpisać tego, co zostało po poprzedniej sesji
+  function uiMark() { if (!uiReady) return; try { localStorage.setItem(UIK, JSON.stringify({ home: !$('home').hidden, t: Date.now() })); } catch (e) {} }
+  function uiResume() { try { const u = JSON.parse(localStorage.getItem(UIK) || 'null'); return !!u && u.home === false && Date.now() - u.t < 30 * 60e3; } catch (e) { return false; } }
   function persist(noHist) {
     const pr = projCur(); if (pr) { const ns = snap(), k = snapKey(ns); if (pr.key === undefined) pr.key = k; else if (pr.key !== k) { pr.key = k; pr.updated = Date.now(); } pr.snap = ns; }
     if (!noHist) histPush();
     const json = JSON.stringify(state);
     try { localStorage.setItem(KEY, json); } catch (e) {}
+    uiMark();
     if (fileOk) { clearTimeout(saveT); saveT = setTimeout(() => desktop.fs.writeFile(FILE, json, 'utf8').catch(() => {}), 400); }
   }
   const GRP = { 'Spódnice': 'Spódnica: ', 'Sukienki': 'Sukienka: ', 'Gorsety': 'Gorset: ', 'Topy': 'Top: ' };

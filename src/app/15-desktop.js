@@ -10,8 +10,8 @@
   }
   function showStore() { $('store').textContent = fileOk ? 'Projekty i modelki zapisują się same w Dokumenty/Wykrojnik.' : 'Projekty i modelki zapisują się same w tej przeglądarce. Po zainstalowaniu aplikacji trafią do Dokumenty/Wykrojnik.'; }
   async function boot() {
-    loadPrintImg(); histReset();
-    fillForm(); layoutUi(); setView(state.view === '3d' ? '3d' : '2d'); showStore(); homeShow(true);
+    const back = uiResume(); loadPrintImg(); histReset();
+    fillForm(); layoutUi(); setView(state.view === '3d' ? '3d' : '2d'); showStore(); uiReady = true; homeShow(!back);
     if (!window.claude || !window.claude.use) return;
     claude.use('downloads').then((d) => (downloads = d)).catch(() => {});
     claude.use('db').then((d) => { if (d) { dbRef = d; wishPull(); } }).catch(() => {});
