@@ -32,10 +32,10 @@
     for (let pn = 1; pn <= doc.numPages; pn++) {
       if (opts.pages && !opts.pages.includes(pn)) continue;
       if (onStep) onStep(pn, doc.numPages);
-      const page = await doc.getPage(pn), vp = page.getViewport({ scale: 1 }), H = vp.height, ops = await page.getOperatorList();
+      const page = await doc.getPage(pn), vp = page.getViewport({ scale: 1 }), H = vp.height, Kp = K * (page.userUnit || 1), ops = await page.getOperatorList(); // UserUnit: arkusze zapisane w skali 1:10 (duży obszar roboczy Illustratora) mają punkt dziesięć razy większy
       let ctm = [1, 0, 0, 1, 0, 0], dash = false, pend = []; const stack = [], mc = [];
       const layer = () => { for (let i = mc.length - 1; i >= 0; i--) if (mc[i]) return mc[i]; return null; };
-      const P = (x, y) => [offX + (ctm[0] * x + ctm[2] * y + ctm[4]) * K, (H - (ctm[1] * x + ctm[3] * y + ctm[5])) * K];
+      const P = (x, y) => [offX + (ctm[0] * x + ctm[2] * y + ctm[4]) * Kp, (H - (ctm[1] * x + ctm[3] * y + ctm[5])) * Kp];
       for (let i = 0; i < ops.fnArray.length; i++) {
         const fn = ops.fnArray[i], a = ops.argsArray[i];
         if (fn === OPS.save) stack.push([ctm, dash]); else if (fn === OPS.restore) { const s = stack.pop(); if (s) { ctm = s[0]; dash = s[1]; } }
@@ -67,9 +67,9 @@
         }
         else if (fn === OPS.fill || fn === OPS.eoFill || fn === OPS.endPath || fn === OPS.clip || fn === OPS.eoClip) { if (fn !== OPS.clip && fn !== OPS.eoClip) pend = []; }
       }
-      try { const tc = await page.getTextContent(); for (const it of tc.items) { const s = String(it.str || '').replace(/\s+/g, ' ').trim(); if (!s) continue; const t = it.transform, o = { s, x: offX + t[4] * K, y: (H - t[5]) * K, h: Math.hypot(t[2], t[3]) * K }; if (s.length <= 160) all.push(Object.assign({ pn }, o)); if (s.length < 3 || s.length > 40) continue; texts.push(o); } } catch (e) { /* bez tekstu też się da */ }
-      pages.push({ pn, x0: offX, w: vp.width * K, h: H * K });
-      offX += vp.width * K + 3;
+      try { const tc = await page.getTextContent(); for (const it of tc.items) { const s = String(it.str || '').replace(/\s+/g, ' ').trim(); if (!s) continue; const t = it.transform, o = { s, x: offX + t[4] * Kp, y: (H - t[5]) * Kp, h: Math.hypot(t[2], t[3]) * Kp }; if (s.length <= 160) all.push(Object.assign({ pn }, o)); if (s.length < 3 || s.length > 40) continue; texts.push(o); } } catch (e) { /* bez tekstu też się da */ }
+      pages.push({ pn, x0: offX, w: vp.width * Kp, h: H * Kp });
+      offX += vp.width * Kp + 3;
     }
     const names = Object.keys(counts).filter((n) => n), sizes = names.filter((n) => !COMMON.test(n));
     if (!paths.length && !opts.soft) throw new Error('W tym pliku nie ma rysunku wektorowego. To pewnie skan, a takiego wykroju nie umiem wczytać.');
@@ -83,7 +83,8 @@
     for (const p of data.paths) { if (p.l && data.sizes.includes(p.l)) { if (p.l === size || !data.sizes.length) mine.push(p); } else common.push(p); }
     const src = data.sizes.length ? mine : common.splice(0), B = src.map((p) => bb(p.pts)), diag = (b) => Math.hypot(b[2] - b[0], b[3] - b[1]);
     // ramka arkusza (linia obejmująca prawie całą stronę) nie jest elementem i nie może wciągnąć do siebie wszystkiego, co leży w środku
-    const pgOf = (pn) => (data.pages || []).find((q) => q.pn === pn), frame = (p, b) => { const pg = pgOf(p.pn); if (!pg) return false; const w = b[2] - b[0], h = b[3] - b[1]; return (w > pg.w * 0.8 && h > pg.h * 0.8) || (p.pts.length === 2 && ((w < 0.3 && h > pg.h * 0.9) || (h < 0.3 && w > pg.w * 0.9))); }; // także pojedyncze proste linie przez cały arkusz: krawędzie stron i siatka sklejania
+    // ramką jest tylko to, co mieści się na stronie: element większy od strony (spódnica rozrysowana na kilka arkuszy) ramką nie jest
+    const pgOf = (pn) => (data.pages || []).find((q) => q.pn === pn), frame = (p, b) => { const pg = pgOf(p.pn); if (!pg) return false; const w = b[2] - b[0], h = b[3] - b[1]; return (w > pg.w * 0.8 && h > pg.h * 0.8 && w < pg.w * 1.03 && h < pg.h * 1.03 && (p.pts.length <= 8 || (w > pg.w * 0.93 && h > pg.h * 0.93))) || (p.pts.length === 2 && ((w < 0.3 && h > pg.h * 0.9) || (h < 0.3 && w > pg.w * 0.9))); }; // także pojedyncze proste linie przez cały arkusz: krawędzie stron i siatka sklejania
     const seeds = []; src.forEach((p, i) => { if (diag(B[i]) > 12 && !frame(p, B[i])) seeds.push(i); });
     const par = seeds.map((_, i) => i), find = (i) => { while (par[i] !== i) i = par[i] = par[par[i]]; return i; }, ov = (a, b) => a[0] <= b[2] + 0.4 && b[0] <= a[2] + 0.4 && a[1] <= b[3] + 0.4 && b[1] <= a[3] + 0.4;
     // elementy leżą na arkuszu ciasno, więc same prostokąty otaczające nie wystarczą: linie należą do jednego elementu, gdy stykają się końcami albo jedna leży w całości w drugiej
@@ -111,12 +112,17 @@
       c.len = plen(c); c.main = c.cut.reduce((a, p) => (p.pts.length > a.length ? p.pts : a), []); c.marks = [{ pn: c.pn, x: m ? m[0] : (c.box[0] + c.box[2]) / 2, y: m ? m[1] : (c.box[1] + c.box[3]) / 2, seen: !!m, box: c.box.slice() }];
     }
     // ten sam element narysowany w całości na dwóch stronach (duże arkusze z jednego rysunku): zostaje jeden, z etykietami na obu stronach
-    { const keep = []; for (const c of list) { const w = c.box[2] - c.box[0], h = c.box[3] - c.box[1], same = (k) => k.main.length === c.main.length && k.main.every((v, i) => Math.abs(v[0] - k.box[0] - (c.main[i][0] - c.box[0])) < 0.2 && Math.abs(v[1] - k.box[1] - (c.main[i][1] - c.box[1])) < 0.2), o = keep.find((k) => k.pn !== c.pn && Math.abs(k.box[2] - k.box[0] - w) < 1 && Math.abs(k.box[3] - k.box[1] - h) < 1 && same(k)); if (o) o.marks = o.marks.concat(c.marks); else keep.push(c); } for (const c of keep) if (c.marks.some((m) => m.seen)) c.marks = c.marks.filter((m) => m.seen); list = keep; }
+    { const keep = []; for (const c of list) { const w = c.box[2] - c.box[0], h = c.box[3] - c.box[1], same = (k) => k.main.length === c.main.length && k.main.every((v, i) => Math.abs(v[0] - k.box[0] - (c.main[i][0] - c.box[0])) < 0.2 && Math.abs(v[1] - k.box[1] - (c.main[i][1] - c.box[1])) < 0.2), o = keep.find((k) => k.pn !== c.pn && Math.abs(k.box[2] - k.box[0] - w) < 1 && Math.abs(k.box[3] - k.box[1] - h) < 1 && same(k)); if (o) { o.marks = o.marks.concat(c.marks); o.copies.push({ box: c.box }); } else { c.copies = [{ box: c.box }]; keep.push(c); } } for (const c of keep) if (c.marks.some((m) => m.seen)) c.marks = c.marks.filter((m) => m.seen); list = keep; }
+    // nazwa elementu: napis leżący w jego obrysie, na dowolnej stronie, na której element jest narysowany.
+    // Elementy bywają rysowane jeden na drugim (duże spódnice), więc napis należący tylko do jednego obrysu ma pierwszeństwo.
+    const PART = /front|back|sleeve|skirt|bodice|strap|godet|train|wing|panel|collar|cuff|facing|pocket|lining|yoke|band|binding|prz[oó]d|ty[lł]|r[eę]kaw/i;
+    const cands = list.map((c) => { const out = []; for (const cp of c.copies || [{ box: c.box }]) { const dx = cp.box[0] - c.box[0], dy = cp.box[1] - c.box[1];
+      for (const t of data.texts || []) { if (!(t.x > cp.box[0] && t.x < cp.box[2] && t.y > cp.box[1] && t.y < cp.box[3]) || !/[A-Za-z]{3}/.test(t.s) || !PART.test(t.s) || /cut|seam|line|allowance|place|fabric|measure|dart|size/i.test(t.s)) continue;
+        if (c.main.length > 3 && closed({ pts: c.main }) && !pip(t.x - dx, t.y - dy, c.main)) continue; out.push(t); } } return out; });
+    const owners = new Map(); cands.forEach((l) => { for (const k of new Set(l.map((t) => t.s.toUpperCase()))) owners.set(k, (owners.get(k) || 0) + 1); });
     return list.map((c, i) => {
       const prims = c.cut.map((p) => ({ t: 'poly', s: 'cut', pts: p.pts })).concat(c.aux.map((p) => ({ t: 'poly', s: p.d ? 'fold' : 'aux', pts: p.pts })));
-      const PART = /front|back|sleeve|skirt|bodice|strap|godet|train|wing|panel|collar|cuff|facing|pocket|lining|yoke|band|binding|prz[oó]d|ty[lł]|r[eę]kaw/i;
-      const inb = (data.texts || []).filter((t) => t.x > c.box[0] && t.x < c.box[2] && t.y > c.box[1] && t.y < c.box[3] && /[A-Za-z]{3}/.test(t.s));
-      const tx = inb.filter((t) => PART.test(t.s) && !/cut|seam|line|allowance|place|fabric|measure|dart|size/i.test(t.s)).sort((a, b) => b.h - a.h)[0];
+      const tx = cands[i].slice().sort((a, b) => (owners.get(a.s.toUpperCase()) === 1 ? 0 : 1) - (owners.get(b.s.toUpperCase()) === 1 ? 0 : 1) || b.h - a.h)[0];
       const name = tx ? tx.s.toUpperCase() : 'ELEMENT ' + (i + 1);
       prims.push({ t: 'text', x: (c.box[0] + c.box[2]) / 2, y: (c.box[1] + c.box[3]) / 2, text: name, size: 'M', anchor: 'middle' });
       return { id: 'imp-' + (i + 1), name, cut: '', hemIn: [], prims, box: { x0: c.box[0], y0: c.box[1], x1: c.box[2], y1: c.box[3] }, noteAt: null, w: c.box[2] - c.box[0], h: c.box[3] - c.box[1], marks: c.marks };
@@ -127,12 +133,12 @@
   async function shots(file, marks, tiles) {
     const L = await lib(), doc = await L.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise, K = 2.54 / 72, out = []; let offX = 0;
     for (let pn = 1; pn <= doc.numPages; pn++) {
-      const page = await doc.getPage(pn), v1 = page.getViewport({ scale: 1 }), nt = typeof tiles === 'function' ? tiles(pn) : tiles; // tiles: liczba albo funkcja strona -> 0 (pomiń), 1 (cała), 2 (dwie połówki)
-      if (!nt) { offX += v1.width * K + 3; continue; }
+      const page = await doc.getPage(pn), v1 = page.getViewport({ scale: 1 }), Kp = K * (page.userUnit || 1), nt = typeof tiles === 'function' ? tiles(pn) : tiles; // tiles: liczba albo funkcja strona -> 0 (pomiń), 1 (cała), 2 (dwie połówki)
+      if (!nt) { offX += v1.width * Kp + 3; continue; }
       const sc = Math.sqrt((1.1e6 * (nt === 2 ? 1.85 : 1)) / (v1.width * v1.height)), vp = page.getViewport({ scale: sc });
       const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
       await page.render({ canvasContext: g, viewport: vp }).promise;
-      const px = sc / K, fs = Math.max(15, Math.round(c.width / 80)); g.font = '700 ' + fs + 'px Arial, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
+      const px = sc / Kp, fs = Math.max(15, Math.round(c.width / 80)); g.font = '700 ' + fs + 'px Arial, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
       for (const m of marks || []) { if (m.pn && m.pn !== pn) continue; const x = (m.x - offX) * px, y = m.y * px; if (x < 0 || x > c.width || y < 0 || y > c.height) continue;
         // etykieta krawędzi: mniejsza, niebieska, dokładnie na środku krawędzi
         if (m.e) { const fe = Math.round(fs * 0.8), we = g.measureText(m.id).width * 0.8 + fe * 0.6; g.font = '700 ' + fe + 'px Arial, sans-serif'; g.fillStyle = '#0b5fd8'; g.fillRect(x - we / 2, y - fe * 0.65, we, fe * 1.3); g.fillStyle = '#fff'; g.fillText(m.id, x, y + 1); g.font = '700 ' + fs + 'px Arial, sans-serif'; continue; }
@@ -144,7 +150,7 @@
         const blob = await new Promise((ok) => q.toBlob(ok, 'image/jpeg', 0.9));
         out.push({ blob, pn, part: n === 1 ? '' : land ? (t ? 'prawa połowa' : 'lewa połowa') : (t ? 'dolna połowa' : 'górna połowa') });
       }
-      offX += v1.width * K + 3;
+      offX += v1.width * Kp + 3;
     }
     return out;
   }
@@ -157,7 +163,7 @@
   // podstawowe dane pliku: liczba stron i największy bok strony w centymetrach (do rozpoznania, czy to arkusz, czy instrukcja)
   async function info(file) {
     const L = await lib(), doc = await L.getDocument({ data: new Uint8Array(await file.arrayBuffer()), disableFontFace: true, isEvalSupported: false }).promise, K = 2.54 / 72; let mx = 0;
-    for (let pn = 1; pn <= Math.min(doc.numPages, 40); pn++) { const v = (await doc.getPage(pn)).getViewport({ scale: 1 }); mx = Math.max(mx, v.width * K, v.height * K); }
+    for (let pn = 1; pn <= Math.min(doc.numPages, 40); pn++) { const pg = await doc.getPage(pn), v = pg.getViewport({ scale: 1 }), Kp = K * (pg.userUnit || 1); mx = Math.max(mx, v.width * Kp, v.height * Kp); }
     return { n: doc.numPages, maxCm: mx };
   }
   // tekst każdej strony osobno, żeby analizator mógł wskazać, z której strony pochodzi informacja
