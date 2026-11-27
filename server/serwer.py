@@ -191,7 +191,7 @@ def janitor():
 
 
 # ---------- HTTP ----------
-TYPES = {'.mp4': 'video/mp4', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2'}
+TYPES = {'.mp4': 'video/mp4', '.jpg': 'image/jpeg', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2'}
 
 
 class H(BaseHTTPRequestHandler):
@@ -308,7 +308,16 @@ class H(BaseHTTPRequestHandler):
         if STATIC and not path.startswith('/api/'):
             fp = os.path.normpath(os.path.join(STATIC, path.lstrip('/') or 'index.html'))
             if fp.startswith(os.path.abspath(STATIC)) and os.path.isfile(fp):
-                return self.send(200, open(fp, 'rb').read(), TYPES.get(os.path.splitext(fp)[1], 'application/octet-stream'))
+                data, ctype = open(fp, 'rb').read(), TYPES.get(os.path.splitext(fp)[1], 'application/octet-stream')
+                m = re.match(r'^bytes=(\d*)-(\d*)$', self.headers.get('Range', ''))
+                if m and (m.group(1) or m.group(2)):  # Safari odtwarza film tylko wtedy, gdy serwer umie oddać wskazany fragment pliku
+                    n = len(data)
+                    a, b = (int(m.group(1)), int(m.group(2)) if m.group(2) else n - 1) if m.group(1) else (max(0, n - int(m.group(2))), n - 1)
+                    if a >= n or a > b:
+                        return self.send(416, b'', ctype, {'Content-Range': 'bytes */%d' % n})
+                    b = min(b, n - 1)
+                    return self.send(206, data[a:b + 1], ctype, {'Content-Range': 'bytes %d-%d/%d' % (a, b, n), 'Accept-Ranges': 'bytes'})
+                return self.send(200, data, ctype, {'Accept-Ranges': 'bytes'})
         self.send(404, {'error': 'Nie znaleziono.'})
 
     def do_PUT(self):

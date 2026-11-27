@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir bpy==5.3.0
 WORKDIR /app
 COPY server/serwer.py server/wykrojnik_render.py ./
-COPY index.html app.js cloth.js engine.js figure.js font.js importer.js prints.js ./strona/
+COPY index.html app.js cloth.js engine.js figure.js font.js importer.js prints.js splash.mp4 splash.jpg ./strona/
 COPY vendor ./strona/vendor
 RUN useradd -m render && mkdir -p /dane && chown render /dane
 USER render
