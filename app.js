@@ -1,10 +1,11 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.97.1', n: 109, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.98.0', n: 110, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
+  const LIB = { list: /** @type {any[]} */ ([]), when: 0 }; // biblioteka konstrukcji użytkowniczki: wczytywana z jej pliku, nigdy nie jest częścią aplikacji
   const f1 = (v) => W.fmt(v, 1);
   const KEY = 'wykrojnik.v3', FILE = '~/Documents/Wykrojnik/wykrojnik.json';
   let desktop = null, downloads = null, fileOk = false;
@@ -358,8 +359,9 @@
       b.addEventListener('click', () => { if (!(odc && ODC.includes(state.style))) pickStyle(st); });
       boxes[st.group].appendChild(b);
     });
+    libTiles({ gora: $('galGo'), dol: $('galSk'), cale: $('galSu') }); // konstrukcje z biblioteki są fasonami jak każdy inny
   }
-  function pickStyle(st) { if (state.ref) { say('Ten projekt pokazuje gotowy model 3D. Fason wybierzesz w nowym projekcie.'); return; } if (st.id !== state.style) state.sel = {}; state.fTab = tabOf(st.id); if (st.preset) { Object.assign(state.p, st.preset); if (st.preset.rek) state.p.rekL = ['krotki', '34', 'dlugi'].includes(st.preset.rek) ? rekDef(st.preset.rek) : 0; if (st.id.indexOf('to_tshirt') === 0) state.fabric = 'dzersej'; } else state.p.bok = 0; if (st.id.indexOf('to_tshirt') !== 0 && state.style.indexOf('to_tshirt') === 0 && state.fabric === 'dzersej') state.fabric = 'bawelna'; const was = W.STYLES.find((s) => s.id === state.style); state.style = st.id; state.p.flare = st.flare || 0; state.p.dol = ''; if (st.dl) state.p.dl = st.dl; else if (was && was.dl && state.p.dl === was.dl) state.p.dl = 58; fillForm(); persist(); draw(true); }
+  function pickStyle(st) { if (state.ref) { say('Ten projekt pokazuje gotowy model 3D. Fason wybierzesz w nowym projekcie.'); return; } if (state.style === 'import' && state.imp && state.imp.lib) state.imp = null; if (st.id !== state.style) state.sel = {}; state.fTab = tabOf(st.id); if (st.preset) { Object.assign(state.p, st.preset); if (st.preset.rek) state.p.rekL = ['krotki', '34', 'dlugi'].includes(st.preset.rek) ? rekDef(st.preset.rek) : 0; if (st.id.indexOf('to_tshirt') === 0) state.fabric = 'dzersej'; } else state.p.bok = 0; if (st.id.indexOf('to_tshirt') !== 0 && state.style.indexOf('to_tshirt') === 0 && state.fabric === 'dzersej') state.fabric = 'bawelna'; const was = W.STYLES.find((s) => s.id === state.style); state.style = st.id; state.p.flare = st.flare || 0; state.p.dol = ''; if (st.dl) state.p.dl = st.dl; else if (was && was.dl && state.p.dl === was.dl) state.p.dl = 58; fillForm(); persist(); draw(true); }
   $('addP').addEventListener('click', () => {
     const c = cur(), id = 'p' + Date.now();
     state.profiles.push({ id, name: 'Nowa modelka', og: c.og, ot: c.ot, ob: c.ob, wb: c.wb, wzrost: c.wzrost, adv: {} });
@@ -462,7 +464,8 @@
     } catch (e) { say(e && e.message ? e.message : 'Nie udało się wczytać tego pliku.', true); } finally { busyOff(bz); }
   }
   function impFill() {
-    const on = state.style === 'import' && !!state.imp, box = $('impBox'); box.hidden = !on; if (!on) $('dopImp').hidden = true; $('fTab').hidden = on; document.querySelectorAll('[data-ft]').forEach((el) => { if (on) el.hidden = true; }); if (on) $('fOpts').hidden = true; if (!on) return;
+    const on = state.style === 'import' && !!state.imp, box = $('impBox'), gal = on && !!state.imp.lib && LIB.list.length > 0; // projekt z biblioteki zostawia galerię fasonów, żeby dało się przejść do innego
+    box.hidden = !on || gal; if (!on) $('dopImp').hidden = true; $('fTab').hidden = on && !gal; document.querySelectorAll('[data-ft]').forEach((el) => { if (on && !gal) el.hidden = true; }); if (on) $('fOpts').hidden = true; if (!on) return;
     const sel = $('impSize'); sel.textContent = ''; for (const z of state.imp.sizes || []) { const o = document.createElement('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.value = state.imp.size || ''; sel.disabled = !(state.imp.sizes || []).length; $('impSizeRow').hidden = sel.disabled;
     { const uw = (state.imp.an && state.imp.an.uw) || [], nb = $('impNotesB'); $('impNotes').hidden = !uw.length; nb.textContent = ''; for (const [k, title] of [['spr', 'Do sprawdzenia'], ['zapas', 'Zapasy na szwy'], ['druk', 'Druk'], ['material', 'Materiał']]) { const it = uw.filter((u) => u.k === k); if (!it.length) continue; const b = document.createElement('b'); b.textContent = title; nb.appendChild(b); it.forEach((u) => { const p = document.createElement('p'); p.textContent = u.t + (u.s ? ' (' + u.s + ')' : ''); nb.appendChild(p); }); } }
     $('impTitle').textContent = state.imp.lib ? 'Z biblioteki' : 'Wykrój z pliku';
@@ -472,7 +475,7 @@
       $('impLenN').textContent = !r.body && !r.sleeve ? (state.imp.an ? 'W tym wykroju nie umiem wskazać przodu, tyłu ani rękawa, więc długości tu nie zmienisz.' : 'Długość zmienisz po analizie wykroju, bo muszę wiedzieć, który element jest przodem, tyłem i rękawem.')
         : r.body && r.body.plan ? 'Wydłużam i skracam elementy sięgające dołu, w połowie ich długości, więc dół i jego szerokość zostają jak w oryginale. Elementy doszyte luzem popraw ręcznie.' : (r.body && r.body.loose ? 'W tym fasonie nie ma pachy, więc wydłużam i skracam w dolnej połowie elementu. Sprawdź na rysunku, czy zmienił się właściwy koniec.' : 'Wydłużam i skracam pod pachą, więc dół i jego szerokość zostają jak w oryginale.') + (!r.body ? ' Przodu i tyłu nie rozpoznałam, zmienisz tylko rękaw.' : '') + ' Podszewkę i odszycia popraw ręcznie.';
     }
-    libFill(); libMatchFill(); $('impNote').textContent = state.imp.lib ? 'Elementy pochodzą z Twojej biblioteki i są przeliczone na wymiary modelki. Linie są liniami szycia, bez zapasów.' : state.imp.raster ? 'Ten wykrój pochodzi z obrazu, więc ma jeden rozmiar: zewnętrzny obrys każdego elementu.' : sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
+    libFill(); libMatchFill(); $('impNote').textContent = state.imp.lib ? 'Ten projekt powstał z biblioteki konstrukcji. Wczytaj ją w „Nowy z biblioteki”, żeby zmieniać fason i dopasowanie.' : state.imp.raster ? 'Ten wykrój pochodzi z obrazu, więc ma jeden rozmiar: zewnętrzny obrys każdego elementu.' : sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
   }
   let model = null, vb = null, rafD = 0;
   function drawSoon() { if (rafD) return; rafD = requestAnimationFrame(() => { rafD = 0; draw(); }); }
@@ -2642,7 +2645,6 @@
   // ---------- biblioteka konstrukcji: własne, stopniowane wykroje jako baza do nowych projektów ----------
   // Dane biblioteki pochodzą z pliku użytkowniczki (kupione wykroje są tylko do użytku własnego), aplikacja niczego nie ma wbudowanego.
   // Element biblioteki ma obrys każdego rozmiaru z tą samą liczbą punktów na krawędź, więc rozmiary można mieszać punkt po punkcie.
-  const LIB = { list: [], when: 0 };
   const libPts = (flat) => { const o = []; for (let i = 0; i < flat.length; i += 2) o.push([flat[i], flat[i + 1]]); return o; };
   const libP = (el) => el._p || (el._p = el.obrysy.map(libPts));
   const libGet = (id) => LIB.list.find((k) => k.id === id) || null;
@@ -2902,21 +2904,42 @@
   function libOpen(spec) {
     const r = libBuild(spec, cur()); if (r.err) { say(r.err, true); return; }
     const name = libName(spec).slice(0, 60), sn = snap(); sn.style = 'import'; sn.imp = { name, sizes: [], size: '', pieces: r.pieces, an: r.an, lib: spec }; sn.sel = {}; sn.layers = [{ role: 'wierzch' }];
-    if (state.view !== '2d') setView('2d'); addProj(name, sn); impFill(); $('libBox').hidden = true; homeShow(false); goPanel('fason');
+    if (state.view !== '2d') setView('2d'); addProj(name, sn); const k0 = libGet((spec.all || spec.top).k); state.fTab = k0 && libKind(k0) === 'dol' ? 'doly' : k0 && libKind(k0) === 'cale' && spec.all ? 'suk' : 'gory'; fillForm(); $('libBox').hidden = true; homeShow(false); goPanel('fason');
     say('Otworzyłam konstrukcję z biblioteki i przeliczyłam ją na wymiary modelki „' + (cur().name || 'bez imienia') + '”.');
   }
   // zmiana ustawień projektu (inna góra, inny dół, linia odcięcia, długość, sposób połączenia)
   function libSet(patch) {
     if (!state.imp || !state.imp.lib) return; const spec = JSON.parse(JSON.stringify(state.imp.lib)); patch(spec);
     const r = libBuild(spec, cur()); if (r.err) { say(r.err, true); libFill(); return; }
-    state.imp.lib = spec; state.imp.name = libName(spec).slice(0, 60); const pr = projCur(); if (pr) pr.name = state.imp.name; persist(true); draw(true); libFill();
+    const pr = projCur(), auto = pr && pr.name === state.imp.name; state.imp.lib = spec; state.imp.name = libName(spec).slice(0, 60); if (auto) pr.name = state.imp.name; // nazwę projektu zmieniam tylko wtedy, gdy była nadana automatycznie
+    fillForm(); persist(true); draw(true); libFill();
+  }
+  // ---------- konstrukcje jako fasony w panelu Fason ----------
+  function libThumb(k) {
+    if (k._svg !== undefined) return k._svg; let svg = '';
+    try { const main = k.elementy.filter((e) => 'FBS'.includes(e.rola)), use = (main.length ? main : k.elementy).slice(0, 4), paths = []; let x = 0, h = 0;
+      for (const el of use) { const fr = libFrame(el), dn = fr ? fr.down : [0, 1], px = [-dn[1], dn[0]], pts = libP(el)[0].map((p) => [p[0] * px[0] + p[1] * px[1], p[0] * dn[0] + p[1] * dn[1]]); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+        paths.push('M' + pts.map((p) => (p[0] - x0 + x).toFixed(1) + ' ' + (p[1] - y0).toFixed(1)).join('L') + 'Z'); x += x1 - x0 + 3; h = Math.max(h, y1 - y0); }
+      svg = '<svg viewBox="-1 -1 ' + Math.ceil(x) + ' ' + Math.ceil(h + 2) + '" aria-hidden="true">' + paths.map((d) => '<path d="' + d + '"/>').join('') + '</svg>'; } catch (e) { svg = ''; }
+    return (k._svg = svg);
+  }
+  function libTiles(boxes) {
+    if (!LIB.list.length) return; const spec = state.style === 'import' && state.imp && state.imp.lib ? state.imp.lib : null, used = spec ? [spec.all && spec.all.k, spec.top && spec.top.k, spec.bot && spec.bot.k] : [], seen = {};
+    LIB.list.forEach((k, i) => { const kind = libKind(k), box = boxes[kind]; if (!box) return; if (!seen[kind]) { seen[kind] = true; const h = mkEl('p'); h.className = 'galH'; h.textContent = 'Z biblioteki'; box.appendChild(h); }
+      const b = mkEl('button'), th = mkEl('span'), nm = mkEl('span'); b.setAttribute('aria-pressed', used.includes(k.id) ? 'true' : 'false'); b.dataset.lib = k.id; th.className = 'th'; th.style.setProperty('--tint', TINTS[i % TINTS.length]); th.innerHTML = libThumb(k); nm.className = 'nm'; nm.textContent = k.nazwa;
+      b.append(th, nm); b.addEventListener('click', () => libUse(k.id)); box.appendChild(b); });
+  }
+  // wybór konstrukcji w panelu Fason zmienia fason bieżącego projektu, tak jak wybór każdego innego fasonu
+  function libUse(id) {
+    if (state.ref) { say('Ten projekt pokazuje gotowy model 3D. Fason wybierzesz w nowym projekcie.'); return; } const k = libGet(id), spec = { all: { k: id } }, r = k ? libBuild(spec, cur()) : { err: 'Tej konstrukcji nie ma już w bibliotece.' }; if (r.err) { say(r.err, true); return; }
+    state.style = 'import'; state.imp = { name: libName(spec).slice(0, 60), sizes: [], size: '', pieces: r.pieces, an: r.an, lib: spec }; state.sel = {}; state.layers = [{ role: 'wierzch' }]; state.fTab = libKind(k) === 'dol' ? 'doly' : libKind(k) === 'cale' ? 'suk' : 'gory';
+    fillForm(); persist(); draw(true);
   }
   const libKind = (k) => (k.typ === 'spodnica' ? 'dol' : k.typ === 'gora' ? 'gora' : 'cale');
   const libCm = (v) => f1(Math.round(v * 2) / 2);
   // panel Fason: z czego składa się projekt, jak został dopasowany i co wymagało decyzji
   function libFill() {
-    const box = $('libPanel'); if (!box) return; const on = state.style === 'import' && state.imp && state.imp.lib; box.hidden = !on; if (!on) return;
-    $('libNo').hidden = LIB.list.length > 0; $('libCtl').hidden = !LIB.list.length; if (!LIB.list.length) return;
+    const box = $('libPanel'); if (!box) return; const on = state.style === 'import' && state.imp && state.imp.lib && LIB.list.length > 0; box.hidden = !on; if (!on) return;
     const spec = state.imp.lib, rt = libRt.get(state.imp), rep = rt && rt.rep, both = !!(spec.top && spec.bot), kT = spec.all ? libGet(spec.all.k) : spec.top ? libGet(spec.top.k) : null;
     const fillSel = (id, kinds, val, none) => { const s = $(id); s.textContent = ''; if (none) { const o = mkEl('option'); o.value = ''; o.textContent = none; s.appendChild(o); } for (const k of LIB.list) if (kinds.includes(libKind(k))) { const o = mkEl('option'); o.value = k.id; o.textContent = (id === 'libBot' && libKind(k) === 'cale' ? 'dół z: ' : '') + k.nazwa; s.appendChild(o); } s.value = val || ''; };
     const soloSkirt = spec.all && kT && kT.typ === 'spodnica';
@@ -2951,7 +2974,7 @@
     if (!obj || obj.format !== 'wykrojnik-biblioteka' || !Array.isArray(obj.konstrukcje)) return false;
     LIB.list = obj.konstrukcje.filter((k) => k && k.id && Array.isArray(k.elementy) && k.tabela); LIB.when = Date.now();
     if (keep) libDb().then((db) => { db.transaction('pliki', 'readwrite').objectStore('pliki').put(JSON.stringify(obj), 'lib'); }).catch(() => {});
-    if (!$('libBox').hidden) libList(); if (state.style === 'import' && state.imp && state.imp.lib && uiReady) draw(true); return true;
+    if (!$('libBox').hidden) libList(); if (uiReady) { fillForm(); if (state.style === 'import' && state.imp && state.imp.lib) draw(true); } return true;
   }
   function libBoot() { libDb().then((db) => { const q = db.transaction('pliki').objectStore('pliki').get('lib'); q.onsuccess = () => { if (q.result && !LIB.list.length) { try { libAdopt(JSON.parse(q.result), false); } catch (e) { /* uszkodzony zapis: biblioteka zostaje pusta */ } } }; }).catch(() => {}); }
   // w aplikacji na komputerze biblioteka leży obok projektów; nowszy plik zastępuje zapis w bazie
@@ -2999,7 +3022,7 @@
   $('libDl').addEventListener('change', () => libSet((s) => { const v = libNum('libDl', -40, 60); if (s.bot) s.bot.dl = v; else if (s.all) s.all.dl = v; }));
   $('libMode').addEventListener('change', () => libSet((s) => { s.mode = $('libMode').value; }));
   libBoot();
-  if (TEST) window['__lib'] = { LIB, libAdopt, libBuild, libOpen, libSet, libMatch, libRt, libShape, libFrame, libWalk, libWalkC, libBodice, libSkirt, libGet, libP };
+  if (TEST) window['__lib'] = { LIB, libAdopt, libBuild, libOpen, libSet, libUse, libMatch, libRt, libShape, libFrame, libWalk, libWalkC, libBodice, libSkirt, libGet, libP };
   // ---------- paleta poleceń (⌘K) ----------
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
   let cmdSel = 0, cmdItems = [];

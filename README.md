@@ -2,7 +2,7 @@
 
 Aplikacja do konstruowania wykrojów odzieży z wymiarów: spódnice, sukienki, topy, t-shirty i gorsety. Rysuje wykrój, sprawdza go z wymiarami modelki, pokazuje podgląd 3D na sylwetce i drukuje na kartkach A4 w skali 100%.
 
-Wersja 0.97.1. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
+Wersja 0.98.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
 
 ## Uruchomienie
 
@@ -84,7 +84,7 @@ Repozytorium nie zawiera żadnych wykrojów ani kluczy, wgrywasz własne.
 
 ## Biblioteka konstrukcji
 
-„Nowy z biblioteki” otwiera Twoje własne, stopniowane konstrukcje: przelicza je na wymiary modelki, sprawdza szwy, łączy górę ze spódnicą w sukienkę, dzieli sukienkę na linii odcięcia i wymienia samą górę albo sam dół. To samo ubranie widzisz w 2D i w 3D. Wczytany z pliku wykrój jest porównywany z biblioteką element po elemencie.
+Po wczytaniu pliku biblioteki („Nowy z biblioteki”) Twoje własne, stopniowane konstrukcje pojawiają się wśród fasonów w panelu Fason, w zakładkach Góry, Doły i Sukienki. Wybierasz je tak jak każdy inny fason, a skład projektu (góra, dół, linia odcięcia) ustawiasz w Dopasowaniu. Aplikacja przelicza je na wymiary modelki, sprawdza szwy, łączy górę ze spódnicą w sukienkę, dzieli sukienkę na linii odcięcia i wymienia samą górę albo sam dół. To samo ubranie widzisz w 2D i w 3D. Wczytany z pliku wykrój jest porównywany z biblioteką element po elemencie.
 
 Plik biblioteki należy do Ciebie i zostaje na Twoim komputerze. Repozytorium ani opublikowana strona nie zawierają żadnych konstrukcji. Format pliku, zasady dopasowania i ograniczenia opisuje [docs/biblioteka.md](docs/biblioteka.md).
 

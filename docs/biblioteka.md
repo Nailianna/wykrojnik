@@ -1,6 +1,8 @@
 # Biblioteka konstrukcji (od wersji 0.97)
 
-Biblioteka to Twoje własne, stopniowane wykroje zapisane tak, żeby dało się je otwierać, przeliczać na modelkę i składać w nowe projekty. Wchodzisz do niej z pulpitu przez „Nowy z biblioteki”.
+Biblioteka to Twoje własne, stopniowane wykroje zapisane tak, żeby dało się je otwierać, przeliczać na modelkę i składać w nowe projekty.
+
+Plik biblioteki wczytujesz raz, z pulpitu przez „Nowy z biblioteki”. Od wersji 0.98 konstrukcje są potem fasonami: widać je w panelu Fason pod nagłówkiem „Z biblioteki”, w zakładkach Góry, Doły i Sukienki, w każdym projekcie. Kliknięcie kafelka zmienia fason bieżącego projektu. Skład projektu (góra, dół, linia odcięcia, długość, decyzja o dopasowaniu) i sprawozdanie ze szwów są w panelu Dopasowanie.
 
 ## Gdzie leżą dane
 
