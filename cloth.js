@@ -125,7 +125,7 @@
       seg.forEach((l, k) => { N[id + ':' + k] = Math.max(1, Math.round(l / h)); });
       return true;
     };
-    pair('sh', side('F', 'shoulder'), side('B', 'shoulder')); pair('sd', side('F', 'side'), side('B', 'side'));
+    pair('sh', side('F', 'shoulder'), side('B', 'shoulder')); pair('sd', side('F', 'side'), side('B', 'side')); pair('us', side('F', 'under'), side('B', 'under')); // us: spód rękawa skrojonego razem z przodem i tyłem
     if (parts.S) { pair('cf', side('S', 'capF'), side('F', 'arm')); pair('cb', side('S', 'capB', true), side('B', 'arm')); pair('un', side('S', 'underF'), side('S', 'underB', true)); }
     // węzły na obrysie, w otworach i w środku; triangulacja
     for (const pk in parts) {
@@ -197,7 +197,7 @@
     const find = (i) => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; }, uni = (a, b) => { a = find(a); b = find(b); if (a !== b) par[Math.max(a, b)] = Math.min(a, b); };
     for (const I of inst) for (const w of I.P.weld) uni(I.map[w[0]], I.map[w[1]]);
     const sew = (IA, IB, id) => { for (const k in IA.P.seam) if (k.indexOf(id + ':') === 0 && k[k.length - 1] === 'a') { const a = IA.P.seam[k], b = IB.P.seam[k.slice(0, -1) + 'b']; if (b && a.length === b.length) for (let i = 0; i < a.length; i++) uni(IA.map[a[i]], IB.map[b[i]]); } };
-    sew(F1, B1, 'sh'); sew(F2, B2, 'sh'); sew(F1, B1, 'sd'); sew(F2, B2, 'sd');
+    sew(F1, B1, 'sh'); sew(F2, B2, 'sh'); sew(F1, B1, 'sd'); sew(F2, B2, 'sd'); sew(F1, B1, 'us'); sew(F2, B2, 'us');
     if (S1) { sew(S1, F1, 'cf'); sew(S1, B1, 'cb'); sew(S1, S1, 'un'); sew(S2, F2, 'cf'); sew(S2, B2, 'cb'); sew(S2, S2, 'un'); }
     const sid = new Int32Array(ng).fill(-1); let ns = 0; for (let i = 0; i < ng; i++) { const r = find(i); if (sid[r] < 0) sid[r] = ns++; sid[i] = sid[r]; }
     // siatka do rysowania zachowuje osobne wierzchołki po obu stronach szwu (każdy element ma własny układ nitek), symulacja liczy na zszytych
@@ -226,7 +226,7 @@
     TE.forEach((l) => { if (l.length !== 2) return; const s0 = sid[l[0][0].map[l[0][1]]], s1 = sid[l[1][0].map[l[1][1]]]; if (s0 === s1) return; const flat = l[0][2] + l[1][2], same = l[0][0] === l[1][0] ? dist(l[0][0].P.pts[l[0][1]], l[1][0].P.pts[l[1][1]]) : 1e9; bends.push([s0, s1, same < flat * 1.25 ? same : flat * 0.97]); });
     // linie szwów do narysowania
     const seams = [], chain = (I, ids) => ids.map((i) => sid[I.map[i]]);
-    for (const I of [F1, F2]) { for (const k in I.P.seam) if (/^(sh|sd):/.test(k)) seams.push(chain(I, I.P.seam[k])); for (const c of I.P.ch) if (/^dL/.test(c.tag)) seams.push(chain(I, c.ids)); }
+    for (const I of [F1, F2]) { for (const k in I.P.seam) if (/^(sh|sd|us):/.test(k)) seams.push(chain(I, I.P.seam[k])); for (const c of I.P.ch) if (/^dL/.test(c.tag)) seams.push(chain(I, c.ids)); }
     for (const I of [B1, B2]) for (const c of I.P.ch) if (/^dL/.test(c.tag)) seams.push(chain(I, c.ids));
     { const c = B1.P.ch.find((q) => q.tag === 'center'); if (c) seams.push(chain(B1, c.ids)); }
     if (S1) for (const I of [S1, S2]) for (const k in I.P.seam) if (/^(cf|cb|un):.*a$/.test(k)) seams.push(chain(I, I.P.seam[k]));

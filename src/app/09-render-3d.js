@@ -347,6 +347,12 @@
                 const tP = figArmP.tPit, t = mt.v >= SL.H ? tP + (mt.v - SL.H) : tP * Math.max(0, mt.v / SL.H), A = figArmAt(mt.sx, t), th = mt.u / rr, r0 = Math.max(rr * 0.9, A.r + 1.2), cu = Math.cos(th), su = Math.sin(th);
                 return [A.c[0] + r0 * cu * mt.sx * A.ca, A.c[1] + r0 * cu * A.sa, A.c[2] + r0 * su];
               }
+              const KM = sil.kim ? sil.kim[mt.pk] : null;
+              if (KM && figArmAt && Math.abs(mt.u) > (mt.v < (mt.pk === 'F' ? FI : BI).sideTop ? KM.xa : ((mt.pk === 'F' ? FI : BI).sideX(mt.v))) + 0.05) { // część rękawowa: owinięta wokół ręki, szew wierzchni na górze, szew spodni pod spodem
+                const x = Math.abs(mt.u) - KM.sp[0], y = mt.v - KM.sp[1], t = Math.max(0, x * KM.e[0] + y * KM.e[1]), dd = Math.max(0, x * KM.n[0] + y * KM.n[1]), bi = Math.min(KM.tab.length - 1, Math.round(t / 2)), wd = Math.max(4, KM.tab[bi] || 4);
+                const A = figArmAt(mt.sx, t + 1), r0 = Math.min(Math.max(A.r + 1.5, wd / Math.PI), A.r + 7), th = Math.PI * Math.min(1, dd / wd), cu = Math.cos(th), su = Math.sin(th) * (mt.pk === 'F' ? 1 : -1);
+                return [A.c[0] + r0 * cu * mt.sx * A.ca, A.c[1] + r0 * cu * A.sa, A.c[2] + r0 * su];
+              }
               const I = mt.pk === 'F' ? FI : BI, yw = mt.v < 0 && !stl ? (-mt.v * yTopW) / -I.top : -mt.v, Wd = I.sideX ? I.sideX(Math.max(mt.v, I.sideTop)) : 20, q = sectRaw(Math.min(yw, yTopW), phiOf(mt, Math.min(1, Math.abs(mt.u) / Math.max(4, Wd))));
               return [q[0], q[1], q[2]];
             };
