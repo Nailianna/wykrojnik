@@ -3,7 +3,7 @@
     if (!init3d()) { say('Podgląd 3D nie działa w tym widoku (brak WebGL).', true); return; }
     const m = cur(), sil = model.d.sil, a = W.full(m), body = bodyFn(m, a), TAU = Math.PI * 2;
     // wczytany wykrój nie ma parametrów fasonu: podgląd dostaje obojętne wartości i długość odczytaną z elementów
-    const p = sil.imported ? Object.assign({}, state.p, { gora: sil.strap ? 'bez' : 'ramiona', dl: sil.impDl, kn: 0, gf: 0, ff: 1, flare: 0, tren: 0, rozp: 0, pasek: 0, pasT: 0, zakK: 0, crop: 0, bok: 0, ram: 'brak', ramW: 0, rek: sil.sleeve ? 'dlugi' : 'brak', mank: false, kol: 'brak', kolW: 0, kop: false, falN: false, falR: false, marsz: false, sciag: false, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, bk: 'prosta', luzG: 4, luzT: 4, luzB: 4, fac: 'brak', extras: [] }) : state.p;
+    const p = sil.imported ? Object.assign({}, state.p, { gora: sil.strap ? 'bez' : 'ramiona', dl: sil.impDl, kn: 0, gf: 0, ff: 1, flare: 0, tren: 0, rozp: 0, pasek: 0, pasT: 0, zakK: 0, crop: 0, bok: 0, ram: 'brak', ramW: 0, rek: sil.sleeve ? 'dlugi' : 'brak', mank: false, kol: 'brak', kolW: 0, kop: false, falN: false, falR: false, marsz: false, sciag: false, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, bk: 'prosta', luzG: 4, luzT: 4, luzB: 4, fac: 'brak', extras: [] }) : sil.approxP || state.p; // przybliżona bryła wczytanego wykroju ma własne parametry, zmierzone z elementów
     if (g3.group) { g3.scene.remove(g3.group); g3.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
     const FG = figData(), fs = FG ? m.wzrost / FG.H : 0, headLen = FG ? (FG.H - FG.lv.neck) * fs : m.wzrost * 0.165;
     const grp = new T3.Group(), floor = -(m.wzrost - a.Dts - headLen); g3.floorY = floor;

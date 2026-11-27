@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.92.2', n: 102, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.93.0', n: 103, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -374,7 +374,7 @@
   function setView(v) {
     if (v === '3d' && state.style === 'import') {
       const d = model && model.d; // wczytany wykrój ma podgląd tylko jako zszyta tkanina na sylwetce
-      if (!d || !d.sewn) { say((d && d.sewErr) || 'Tego wykroju nie umiem jeszcze pokazać w 3D.', true); v = '2d'; }
+      if (!d || (!d.sewn && !d.approx)) { say((d && d.sewErr) || 'Tego wykroju nie umiem jeszcze pokazać w 3D.', true); v = '2d'; }
       else if (!state.figure) { state.figure = true; say('Włączyłam sylwetkę, bo wczytany wykrój układa się tylko na niej.'); }
     }
     state.view = v;
@@ -430,9 +430,10 @@
         if (pl && !pl.err) sw = { plan: pl.plan, used: pl.used, pieces: [], dl: pl.dl, hemC: pl.hemC, sleeve: null, gather: null, skip: pl.skip, strap: pl.strap ? { F: true, B: true, yMax: pl.plan.yMax } : null, byPlan: true };
         else if (pl && pl.err) sw = { err: (sw.err === 'plan' ? '' : sw.err + ' ') + pl.err }; else if (sw.err === 'plan') sw = { err: 'Po tej zmianie nie umiem zszyć wykroju według szwów z analizy.' };
       } impSewC = { k: sk, imp, sw }; }
-    const sw = impSewC.sw, sew3 = !sw.err ? (sw.byPlan ? ' Podgląd 3D jest zszyty według szwów z analizy' + (sw.strap ? ', na ramiączkach' : '') : ' Podgląd 3D pokazuje przód' + (sw.strap ? (sw.strap.F && sw.strap.B ? ' i tył na ramiączkach' : ' i tył z górną krawędzią przytrzymaną na miejscu') : ', tył') + (sw.kim ? ' razem z rękawami' : sw.sleeve ? ' i rękawy' + (sw.gather ? ' zmarszczone do długości mankietu' : '') : '') + '') + (sw.used && sw.used.length ? '. Zszyte elementy: ' + sw.used.map((x) => x.toLowerCase()).join(', ') : '') + (sw.skip.length ? '; bez elementów: ' + sw.skip.join(', ').toLowerCase() : '') + '.' : '';
+    const sw = impSewC.sw; let ap = null; if (sw.err) { try { ap = impApprox(imp, m, pcs); } catch (e) { ap = null; } } // elementów nie da się zszyć: podgląd pokaże przybliżoną bryłę zamiast odmowy
+    const sew3 = ap ? ' Elementów nie udało się zszyć, więc podgląd 3D pokazuje przybliżoną bryłę: długość od talii ' + ap.dl + ' cm, obwód dołu ' + ap.hemC + ' cm.' : !sw.err ? (sw.byPlan ? ' Podgląd 3D jest zszyty według szwów z analizy' + (sw.strap ? ', na ramiączkach' : '') : ' Podgląd 3D pokazuje przód' + (sw.strap ? (sw.strap.F && sw.strap.B ? ' i tył na ramiączkach' : ' i tył z górną krawędzią przytrzymaną na miejscu') : ', tył') + (sw.kim ? ' razem z rękawami' : sw.sleeve ? ' i rękawy' + (sw.gather ? ' zmarszczone do długości mankietu' : '') : '') + '') + (sw.used && sw.used.length ? '. Zszyte elementy: ' + sw.used.map((x) => x.toLowerCase()).join(', ') : '') + (sw.skip.length ? '; bez elementów: ' + sw.skip.join(', ').toLowerCase() : '') + '.' : '';
     return { pieces: pcs, sewn: sw.err ? null : { pieces: sw.pieces, plan: sw.plan || null }, sewErr: sw.err || '', info: { rows: [], darts: [], cut: pcs.map((q) => [q.name, q.cut ? q.cut.replace(/^wytnij /, '') : 'według oryginału']), warn: 'Wykrój wczytany z pliku, rozmiar ' + (imp.size || 'jedyny') + '. ' + saT + fit + sew3 },
-      sil: sw.err ? { top: 'import', lower: 'none', hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 } : { top: 'dress', lower: 'straight', imported: true, impDl: sw.dl, frac: 0, hemC: sw.hemC, a: W.full(m), neckGap: 99, lowerArm: 0, sleeve: sw.sleeve, kim: sw.kim || null, strap: sw.strap || null, gather: sw.gather, seams: { side: true } }, title: (imp.name || 'Wykrój z pliku') + (imp.size ? ' · ' + imp.size : ''), notions: an && an.pasm ? an.pasm.map((x) => [x, '']) : [], bases: {}, imported: true };
+      approx: !!ap, sil: ap ? ap.sil : sw.err ? { top: 'import', lower: 'none', hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 } : { top: 'dress', lower: 'straight', imported: true, impDl: sw.dl, frac: 0, hemC: sw.hemC, a: W.full(m), neckGap: 99, lowerArm: 0, sleeve: sw.sleeve, kim: sw.kim || null, strap: sw.strap || null, gather: sw.gather, seams: { side: true } }, title: (imp.name || 'Wykrój z pliku') + (imp.size ? ' · ' + imp.size : ''), notions: an && an.pasm ? an.pasm.map((x) => [x, '']) : [], bases: {}, imported: true };
   }
   // nowy projekt zaczyna od pustego manekina: fason wybiera się dopiero w panelu
   function emptyDraft(m) { return { pieces: [], info: { rows: [], darts: [], cut: [], warn: '' }, sil: { top: 'waist', lower: 'none', empty: true, hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: 'bez fasonu', notions: [], bases: {}, empty: true }; }
@@ -501,7 +502,7 @@
     try { model = compute(); } catch (e) { say('Z tych wymiarów nie da się zbudować wykroju. Sprawdź wpisane wartości.'); return; }
     const { d, lay, tl } = model;
     $('emptyN').hidden = !d.empty || !$('home').hidden || !!state.ref; cardUi();
-    if (state.view === '3d' && d.imported && !d.sewn) { say(d.sewErr || 'Tego wykroju nie umiem pokazać w 3D.', true); setView('2d'); return; } // po zmianie ustawień wykrój przestał się zszywać: zamiast przypadkowej bryły wraca rysunek
+    if (state.view === '3d' && d.imported && !d.sewn && !d.approx) { say(d.sewErr || 'Tego wykroju nie umiem pokazać w 3D.', true); setView('2d'); return; } // po zmianie ustawień wykrój przestał się zszywać: zamiast przypadkowej bryły wraca rysunek
     { const mb = $('miniS').closest('.float') || $('miniS').parentElement; if (mb) mb.style.display = d.empty ? 'none' : ''; }
     $('sub').textContent = (projCur().name || 'Bez nazwy') + ' · ' + d.title + ' · ' + (cur().name || 'Bez imienia');
     if (state.view === '3d') {
@@ -835,7 +836,7 @@
     if (!init3d()) { say('Podgląd 3D nie działa w tym widoku (brak WebGL).', true); return; }
     const m = cur(), sil = model.d.sil, a = W.full(m), body = bodyFn(m, a), TAU = Math.PI * 2;
     // wczytany wykrój nie ma parametrów fasonu: podgląd dostaje obojętne wartości i długość odczytaną z elementów
-    const p = sil.imported ? Object.assign({}, state.p, { gora: sil.strap ? 'bez' : 'ramiona', dl: sil.impDl, kn: 0, gf: 0, ff: 1, flare: 0, tren: 0, rozp: 0, pasek: 0, pasT: 0, zakK: 0, crop: 0, bok: 0, ram: 'brak', ramW: 0, rek: sil.sleeve ? 'dlugi' : 'brak', mank: false, kol: 'brak', kolW: 0, kop: false, falN: false, falR: false, marsz: false, sciag: false, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, bk: 'prosta', luzG: 4, luzT: 4, luzB: 4, fac: 'brak', extras: [] }) : state.p;
+    const p = sil.imported ? Object.assign({}, state.p, { gora: sil.strap ? 'bez' : 'ramiona', dl: sil.impDl, kn: 0, gf: 0, ff: 1, flare: 0, tren: 0, rozp: 0, pasek: 0, pasT: 0, zakK: 0, crop: 0, bok: 0, ram: 'brak', ramW: 0, rek: sil.sleeve ? 'dlugi' : 'brak', mank: false, kol: 'brak', kolW: 0, kop: false, falN: false, falR: false, marsz: false, sciag: false, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, bk: 'prosta', luzG: 4, luzT: 4, luzB: 4, fac: 'brak', extras: [] }) : sil.approxP || state.p; // przybliżona bryła wczytanego wykroju ma własne parametry, zmierzone z elementów
     if (g3.group) { g3.scene.remove(g3.group); g3.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
     const FG = figData(), fs = FG ? m.wzrost / FG.H : 0, headLen = FG ? (FG.H - FG.lv.neck) * fs : m.wzrost * 0.165;
     const grp = new T3.Group(), floor = -(m.wzrost - a.Dts - headLen); g3.floorY = floor;
@@ -2505,6 +2506,48 @@
   // punkt na łamanej w ułamku jej długości
   function ptOn(pts, f) { const L = swLen(pts); let acc = 0; for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (acc + d >= f * L - 1e-9) { const t = (f * L - acc) / (d || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; } acc += d; } return pts[pts.length - 1]; }
   if (TEST) window.__pl = { plEdges, plAll, impPlan, plHalve, plUnfold }; // tylko do testów
+  // ---------- przybliżona bryła wczytanego wykroju ----------
+  // Gdy elementów nie da się zszyć, podgląd 3D nie odmawia: pokazuje bryłę o długości, obwodzie dołu, górze i rękawach zmierzonych z elementów wykroju.
+  // Obrys elementu traktuję jak wycinek pierścienia: pole i obwód dają dwie liczby, długość i średnią szerokość (dla prostokąta to jego boki).
+  function apxShape(pc) {
+    const cut = (pc.prims || []).filter((q) => q.t === 'poly' && q.s === 'cut' && q.pts.length > 3), ring = cut.reduce((b, q) => (q.pts.length > b.length ? q.pts : b), []);
+    if (ring.length < 4) return { A: pc.w * pc.h, a: Math.max(pc.w, pc.h), b: Math.min(pc.w, pc.h), ring: [] };
+    let A = 0, P = 0; for (let i = 0; i < ring.length; i++) { const p = ring[i], q = ring[(i + 1) % ring.length]; A += p[0] * q[1] - q[0] * p[1]; P += Math.hypot(q[0] - p[0], q[1] - p[1]); }
+    A = Math.abs(A) / 2; const h = P / 2, disc = Math.max(0, h * h - 4 * A), a = (h + Math.sqrt(disc)) / 2, b = A / Math.max(1, a);
+    return { A, a, b, ring };
+  }
+  // ile szerokości elementu trafia do ubrania: liczba sztuk, a element krojony ze złożenia albo odbijany liczy się podwójnie
+  const apxCopies = (pc) => { const c = String(pc.cut || ''), n = /(\d+)\s*×/.exec(c); return Math.max(1, Math.min(8, n ? +n[1] : 1)) * (/złożenia|odbijając/.test(c) ? 2 : 1); };
+  function impApprox(imp, m, pcs) {
+    const an = imp.an || {}, typ = an.typ || ''; if (typ === 'spodnie') return null;
+    const a = W.full(m), Tw = m.ot + 2, major = pcs.filter((q) => Math.hypot(q.w, q.h) > 25); if (!major.length) return null;
+    const minor = (q) => q.role === 'mankiet' || /odszyc|facing|podszew|lining|pasek|strap|rami[aą]cz|kiesze|pocket|mankiet|cuff|ko[lł]nierz|collar|lam[oó]wk|binding|szlufk|wi[aą]zani|troczk/i.test(q.name);
+    const isSl = (q) => q.role === 'rekaw' || /r[eę]kaw|sleeve/i.test(q.name), isSk = (q) => /sp[oó]dnic|skirt|panel|klin|godet|falban|tren|(^|\s)d[oó][lł](\s|$)/i.test(q.name);
+    const body = major.filter((q) => !minor(q) && !isSl(q)), up = (q) => Math.max(q.h, q.w * 0.6 > q.h ? q.w : 0);
+    let skirt = body.filter((q) => typ === 'spodnica' || isSk(q)); if (!skirt.length && typ === 'sukienka') skirt = body.filter((q) => q.role !== 'przod' && q.role !== 'tyl' && Math.max(q.w, q.h) > 60);
+    const strap = an.trzym === 'ramiaczka' || (!an.trzym && pcs.some((q) => /rami[aą]cz|strap/i.test(q.name))), bez = an.trzym === 'bez', topOff = strap || bez ? a.Dts - a.Gp + 4 : a.Dps;
+    const sl = pcs.filter(isSl).sort((x, y) => y.w * y.h - x.w * x.h)[0], rek = sl && !strap && !bez ? (Math.max(sl.w, sl.h) > 42 ? 'dlugi' : 'krotki') : 'brak';
+    let dl = 0, hemC = 0, how = '';
+    if (skirt.length) { // dół z osobnych elementów: długość i obwód z ich kształtu
+      let S = 0, LA = 0, AA = 0;
+      for (const q of skirt) { const s = apxShape(q), L = Math.max(20, Math.min(135, s.a > 135 || s.b >= 0.6 * s.a ? s.b : s.a)), n = apxCopies(q); S += (s.A / L) * n; LA += L * s.A * n; AA += s.A * n; }
+      dl = LA / AA; hemC = Math.max(m.ob + 4, Math.min(Tw + 4 * Math.PI * dl, 2 * S - Tw)); how = 'dol';
+    } else { // przód i tył w jednym kawałku: długość z wysokości przodu, obwód dołu z szerokości elementów przy dolnej krawędzi
+      const F = body.filter((q) => q.role === 'przod').sort((x, y) => up(y) - up(x))[0] || body.slice().sort((x, y) => up(y) - up(x))[0]; if (!F) return null;
+      const B = body.filter((q) => q.role === 'tyl').sort((x, y) => up(y) - up(x))[0];
+      const bottom = (q) => { const s = apxShape(q); if (!s.ring.length || q.w * 0.6 > q.h) return Math.min(q.w, q.h); let lo = 1e9, hi = -1e9; const y0 = q.box.y1 - 0.1 * q.h; for (const p of s.ring) if (p[1] > y0) { lo = Math.min(lo, p[0]); hi = Math.max(hi, p[0]); } const wd = hi - lo; return wd * (/złożenia|odbijając/.test(q.cut || '') || wd < 0.36 * m.ob ? 2 : 1); };
+      dl = Math.max(0, Math.min(0.62 * m.wzrost, up(F) - topOff - 2)); hemC = typ === 'spodnica' ? 2 * bottom(F) : bottom(F) + (B ? bottom(B) : bottom(F)); how = 'calosc';
+      if (typ === 'spodnica') dl = Math.max(20, Math.min(120, up(F) - 3));
+    }
+    const kind = typ === 'spodnica' ? 'sk' : typ === 'gorset' ? 'go' : typ === 'top' || typ === 'okrycie' || (typ !== 'sukienka' && dl < 30) ? 'to' : 'su';
+    if (kind === 'su' || kind === 'sk') dl = Math.max(25, dl);
+    const flare = (kind === 'su' || kind === 'sk') && hemC > (m.ob + 6) * 1.12, frac = flare ? Math.max(0.08, Math.min(2, (hemC - Tw) / (2 * Math.PI * dl))) : 0;
+    const style = kind === 'sk' ? (flare ? 'sk_kolo' : 'sk_prosta') : kind === 'go' ? 'go_nad' : kind === 'to' ? (strap ? 'to_ramiaczka' : 'to_klasyczny') : flare ? 'su_kolo' : 'su_dopasowana';
+    const P = Object.assign({}, DEF_P, { dl: Math.round(dl), tren: 0, crop: 0, dol: '', fac: 'brak', layers: null, extras: [] }, kind === 'su' ? { gora: strap || bez ? 'bez' : 'ramiona', ram: strap ? 'cienkie' : 'brak', rek } : kind === 'to' && !strap ? { rek } : {});
+    let d; try { d = W.draft(m, P, style); } catch (e) { d = null; } if (!d || !d.sil) return null;
+    const sil = Object.assign({}, d.sil, flare ? { frac, hemC, pleat: false } : {}, { approx: true, approxP: P, approxStyle: style });
+    return { sil, dl: Math.round(dl), hemC: Math.round(flare ? hemC : sil.hemC || hemC), how, skirt: skirt.map((q) => q.name) };
+  }
   // ---------- paleta poleceń (⌘K) ----------
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
   let cmdSel = 0, cmdItems = [];
@@ -2871,11 +2914,19 @@
     const e = $('seeN'); let t = '';
     if (g3 && state.view === '3d' && $('home').hidden) {
       const tp = g3.top && !g3.top.fail && (g3.top.ready || g3.top.prev) ? g3.top : null;
-      t = state.ref ? 'Oglądasz gotowy model 3D, bez dopasowania do wymiarów modelki.' : state.style === 'pusty' ? '' : tp ? (tp.bl === 'done' ? 'Oglądasz ubranie zszyte z elementów wykroju i ułożone w Blenderze.' : 'Oglądasz ubranie zszyte z elementów wykroju.') : 'Oglądasz bryłę policzoną z wymiarów.';
+      t = state.ref ? 'Oglądasz gotowy model 3D, bez dopasowania do wymiarów modelki.' : state.style === 'pusty' ? '' : model && model.d && model.d.approx ? 'Oglądasz przybliżoną bryłę policzoną z elementów wykroju, bez zszywania.' : tp ? (tp.bl === 'done' ? 'Oglądasz ubranie zszyte z elementów wykroju i ułożone w Blenderze.' : 'Oglądasz ubranie zszyte z elementów wykroju.') : 'Oglądasz bryłę policzoną z wymiarów.';
       if (t && BL.shown) t += ' Obraz jest dopracowany.';
     }
+    const d = model && model.d, why = d && d.approx && d.sewErr ? 'Elementy nie są zszyte. ' + String(d.sewErr).replace(/Tego fasonu nie umiem jeszcze pokazać w 3D/g, 'Nie umiem jeszcze zszyć tego fasonu').replace(/ Na razie działa układ przód, tył i rękaw z ramieniem i pachą\./, '') : '';
+    $('seeWhy').textContent = why; $('seeWhy').hidden = !why; $('seeCopyRow').hidden = !(state.style === 'import' && state.imp && state.imp.an);
     if (e.textContent !== t) e.textContent = t; e.hidden = !t; if (!t) { $('seeBox').hidden = true; e.setAttribute('aria-expanded', 'false'); }
   }
+  // dane analizy do schowka: to, co analiza zwróciła dla tego wykroju, i powód, dla którego elementy nie zostały zszyte
+  $('seeCopy').addEventListener('click', async () => {
+    const d = model && model.d, imp = state.imp; if (!imp) return;
+    const out = { wersja: BUILD.v, rozmiar: imp.size || '', szycie: d && d.sewn ? (d.sewn.plan ? 'plan' : 'kroj') : d && d.approx ? 'przyblizenie' : 'brak', powod: (d && d.sewErr) || '', analiza: imp.an || null, elementy: ((d && d.pieces) || []).map((q) => ({ nazwa: q.name, rola: q.role || '', ciecie: q.cut || '', w: Math.round(q.w), h: Math.round(q.h), x: Math.round(q.box.x0), y: Math.round(q.box.y0) })) };
+    try { await navigator.clipboard.writeText(JSON.stringify(out)); say('Dane analizy są w schowku.'); } catch (e) { say('Nie udało się skopiować danych do schowka.'); }
+  });
   $('seeN').addEventListener('click', () => { const b = $('seeBox'); b.hidden = !b.hidden; $('seeN').setAttribute('aria-expanded', String(!b.hidden)); });
   const blStat = (t) => { const e = $('blS'); if (e) e.textContent = t || ''; };
   function blNote() {

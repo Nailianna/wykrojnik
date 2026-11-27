@@ -113,7 +113,7 @@
   function setView(v) {
     if (v === '3d' && state.style === 'import') {
       const d = model && model.d; // wczytany wykrój ma podgląd tylko jako zszyta tkanina na sylwetce
-      if (!d || !d.sewn) { say((d && d.sewErr) || 'Tego wykroju nie umiem jeszcze pokazać w 3D.', true); v = '2d'; }
+      if (!d || (!d.sewn && !d.approx)) { say((d && d.sewErr) || 'Tego wykroju nie umiem jeszcze pokazać w 3D.', true); v = '2d'; }
       else if (!state.figure) { state.figure = true; say('Włączyłam sylwetkę, bo wczytany wykrój układa się tylko na niej.'); }
     }
     state.view = v;

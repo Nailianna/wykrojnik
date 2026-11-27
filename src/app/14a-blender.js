@@ -236,11 +236,19 @@
     const e = $('seeN'); let t = '';
     if (g3 && state.view === '3d' && $('home').hidden) {
       const tp = g3.top && !g3.top.fail && (g3.top.ready || g3.top.prev) ? g3.top : null;
-      t = state.ref ? 'Oglądasz gotowy model 3D, bez dopasowania do wymiarów modelki.' : state.style === 'pusty' ? '' : tp ? (tp.bl === 'done' ? 'Oglądasz ubranie zszyte z elementów wykroju i ułożone w Blenderze.' : 'Oglądasz ubranie zszyte z elementów wykroju.') : 'Oglądasz bryłę policzoną z wymiarów.';
+      t = state.ref ? 'Oglądasz gotowy model 3D, bez dopasowania do wymiarów modelki.' : state.style === 'pusty' ? '' : model && model.d && model.d.approx ? 'Oglądasz przybliżoną bryłę policzoną z elementów wykroju, bez zszywania.' : tp ? (tp.bl === 'done' ? 'Oglądasz ubranie zszyte z elementów wykroju i ułożone w Blenderze.' : 'Oglądasz ubranie zszyte z elementów wykroju.') : 'Oglądasz bryłę policzoną z wymiarów.';
       if (t && BL.shown) t += ' Obraz jest dopracowany.';
     }
+    const d = model && model.d, why = d && d.approx && d.sewErr ? 'Elementy nie są zszyte. ' + String(d.sewErr).replace(/Tego fasonu nie umiem jeszcze pokazać w 3D/g, 'Nie umiem jeszcze zszyć tego fasonu').replace(/ Na razie działa układ przód, tył i rękaw z ramieniem i pachą\./, '') : '';
+    $('seeWhy').textContent = why; $('seeWhy').hidden = !why; $('seeCopyRow').hidden = !(state.style === 'import' && state.imp && state.imp.an);
     if (e.textContent !== t) e.textContent = t; e.hidden = !t; if (!t) { $('seeBox').hidden = true; e.setAttribute('aria-expanded', 'false'); }
   }
+  // dane analizy do schowka: to, co analiza zwróciła dla tego wykroju, i powód, dla którego elementy nie zostały zszyte
+  $('seeCopy').addEventListener('click', async () => {
+    const d = model && model.d, imp = state.imp; if (!imp) return;
+    const out = { wersja: BUILD.v, rozmiar: imp.size || '', szycie: d && d.sewn ? (d.sewn.plan ? 'plan' : 'kroj') : d && d.approx ? 'przyblizenie' : 'brak', powod: (d && d.sewErr) || '', analiza: imp.an || null, elementy: ((d && d.pieces) || []).map((q) => ({ nazwa: q.name, rola: q.role || '', ciecie: q.cut || '', w: Math.round(q.w), h: Math.round(q.h), x: Math.round(q.box.x0), y: Math.round(q.box.y0) })) };
+    try { await navigator.clipboard.writeText(JSON.stringify(out)); say('Dane analizy są w schowku.'); } catch (e) { say('Nie udało się skopiować danych do schowka.'); }
+  });
   $('seeN').addEventListener('click', () => { const b = $('seeBox'); b.hidden = !b.hidden; $('seeN').setAttribute('aria-expanded', String(!b.hidden)); });
   const blStat = (t) => { const e = $('blS'); if (e) e.textContent = t || ''; };
   function blNote() {
