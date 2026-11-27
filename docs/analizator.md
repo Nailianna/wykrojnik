@@ -50,3 +50,9 @@ Aplikacja zapisuje wskazania jako punkty na arkuszu (środek krawędzi), numer e
 Szycie: elementy są składane na płasko wzdłuż szwów, zaczynając od przodu; najpierw te bliżej przodu w łańcuchu szwów, wstawki rozkładane ze złożenia na końcu. Arkusz jest owijany wokół sylwetki, a wstawki startują złożone, jako płetwy przy swoim szwie. Wynik przechodzi kontrolę obwodu i długości, a po ułożeniu także kontrolę naciągnięcia siatki (ostrzeżenie powyżej 30%).
 
 Jeszcze nieobsługiwane: elementy wszyte jedną krawędzią i wiszące luźno (skrzydła, treny, falbany), marszczenie do krótszej krawędzi w symulacji, dokrojone odszycia za linią zgięcia, rękawy wszywane w pachę w tej ścieżce (działają w rozpoznawaniu z kształtu).
+
+## Sylwetka z ilustracji (od wersji 0.94)
+
+Strona instrukcji z rysunkiem technicznym albo okładką zawsze trafia do analizy jako obraz. Analiza opisuje na jej podstawie gotowe ubranie w polu `sylwetka`: `gora` (dopasowana, luzna), `dekolt` (okragly, v, karo, lodka, serce, prosty), `dekolt_gleboki`, `rekaw` (brak, krotki, 34, dlugi, bufka), `talia` (odcieta, bez_odciecia, empire), `dol` (brak, prosty, trapez, polkole, kolo, rybka), `kopertowa`, `dlugosc` (biodra, mini, kolano, midi, maxi, ziemia), `rozciecie`.
+
+Podgląd 3D używa tego opisu jako bazy bryły, a wymiary zmierzone z elementów wykroju (długość, obwód dołu) ją doprecyzowują. Gdy elementów nie da się zszyć, ta bryła jest pokazywana zamiast odmowy (`src/app/12d-przyblizenie.js`).
