@@ -2,7 +2,7 @@
 
 Aplikacja do konstruowania wykrojów odzieży z wymiarów: spódnice, sukienki, topy, t-shirty i gorsety. Rysuje wykrój, sprawdza go z wymiarami modelki, pokazuje podgląd 3D na sylwetce i drukuje na kartkach A4 w skali 100%.
 
-Wersja 0.98.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
+Wersja 0.98.1. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
 
 ## Uruchomienie
 

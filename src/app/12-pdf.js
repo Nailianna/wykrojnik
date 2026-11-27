@@ -52,10 +52,18 @@
     persist(true); const name = 'wykrojnik-kopia-' + new Date().toISOString().slice(0, 10) + '.json';
     saveFile(name, new TextEncoder().encode(JSON.stringify(state)), 'application/json', false, 'Kopia zapisana w Dokumenty/Wykrojnik/' + name + '.', 'Kopia pobrana.');
   });
+  // kopia zapasowa zastępuje wszystko, więc najpierw pokazuję zakres i pytam, a stan sprzed wczytania da się przywrócić
+  let bkNew = '', bkPrev = '';
+  const bkApply = (raw, msg) => { let ok = false; try { ok = adopt(raw); } catch (e) { ok = false; } if (!ok) { say('To nie jest plik kopii Wykrojnika.'); return false; } ensureProjects(); loadSnap(projCur().snap); histReset(); fillForm(); layoutUi(); persist(true); draw(true); say(msg, true); return true; };
   $('bkIn').addEventListener('change', async () => {
-    const f = $('bkIn').files[0]; $('bkIn').value = ''; if (!f) return;
-    let ok = false; try { ok = adopt(await f.text()); } catch (e) {}
-    if (!ok) { say('To nie jest plik kopii Wykrojnika.'); return; }
-    ensureProjects(); loadSnap(projCur().snap); histReset(); fillForm(); layoutUi(); persist(true); draw(true); say('Wczytałam projekty i modelki z kopii.');
+    const f = $('bkIn').files[0]; $('bkIn').value = ''; if (!f) return; let s = null, raw = '';
+    try { raw = await f.text(); s = JSON.parse(raw); } catch (e) { s = null; }
+    if (!s || !Array.isArray(s.profiles) || !s.profiles.length || !s.p) { say('To nie jest plik kopii Wykrojnika.'); return; }
+    const np = (s.projects || []).length, lost = state.projects.filter((q) => !(s.projects || []).some((x) => x.id === q.id)).map((q) => q.name);
+    bkNew = raw; $('bkAskT').textContent = 'Kopia „' + f.name + '” ma projektów: ' + np + ', modelek: ' + s.profiles.length + '. Zastąpi wszystko, co jest teraz w Wykrojniku (projektów: ' + state.projects.length + ', modelek: ' + state.profiles.length + ').' + (lost.length ? ' Tych projektów nie ma w kopii i znikną: ' + lost.join(', ') + '.' : ''); $('bkAsk').hidden = false; $('bkUndo').hidden = true;
   });
+  $('bkNo').addEventListener('click', () => { bkNew = ''; $('bkAsk').hidden = true; });
+  $('bkYes').addEventListener('click', () => { $('bkAsk').hidden = true; if (!bkNew) return; persist(true); const before = JSON.stringify(state); if (bkApply(bkNew, 'Wczytałam projekty i modelki z kopii. Poprzedni stan możesz przywrócić w panelu Projekty, dopóki nie zamkniesz Wykrojnika.')) { bkPrev = before; $('bkUndo').hidden = false; } bkNew = ''; });
+  $('bkUndo').addEventListener('click', () => { if (bkPrev && bkApply(bkPrev, 'Przywróciłam projekty i modelki sprzed wczytania kopii.')) { bkPrev = ''; $('bkUndo').hidden = true; } });
+  $('saveWarnB').addEventListener('click', () => $('bkOut').click());
 

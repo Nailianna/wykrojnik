@@ -105,9 +105,12 @@
   });
   $('delP').addEventListener('click', () => {
     const b = $('delP');
+    // modelka, z której korzystają inne projekty, zostaje: po jej usunięciu dostałyby cudze miary
+    const gone = cur(), used = state.projects.filter((q) => q.id !== state.proj && q.snap && q.snap.active === gone.id).map((q) => q.name);
+    if (used.length) { say('Z modelki „' + (gone.name || 'bez imienia') + '” korzystają też projekty: ' + used.join(', ') + '. Najpierw wybierz w nich inną modelkę albo je usuń.', true); return; }
     if (b.textContent === 'Usuń') { b.textContent = 'Na pewno?'; setTimeout(() => (b.textContent = 'Usuń'), 3000); return; }
-    state.profiles = state.profiles.filter((x) => x.id !== state.active); state.active = state.profiles[0].id;
-    fillForm(); persist(); draw(true);
+    state.profiles = state.profiles.filter((x) => x.id !== gone.id); state.active = state.profiles[0].id;
+    fillForm(); persist(); draw(true); say('Usunęłam modelkę „' + (gone.name || 'bez imienia') + '”. Ten projekt liczę teraz na wymiary modelki „' + (cur().name || 'bez imienia') + '”.', true);
   });
   function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(k === 'tiles'); }); $(id).setAttribute('aria-pressed', state[k]); }
   toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); $('tFig').addEventListener('click', () => { state.figure = !state.figure; $('tFig').setAttribute('aria-pressed', state.figure); persist(); draw(true); }); $('tFig').setAttribute('aria-pressed', state.figure);

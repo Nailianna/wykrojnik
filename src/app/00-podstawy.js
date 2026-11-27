@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.98.0', n: 110, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.98.1', n: 111, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -81,13 +81,17 @@
   let uiReady = false; // przed startem nie zapisujemy, żeby nie nadpisać tego, co zostało po poprzedniej sesji
   function uiMark() { if (!uiReady) return; try { localStorage.setItem(UIK, JSON.stringify({ home: !$('home').hidden, t: Date.now() })); } catch (e) {} }
   function uiResume() { try { const u = JSON.parse(localStorage.getItem(UIK) || 'null'); return !!u && u.home === false && Date.now() - u.t < 30 * 60e3; } catch (e) { return false; } }
+  let saveBad = false;
+  function saveState(ok) { if (saveBad === !ok) return; saveBad = !ok; const w = document.getElementById('saveWarn'); if (w) w.hidden = ok; }
+  window.addEventListener('beforeunload', (e) => { if (saveBad) { e.preventDefault(); e.returnValue = ''; } });
   function persist(noHist) {
     const pr = projCur(); if (pr) { const ns = snap(), k = snapKey(ns); if (pr.key === undefined) pr.key = k; else if (pr.key !== k) { pr.key = k; pr.updated = Date.now(); } pr.snap = ns; }
     if (!noHist) histPush();
     const json = JSON.stringify(state);
-    try { localStorage.setItem(KEY, json); } catch (e) {}
+    let lsOk = true; try { localStorage.setItem(KEY, json); } catch (e) { lsOk = false; }
     uiMark(); if (pr && pr.thumbKey !== pr.key) shotPlan();
-    if (fileOk) { clearTimeout(saveT); saveT = setTimeout(() => desktop.fs.writeFile(FILE, json, 'utf8').catch(() => {}), 400); }
+    // zapis uznaję za udany dopiero wtedy, gdy przyjęło go trwałe miejsce: plik w Dokumentach albo pamięć przeglądarki
+    if (fileOk) { clearTimeout(saveT); saveT = setTimeout(() => desktop.fs.writeFile(FILE, json, 'utf8').then(() => saveState(true), () => saveState(lsOk)), 400); } else saveState(lsOk);
   }
   const GRP = { 'Spódnice': 'Spódnica: ', 'Sukienki': 'Sukienka: ', 'Gorsety': 'Gorset: ', 'Topy': 'Top: ' };
   const tabOf = (s) => (s.indexOf('su_') === 0 ? 'suk' : s.indexOf('sk_') === 0 ? 'doly' : 'gory'), ODC = ['su_polkole', 'su_kolo', 'su_2kola', 'su_zakl'];

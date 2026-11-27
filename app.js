@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.98.0', n: 110, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.98.1', n: 111, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -81,13 +81,17 @@
   let uiReady = false; // przed startem nie zapisujemy, żeby nie nadpisać tego, co zostało po poprzedniej sesji
   function uiMark() { if (!uiReady) return; try { localStorage.setItem(UIK, JSON.stringify({ home: !$('home').hidden, t: Date.now() })); } catch (e) {} }
   function uiResume() { try { const u = JSON.parse(localStorage.getItem(UIK) || 'null'); return !!u && u.home === false && Date.now() - u.t < 30 * 60e3; } catch (e) { return false; } }
+  let saveBad = false;
+  function saveState(ok) { if (saveBad === !ok) return; saveBad = !ok; const w = document.getElementById('saveWarn'); if (w) w.hidden = ok; }
+  window.addEventListener('beforeunload', (e) => { if (saveBad) { e.preventDefault(); e.returnValue = ''; } });
   function persist(noHist) {
     const pr = projCur(); if (pr) { const ns = snap(), k = snapKey(ns); if (pr.key === undefined) pr.key = k; else if (pr.key !== k) { pr.key = k; pr.updated = Date.now(); } pr.snap = ns; }
     if (!noHist) histPush();
     const json = JSON.stringify(state);
-    try { localStorage.setItem(KEY, json); } catch (e) {}
+    let lsOk = true; try { localStorage.setItem(KEY, json); } catch (e) { lsOk = false; }
     uiMark(); if (pr && pr.thumbKey !== pr.key) shotPlan();
-    if (fileOk) { clearTimeout(saveT); saveT = setTimeout(() => desktop.fs.writeFile(FILE, json, 'utf8').catch(() => {}), 400); }
+    // zapis uznaję za udany dopiero wtedy, gdy przyjęło go trwałe miejsce: plik w Dokumentach albo pamięć przeglądarki
+    if (fileOk) { clearTimeout(saveT); saveT = setTimeout(() => desktop.fs.writeFile(FILE, json, 'utf8').then(() => saveState(true), () => saveState(lsOk)), 400); } else saveState(lsOk);
   }
   const GRP = { 'Spódnice': 'Spódnica: ', 'Sukienki': 'Sukienka: ', 'Gorsety': 'Gorset: ', 'Topy': 'Top: ' };
   const tabOf = (s) => (s.indexOf('su_') === 0 ? 'suk' : s.indexOf('sk_') === 0 ? 'doly' : 'gory'), ODC = ['su_polkole', 'su_kolo', 'su_2kola', 'su_zakl'];
@@ -369,9 +373,12 @@
   });
   $('delP').addEventListener('click', () => {
     const b = $('delP');
+    // modelka, z której korzystają inne projekty, zostaje: po jej usunięciu dostałyby cudze miary
+    const gone = cur(), used = state.projects.filter((q) => q.id !== state.proj && q.snap && q.snap.active === gone.id).map((q) => q.name);
+    if (used.length) { say('Z modelki „' + (gone.name || 'bez imienia') + '” korzystają też projekty: ' + used.join(', ') + '. Najpierw wybierz w nich inną modelkę albo je usuń.', true); return; }
     if (b.textContent === 'Usuń') { b.textContent = 'Na pewno?'; setTimeout(() => (b.textContent = 'Usuń'), 3000); return; }
-    state.profiles = state.profiles.filter((x) => x.id !== state.active); state.active = state.profiles[0].id;
-    fillForm(); persist(); draw(true);
+    state.profiles = state.profiles.filter((x) => x.id !== gone.id); state.active = state.profiles[0].id;
+    fillForm(); persist(); draw(true); say('Usunęłam modelkę „' + (gone.name || 'bez imienia') + '”. Ten projekt liczę teraz na wymiary modelki „' + (cur().name || 'bez imienia') + '”.', true);
   });
   function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(k === 'tiles'); }); $(id).setAttribute('aria-pressed', state[k]); }
   toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); $('tFig').addEventListener('click', () => { state.figure = !state.figure; $('tFig').setAttribute('aria-pressed', state.figure); persist(); draw(true); }); $('tFig').setAttribute('aria-pressed', state.figure);
@@ -1794,12 +1801,20 @@
     persist(true); const name = 'wykrojnik-kopia-' + new Date().toISOString().slice(0, 10) + '.json';
     saveFile(name, new TextEncoder().encode(JSON.stringify(state)), 'application/json', false, 'Kopia zapisana w Dokumenty/Wykrojnik/' + name + '.', 'Kopia pobrana.');
   });
+  // kopia zapasowa zastępuje wszystko, więc najpierw pokazuję zakres i pytam, a stan sprzed wczytania da się przywrócić
+  let bkNew = '', bkPrev = '';
+  const bkApply = (raw, msg) => { let ok = false; try { ok = adopt(raw); } catch (e) { ok = false; } if (!ok) { say('To nie jest plik kopii Wykrojnika.'); return false; } ensureProjects(); loadSnap(projCur().snap); histReset(); fillForm(); layoutUi(); persist(true); draw(true); say(msg, true); return true; };
   $('bkIn').addEventListener('change', async () => {
-    const f = $('bkIn').files[0]; $('bkIn').value = ''; if (!f) return;
-    let ok = false; try { ok = adopt(await f.text()); } catch (e) {}
-    if (!ok) { say('To nie jest plik kopii Wykrojnika.'); return; }
-    ensureProjects(); loadSnap(projCur().snap); histReset(); fillForm(); layoutUi(); persist(true); draw(true); say('Wczytałam projekty i modelki z kopii.');
+    const f = $('bkIn').files[0]; $('bkIn').value = ''; if (!f) return; let s = null, raw = '';
+    try { raw = await f.text(); s = JSON.parse(raw); } catch (e) { s = null; }
+    if (!s || !Array.isArray(s.profiles) || !s.profiles.length || !s.p) { say('To nie jest plik kopii Wykrojnika.'); return; }
+    const np = (s.projects || []).length, lost = state.projects.filter((q) => !(s.projects || []).some((x) => x.id === q.id)).map((q) => q.name);
+    bkNew = raw; $('bkAskT').textContent = 'Kopia „' + f.name + '” ma projektów: ' + np + ', modelek: ' + s.profiles.length + '. Zastąpi wszystko, co jest teraz w Wykrojniku (projektów: ' + state.projects.length + ', modelek: ' + state.profiles.length + ').' + (lost.length ? ' Tych projektów nie ma w kopii i znikną: ' + lost.join(', ') + '.' : ''); $('bkAsk').hidden = false; $('bkUndo').hidden = true;
   });
+  $('bkNo').addEventListener('click', () => { bkNew = ''; $('bkAsk').hidden = true; });
+  $('bkYes').addEventListener('click', () => { $('bkAsk').hidden = true; if (!bkNew) return; persist(true); const before = JSON.stringify(state); if (bkApply(bkNew, 'Wczytałam projekty i modelki z kopii. Poprzedni stan możesz przywrócić w panelu Projekty, dopóki nie zamkniesz Wykrojnika.')) { bkPrev = before; $('bkUndo').hidden = false; } bkNew = ''; });
+  $('bkUndo').addEventListener('click', () => { if (bkPrev && bkApply(bkPrev, 'Przywróciłam projekty i modelki sprzed wczytania kopii.')) { bkPrev = ''; $('bkUndo').hidden = true; } });
+  $('saveWarnB').addEventListener('click', () => $('bkOut').click());
 
   // ---------- analizator wykrojów PDF ----------
   // Kod czyta z pliku linie, warstwy i napisy; Claude opisuje ich znaczenie (nazwy elementów, ile wyciąć, nitka, zapas, tabela rozmiarów).

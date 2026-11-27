@@ -144,6 +144,7 @@ h3:first-child{margin-top:6px}
 .gal svg{width:100%;height:100%}
 .gal svg path{fill:var(--surface);stroke:var(--ink);stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .gal .nm{display:block;padding:6px 4px 2px;font-size:13px;line-height:1.25}
+#saveWarn{position:fixed;left:50%;top:58px;transform:translateX(-50%);z-index:30;display:flex;gap:12px;align-items:center;padding:10px 14px;border-radius:14px;background:#5a1f1f;color:#fff;font-size:13.5px;box-shadow:0 8px 30px rgba(0,0,0,.35)}#saveWarn[hidden]{display:none}#saveWarn button{background:#fff;color:#5a1f1f;padding:6px 12px;border-radius:10px;font-weight:600}
 .gal .galH{grid-column:1/-1;margin:14px 0 0;font-size:12.5px;color:var(--mute)}
 .gal button[aria-pressed="true"] .nm{color:var(--accent);font-weight:600}
 
@@ -428,6 +429,7 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
     <div class="row" style="margin-top:10px;max-width:520px"><button class="primary" id="libPGo">Połącz w sukienkę</button></div></div>
   <div id="libList"></div>
 </div></div></div>
+<div id="saveWarn" role="alert" hidden><span>Nie udało się zapisać zmian. Pobierz kopię, żeby ich nie stracić po zamknięciu.</span><button id="saveWarnB">Pobierz kopię</button></div>
 <div id="busy" role="status" aria-live="polite" hidden><i></i><span id="busyTx"></span><b id="busyTm"></b></div>
 <div id="emptyN" hidden style="position:fixed;left:50%;bottom:86px;transform:translateX(-50%);z-index:4;padding:10px 16px;border-radius:12px;background:var(--glass);border:1px solid var(--line);font-size:13.5px;pointer-events:none">Wybierz fason w panelu, a ubiorę w niego manekin.</div>
 <div id="home" hidden><div class="hwrap">
@@ -472,6 +474,8 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
         <label class="f" style="grid-template-columns:70px 1fr;margin-top:16px"><span>Nazwa</span><input id="prName" maxlength="60"></label>
         <h3>Kopia zapasowa</h3>
         <div class="row"><button id="bkOut">Zapisz do pliku</button><label class="up" style="margin:0"><input id="bkIn" type="file" accept=".json,application/json" hidden>Wczytaj z pliku</label></div>
+        <div id="bkAsk" hidden><p class="warn" id="bkAskT" style="margin:10px 0 8px"></p><div class="row"><button id="bkYes">Zastąp kopią</button><button id="bkNo">Zostaw, jak jest</button></div></div>
+        <div class="row"><button id="bkUndo" hidden>Przywróć stan sprzed wczytania kopii</button></div>
         <p class="note" id="store"></p>
         <div class="row" id="permRow" hidden><button id="permBtn">Włącz zapis w Dokumentach</button></div>
       </div>
