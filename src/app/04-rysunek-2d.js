@@ -9,7 +9,7 @@
     // zszyte elementy do podglądu 3D: liczone raz na wykrój i modelkę
     const sk = adjK + (imp.size || '') + '|' + pcs.length + '|' + (pcs[0] ? pcs[0].name + pcs[0].w : '') + '|' + [m.og, m.ot, m.ob, m.wzrost].join(',');
     if (!impSewC || impSewC.k !== sk || impSewC.imp !== imp) { let sw; if (planAx) sw = { err: 'plan' }; else try { sw = impSew(Object.assign({}, imp, { pieces: pcs }), m); } catch (e) { sw = { err: 'Nie umiem jeszcze zszyć tego fasonu.' }; }
-      if ((sw.err || window['__forcePlan']) && an && an.szwy && an.szwy.length) { // kształt nie pasuje do znanych krojów: szyję według szwów wskazanych przez analizę
+      if ((sw.err || (TEST && window['__forcePlan'])) && an && an.szwy && an.szwy.length) { // kształt nie pasuje do znanych krojów: szyję według szwów wskazanych przez analizę
         let pl = null; try { pl = impPlan(imp, m, impAdjC.r.fn); } catch (e) { pl = null; }
         if (pl && !pl.err) sw = { plan: pl.plan, used: pl.used, pieces: [], dl: pl.dl, hemC: pl.hemC, sleeve: null, gather: null, skip: pl.skip, strap: pl.strap ? { F: true, B: true, yMax: pl.plan.yMax } : null, byPlan: true };
         else if (pl && pl.err) sw = { err: (sw.err === 'plan' ? '' : sw.err + ' ') + pl.err }; else if (sw.err === 'plan') sw = { err: 'Po tej zmianie nie umiem zszyć wykroju według szwów z analizy.' };
@@ -24,7 +24,7 @@
   // czy ubranie jest szyte według planu z analizy (kroju nie da się rozpoznać z kształtu) i które elementy zmieniają wtedy długość; liczone na oryginalnych elementach, raz na wykrój i modelkę
   function impAxes(imp, m) {
     const k = [m.og, m.ot, m.ob, m.wzrost].join(','); if (impAxC && impAxC.pcs === imp.pieces && impAxC.an === imp.an && impAxC.k === k) return impAxC.ax;
-    let ax = null; if (imp.an && imp.an.szwy && imp.an.szwy.length) { let g; try { g = window['__forcePlan'] ? { err: 1 } : impSew(Object.assign({}, imp, { adj: null }), m); } catch (e) { g = { err: 1 }; } if (g.err) { let pl = null; try { pl = impPlan(Object.assign({}, imp, { adj: null }), m); } catch (e) { pl = null; } if (pl && !pl.err && pl.lenAx.length) ax = pl.lenAx; } }
+    let ax = null; if (imp.an && imp.an.szwy && imp.an.szwy.length) { let g; try { g = TEST && window['__forcePlan'] ? { err: 1 } : impSew(Object.assign({}, imp, { adj: null }), m); } catch (e) { g = { err: 1 }; } if (g.err) { let pl = null; try { pl = impPlan(Object.assign({}, imp, { adj: null }), m); } catch (e) { pl = null; } if (pl && !pl.err && pl.lenAx.length) ax = pl.lenAx; } }
     impAxC = { pcs: imp.pieces, an: imp.an, k, ax }; return ax;
   }
   const impCache = {}; // pełne dane ostatnio wczytanych plików (wszystkie rozmiary), tylko na czas sesji

@@ -70,9 +70,10 @@
   }
   function anKeyDrop() { anKeyMem = ''; anKeyState = ''; $('anKeyIn').value = ''; anKeyUi(''); anDocs(); }
   // jedno miejsce, przez które idzie każde pytanie do Claude; reszta analizatora nie wie, którą drogą
-  async function anLimit() { if (window.__anFake) return 8; if (!sampleFn) return anKey() ? 12 : 0; const l = await sampleFn.limits().catch(() => null); return l && l.images ? l.images.maxCount : 0; }
+  const anFake = () => (TEST && window.__anFake) || null;
+  async function anLimit() { if (anFake()) return 8; if (!sampleFn) return anKey() ? 12 : 0; const l = await sampleFn.limits().catch(() => null); return l && l.images ? l.images.maxCount : 0; }
   async function anAsk(prompt, blobs, signal) {
-    if (window.__anFake) return window.__anFake(prompt, blobs);
+    if (anFake()) return anFake()(prompt, blobs);
     if (!sampleFn) { if (!anKey()) throw { code: 'no_channel' }; return anApi(prompt, blobs, signal); }
     return sampleFn.json(prompt, { images: blobs, signal, modelTier: 'complex' });
   }
@@ -186,7 +187,7 @@
       row.append(anEl('span', x.name, 'anDn'), anEl('span', (x.n === 1 ? '1 strona' : x.n + ' str.') + (x.maxCm >= 55 ? ', duży format' : ''), 'anDi'), sel, rm); box.appendChild(row);
     });
     const sh = anSheetDoc(); $('anGo').disabled = !sh; $('anRaw').disabled = !sh; $('anKeyBox').hidden = !!sampleFn;
-    $('anStat').textContent = st.docs.length && !sh ? 'Wskaż na liście, który plik jest arkuszem wykroju.' : sh && !sampleFn && !anKey() && !window.__anFake ? AN_ERR.no_channel : '';
+    $('anStat').textContent = st.docs.length && !sh ? 'Wskaż na liście, który plik jest arkuszem wykroju.' : sh && !sampleFn && !anKey() && !anFake() ? AN_ERR.no_channel : '';
   }
   async function anAdd(files) {
     const st = anSt; if (!st || !files || !files.length) return; const bz = busyOn('Sprawdzam pliki.');
@@ -303,7 +304,7 @@
   $('anFiles').addEventListener('change', () => { const fs = Array.from($('anFiles').files); $('anFiles').value = ''; anAdd(fs); });
   { const dz = $('anDrop'); dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('over'); }); dz.addEventListener('dragleave', () => dz.classList.remove('over')); dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('over'); anAdd(e.dataTransfer ? e.dataTransfer.files : null); }); }
   // bez podłączonego klucza „Analizuj” otwiera formularz; wybrane pliki i ich role zostają, a analiza rusza dopiero po ponownym kliknięciu
-  $('anGo').addEventListener('click', () => { if (!sampleFn && !anKey() && !window.__anFake) { anKeyForm(); return; } anRun(); }); $('anRaw').addEventListener('click', anRaw); $('anStop').addEventListener('click', () => { if (anCtl) anCtl.abort(); });
+  $('anGo').addEventListener('click', () => { if (!sampleFn && !anKey() && !anFake()) { anKeyForm(); return; } anRun(); }); $('anRaw').addEventListener('click', anRaw); $('anStop').addEventListener('click', () => { if (anCtl) anCtl.abort(); });
   $('anSaveB').addEventListener('click', anSave); $('anX').addEventListener('click', anClose); $('anPrz').addEventListener('click', () => { anClose(); przOpen(); });
   $('anKeyOpen').addEventListener('click', anKeyForm); $('anKeyOff').addEventListener('click', anKeyDrop); $('anKeyGo').addEventListener('click', anKeyConnect);
   $('anKeyIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); anKeyConnect(); } });

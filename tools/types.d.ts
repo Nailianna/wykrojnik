@@ -48,6 +48,7 @@ interface Window {
   __sw?: any;
   __pl?: any;
   __bl?: any;
+  __wkTest?: any;
 }
 declare const claude: any;
 

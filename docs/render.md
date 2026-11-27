@@ -10,7 +10,9 @@ Wykrojnik pokazuje gotowy obraz z Blendera w tym samym miejscu, w którym jest p
 - `server/wykrojnik_render.py`: skrypt Blendera. Powstaje z `14a-blender.js` poleceniem `node tools/blender-skrypt.js`, więc aplikacja i serwer używają tego samego.
 - `functions/api/render/[[path]].js`: pośrednik na Cloudflare Pages. Strona woła `/api/render/...`, a adres i hasło usługi zostają w ustawieniach strony.
 
-Przeglądarka najpierw pyta `api/render/health`. Jeśli usługa odpowiada, używa jej. Jeśli nie, a Wykrojnik jest zainstalowany jako aplikacja na komputerze z Blenderem, używa lokalnego Blendera. W pozostałych przypadkach zostaje zwykły podgląd i powód w ustawieniach.
+Przeglądarka najpierw pyta `api/render/health`. Jeśli usługa odpowiada, używa jej. Jeśli nie, a Wykrojnik jest zainstalowany jako aplikacja na komputerze z Blenderem, używa lokalnego Blendera. W pozostałych przypadkach zostaje zwykły podgląd. Etykieta nad podglądem mówi, co widać (bryła z wymiarów, ubranie zszyte z elementów, ułożone w Blenderze albo gotowy model), a po kliknięciu pokazuje stan połączenia i powód niedostępności.
+
+Zmiana samego koloru albo połysku nie przesyła sceny od nowa: zadanie niesie listę materiałów, a Blender podmienia je na wczytanej geometrii.
 
 ## API
 
@@ -20,7 +22,7 @@ Każde żądanie niesie nagłówki `x-wk-client` (losowy identyfikator przegląd
 |---|---|
 | `GET /api/render/health` | czy usługa żyje |
 | `PUT /api/render/scenes/{sig}` | przesyła scenę GLB |
-| `POST /api/render/jobs` | `{kind:"render", key, geo, w, h, cam}` albo `{kind:"cloth", key, data}`; odpowiedź `{id, state}`, `{need:"scene"}` albo od razu `{state:"done", cached:true}` |
+| `POST /api/render/jobs` | `{kind:"render", key, geo, mats, w, h, cam}` albo `{kind:"cloth", key, data}`; odpowiedź `{id, state}`, `{need:"scene"}` albo od razu `{state:"done", cached:true}` |
 | `GET /api/render/jobs/{id}` | stan: `queued`, `starting`, `running`, `done`, `failed`, `cancelled`, liczba zadań przed nami |
 | `GET /api/render/jobs/{id}/result` | obraz PNG albo położenia węzłów tkaniny |
 | `DELETE /api/render/jobs/{id}` | anuluje zadanie |
@@ -49,3 +51,5 @@ Cloudflare Pages nie uruchomi Blendera, potrzebny jest osobny serwer. Bez karty 
 
 - `python3 tools/test-serwera.py`: kolejka, zapis, anulowanie, limit czasu, rozdzielenie użytkowników, na podstawionym Blenderze.
 - `node tools/test-funkcji.mjs`: funkcja pośrednicząca do Claude'a.
+
+Furtki do testów w aplikacji (podstawiona analiza, podstawiona aplikacja desktopowa, dostęp do stanu podglądu) działają tylko wtedy, gdy przed wczytaniem strony ustawiono `window.__wkTest = true`. Zwykła strona niczego takiego nie wystawia.

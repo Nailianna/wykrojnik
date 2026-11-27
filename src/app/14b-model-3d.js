@@ -35,7 +35,6 @@
   const refS2L = (x) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)), refL2S = (x) => (x <= 0.0031308 ? x * 12.92 : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
   // dodaje model do sceny; kolor projektu przebarwia wszystkie materiały z zachowaniem różnic między nimi (jaśniejszy szyfon zostaje jaśniejszy)
   function refAdd(grp, floor) {
-    const note = $('refN'); if (note) note.hidden = !state.ref;
     if (!state.ref) return null;
     if (REF.proj !== state.proj || !REF.parts) { if (REF.loading !== state.proj) { REF.loading = state.proj; const id = state.proj; refGet(id).then((b) => { if (state.proj !== id) return; if (!b) { say('Nie mam już pliku tego modelu 3D w tej przeglądarce. Wgraj go jeszcze raz.'); return; } const r = refParse(new Uint8Array(b)); Object.assign(REF, r, { proj: id }); render3d(true); }).catch(() => {}).then(() => { REF.loading = ''; }); } return null; }
     const tc = new T3.Color(state.color), tl = [refS2L(tc.r), refS2L(tc.g), refS2L(tc.b)], mats = new Map();

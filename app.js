@@ -1,13 +1,14 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.90.1', n: 98, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.91.0', n: 99, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
   const f1 = (v) => W.fmt(v, 1);
   const KEY = 'wykrojnik.v3', FILE = '~/Documents/Wykrojnik/wykrojnik.json';
   let desktop = null, downloads = null, fileOk = false;
+  const TEST = !!window['__wkTest']; // furtki do testów działają tylko wtedy, gdy strona została otwarta z tą flagą
 
   const FAB = {
     szyfon: { name: 'Szyfon, jedwab', st: 0.05, wt: 0.2 }, wiskoza: { name: 'Wiskoza, krepa', st: 0.2, wt: 0.55 }, dzersej: { name: 'Dżersej', st: 0.15, wt: 0.75 },
@@ -424,7 +425,7 @@
     // zszyte elementy do podglądu 3D: liczone raz na wykrój i modelkę
     const sk = adjK + (imp.size || '') + '|' + pcs.length + '|' + (pcs[0] ? pcs[0].name + pcs[0].w : '') + '|' + [m.og, m.ot, m.ob, m.wzrost].join(',');
     if (!impSewC || impSewC.k !== sk || impSewC.imp !== imp) { let sw; if (planAx) sw = { err: 'plan' }; else try { sw = impSew(Object.assign({}, imp, { pieces: pcs }), m); } catch (e) { sw = { err: 'Nie umiem jeszcze zszyć tego fasonu.' }; }
-      if ((sw.err || window['__forcePlan']) && an && an.szwy && an.szwy.length) { // kształt nie pasuje do znanych krojów: szyję według szwów wskazanych przez analizę
+      if ((sw.err || (TEST && window['__forcePlan'])) && an && an.szwy && an.szwy.length) { // kształt nie pasuje do znanych krojów: szyję według szwów wskazanych przez analizę
         let pl = null; try { pl = impPlan(imp, m, impAdjC.r.fn); } catch (e) { pl = null; }
         if (pl && !pl.err) sw = { plan: pl.plan, used: pl.used, pieces: [], dl: pl.dl, hemC: pl.hemC, sleeve: null, gather: null, skip: pl.skip, strap: pl.strap ? { F: true, B: true, yMax: pl.plan.yMax } : null, byPlan: true };
         else if (pl && pl.err) sw = { err: (sw.err === 'plan' ? '' : sw.err + ' ') + pl.err }; else if (sw.err === 'plan') sw = { err: 'Po tej zmianie nie umiem zszyć wykroju według szwów z analizy.' };
@@ -439,7 +440,7 @@
   // czy ubranie jest szyte według planu z analizy (kroju nie da się rozpoznać z kształtu) i które elementy zmieniają wtedy długość; liczone na oryginalnych elementach, raz na wykrój i modelkę
   function impAxes(imp, m) {
     const k = [m.og, m.ot, m.ob, m.wzrost].join(','); if (impAxC && impAxC.pcs === imp.pieces && impAxC.an === imp.an && impAxC.k === k) return impAxC.ax;
-    let ax = null; if (imp.an && imp.an.szwy && imp.an.szwy.length) { let g; try { g = window['__forcePlan'] ? { err: 1 } : impSew(Object.assign({}, imp, { adj: null }), m); } catch (e) { g = { err: 1 }; } if (g.err) { let pl = null; try { pl = impPlan(Object.assign({}, imp, { adj: null }), m); } catch (e) { pl = null; } if (pl && !pl.err && pl.lenAx.length) ax = pl.lenAx; } }
+    let ax = null; if (imp.an && imp.an.szwy && imp.an.szwy.length) { let g; try { g = TEST && window['__forcePlan'] ? { err: 1 } : impSew(Object.assign({}, imp, { adj: null }), m); } catch (e) { g = { err: 1 }; } if (g.err) { let pl = null; try { pl = impPlan(Object.assign({}, imp, { adj: null }), m); } catch (e) { pl = null; } if (pl && !pl.err && pl.lenAx.length) ax = pl.lenAx; } }
     impAxC = { pcs: imp.pieces, an: imp.an, k, ax }; return ax;
   }
   const impCache = {}; // pełne dane ostatnio wczytanych plików (wszystkie rozmiary), tylko na czas sesji
@@ -593,11 +594,13 @@
   const PT = { proj: 'Projekty', druk: 'Krojenie i druk', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Dopasowanie', modelka: 'Modelka' };
   function cardUi() { const none = state.style === 'pusty'; $('card').toggleAttribute('hidden', !state.card || none); $('cardBtn').toggleAttribute('hidden', state.card || none); }
   function layoutUi() {
+    const refOff = state.ref ? ['fason', 'wymiary', 'druk'] : []; if (refOff.includes(state.panel)) state.panel = '';
+    document.querySelectorAll('nav [data-panel]').forEach((b) => (/** @type {HTMLElement} */ (b).hidden = refOff.includes(/** @type {HTMLElement} */ (b).dataset.panel)));
     $('panel').toggleAttribute('hidden', !state.panel);
     if (state.panel && !PT[state.panel]) state.panel = 'druk'; // starsze zapisy: Warstwy i Zapasy na szwy są teraz w jednym panelu
     if (state.panel) { $('panelT').textContent = PT[state.panel]; document.querySelectorAll('[data-sec]').forEach((el) => (el.hidden = el.dataset.sec !== state.panel)); }
     document.querySelectorAll('nav [data-panel]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.panel === state.panel));
-    { const k = FLOW.indexOf(state.panel), nx = k >= 0 && k < FLOW.length - 1 ? FLOW[k + 1] : null; $('panelF').hidden = !nx; $('next').textContent = nx ? 'Dalej: ' + PT[nx].toLowerCase() : ''; $('next').dataset.to = nx || ''; }
+    { const fl = FLOW.filter((x) => !refOff.includes(x)), k = fl.indexOf(state.panel), nx = k >= 0 && k < fl.length - 1 ? fl[k + 1] : null; $('panelF').hidden = !nx; $('next').textContent = nx ? 'Dalej: ' + PT[nx].toLowerCase() : ''; $('next').dataset.to = nx || ''; }
     cardUi();
     const ins = insets(), gl0 = ins.l > 12 ? ins.l - 12 : 0, gr0 = ins.r > 12 ? ins.r - 12 : 0; $('gl').style.left = gl0 + 'px'; $('gl').style.width = 'calc(100% - ' + (gl0 + gr0) + 'px)';
     $('mini').style.left = ins.l + 'px';
@@ -1204,7 +1207,7 @@
             const eB = 0.5 + 0.25 * F.st, collide = (q, kind) => figCol(q, kind ? eB + 0.1 : eB, true);
             // tkanina: sztywność steruje oporem przy zginaniu (skala logarytmiczna jak w seamer-studio), dżersej jest rozciągliwy
             const bendC = Math.exp(Math.log(6e-5) + (Math.log(2e-7) - Math.log(6e-5)) * F.st), knit = state.fabric === 'dzersej';
-            const S = window.Cloth.sim(g, { selfContact: !window.__noSelf, init, pinPos, pinned, collide, hold: stl, holdSlack: 0.4, steps: 150, subSteps: 14, stretchCompliance: knit ? 4e-7 : 2e-8, compressCompliance: 4e-7, bendCompliance: bendC, friction: 0.4, damping: 0.03 });
+            const S = window.Cloth.sim(g, { selfContact: !(TEST && window['__noSelf']), init, pinPos, pinned, collide, hold: stl, holdSlack: 0.4, steps: 150, subSteps: 14, stretchCompliance: knit ? 4e-7 : 2e-8, compressCompliance: 4e-7, bendCompliance: bendC, friction: 0.4, damping: 0.03 });
             // lico na zewnątrz: orientacja trójkątów każdego elementu względem środka bryły, którą okrywa
             const X = S.X, cen = (pred) => { let cx = 0, cy = 0, cz2 = 0, c = 0; for (let i = 0; i < g.ns; i++) if (pred(g.meta[i])) { cx += X[i * 3]; cy += X[i * 3 + 1]; cz2 += X[i * 3 + 2]; c++; } return [cx / c, cy / c, cz2 / c]; };
             const cb = cen((mt) => mt.pk !== 'S');
@@ -1847,9 +1850,10 @@
   }
   function anKeyDrop() { anKeyMem = ''; anKeyState = ''; $('anKeyIn').value = ''; anKeyUi(''); anDocs(); }
   // jedno miejsce, przez które idzie każde pytanie do Claude; reszta analizatora nie wie, którą drogą
-  async function anLimit() { if (window.__anFake) return 8; if (!sampleFn) return anKey() ? 12 : 0; const l = await sampleFn.limits().catch(() => null); return l && l.images ? l.images.maxCount : 0; }
+  const anFake = () => (TEST && window.__anFake) || null;
+  async function anLimit() { if (anFake()) return 8; if (!sampleFn) return anKey() ? 12 : 0; const l = await sampleFn.limits().catch(() => null); return l && l.images ? l.images.maxCount : 0; }
   async function anAsk(prompt, blobs, signal) {
-    if (window.__anFake) return window.__anFake(prompt, blobs);
+    if (anFake()) return anFake()(prompt, blobs);
     if (!sampleFn) { if (!anKey()) throw { code: 'no_channel' }; return anApi(prompt, blobs, signal); }
     return sampleFn.json(prompt, { images: blobs, signal, modelTier: 'complex' });
   }
@@ -1963,7 +1967,7 @@
       row.append(anEl('span', x.name, 'anDn'), anEl('span', (x.n === 1 ? '1 strona' : x.n + ' str.') + (x.maxCm >= 55 ? ', duży format' : ''), 'anDi'), sel, rm); box.appendChild(row);
     });
     const sh = anSheetDoc(); $('anGo').disabled = !sh; $('anRaw').disabled = !sh; $('anKeyBox').hidden = !!sampleFn;
-    $('anStat').textContent = st.docs.length && !sh ? 'Wskaż na liście, który plik jest arkuszem wykroju.' : sh && !sampleFn && !anKey() && !window.__anFake ? AN_ERR.no_channel : '';
+    $('anStat').textContent = st.docs.length && !sh ? 'Wskaż na liście, który plik jest arkuszem wykroju.' : sh && !sampleFn && !anKey() && !anFake() ? AN_ERR.no_channel : '';
   }
   async function anAdd(files) {
     const st = anSt; if (!st || !files || !files.length) return; const bz = busyOn('Sprawdzam pliki.');
@@ -2080,7 +2084,7 @@
   $('anFiles').addEventListener('change', () => { const fs = Array.from($('anFiles').files); $('anFiles').value = ''; anAdd(fs); });
   { const dz = $('anDrop'); dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('over'); }); dz.addEventListener('dragleave', () => dz.classList.remove('over')); dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('over'); anAdd(e.dataTransfer ? e.dataTransfer.files : null); }); }
   // bez podłączonego klucza „Analizuj” otwiera formularz; wybrane pliki i ich role zostają, a analiza rusza dopiero po ponownym kliknięciu
-  $('anGo').addEventListener('click', () => { if (!sampleFn && !anKey() && !window.__anFake) { anKeyForm(); return; } anRun(); }); $('anRaw').addEventListener('click', anRaw); $('anStop').addEventListener('click', () => { if (anCtl) anCtl.abort(); });
+  $('anGo').addEventListener('click', () => { if (!sampleFn && !anKey() && !anFake()) { anKeyForm(); return; } anRun(); }); $('anRaw').addEventListener('click', anRaw); $('anStop').addEventListener('click', () => { if (anCtl) anCtl.abort(); });
   $('anSaveB').addEventListener('click', anSave); $('anX').addEventListener('click', anClose); $('anPrz').addEventListener('click', () => { anClose(); przOpen(); });
   $('anKeyOpen').addEventListener('click', anKeyForm); $('anKeyOff').addEventListener('click', anKeyDrop); $('anKeyGo').addEventListener('click', anKeyConnect);
   $('anKeyIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); anKeyConnect(); } });
@@ -2336,7 +2340,7 @@
     }
     out.pieces = res; return out;
   }
-  window.__sw = { impAdj, swAxis, impSew, swBodice, swSleeve, swCorners, swRing }; // tylko do testów
+  if (TEST) window.__sw = { impAdj, swAxis, impSew, swBodice, swSleeve, swCorners, swRing }; // tylko do testów
   // ---------- plan szycia wczytanego wykroju: szwy wskazane przez analizę zamiast zgadywania kroju z kształtu ----------
   // Każdy element dzieli się w narożnikach na krawędzie (a, b, c…). Analiza mówi, które krawędzie zszywa się ze sobą i która leży na środku przodu.
   // Elementy są potem składane na płasko wzdłuż szwów w jeden arkusz od środka przodu do środka tyłu, a ten arkusz owija się wokół sylwetki.
@@ -2487,7 +2491,7 @@
   }
   // punkt na łamanej w ułamku jej długości
   function ptOn(pts, f) { const L = swLen(pts); let acc = 0; for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (acc + d >= f * L - 1e-9) { const t = (f * L - acc) / (d || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; } acc += d; } return pts[pts.length - 1]; }
-  window.__pl = { plEdges, plAll, impPlan, plHalve, plUnfold }; // tylko do testów
+  if (TEST) window.__pl = { plEdges, plAll, impPlan, plHalve, plUnfold }; // tylko do testów
   // ---------- paleta poleceń (⌘K) ----------
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
   let cmdSel = 0, cmdItems = [];
@@ -2642,14 +2646,28 @@
     '    if bg: bg.inputs[0].default_value = (1, 1, 1, 1); bg.inputs[1].default_value = 0.4',
     '    sc.world = w',
     '    for o in list(bpy.data.objects): bpy.data.objects.remove(o, do_unlink=True)',
+    'def purge():',
+    '    for blk in (bpy.data.meshes, bpy.data.materials, bpy.data.images):',
+    '        for d in [d for d in blk if d.users == 0]: blk.remove(d)',
     'def load(job):',
     '    if st["geo"] == job["geo"]: return',
     '    for o in [o for o in bpy.data.objects if o.type == "MESH" or o.type == "EMPTY"]: bpy.data.objects.remove(o, do_unlink=True)',
-    '    bpy.ops.import_scene.gltf(filepath=job["glb"])',
+    '    purge(); bpy.ops.import_scene.gltf(filepath=job["glb"]); st["mats"] = {}',
+    '    for m in bpy.data.materials:',
+    '        if m.name.startswith("wk") and m.name[2:].split(".")[0].isdigit(): st["mats"][int(m.name[2:].split(".")[0])] = m',
     '    for o in bpy.data.objects:',
     '        if o.type == "MESH":',
     '            for p in o.data.polygons: p.use_smooth = True',
     '    st["geo"] = job["geo"]',
+    'def paint(job):',
+    '    for i, q in enumerate(job.get("mats") or []):',
+    '        m = st.get("mats", {}).get(i)',
+    '        b = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None) if m and m.node_tree else None',
+    '        if not b: continue',
+    '        col = b.inputs["Base Color"]; al = b.inputs["Alpha"]',
+    '        if not col.is_linked: col.default_value = (q["c"][0], q["c"][1], q["c"][2], 1.0)',
+    '        if not al.is_linked: al.default_value = q["a"]',
+    '        b.inputs["Roughness"].default_value = q["r"]; b.inputs["Metallic"].default_value = q["m"]',
     'def aim(o, loc, to):',
     '    o.location = loc; o.rotation_euler = (to - loc).to_track_quat("-Z", "Y").to_euler()',
     'def named(name, make):',
@@ -2676,7 +2694,7 @@
     '    import array',
     '    c = json.load(open(job["cloth"])); S = 0.01; sc = bpy.context.scene',
     '    for o in [o for o in bpy.data.objects if o.type == "MESH" or o.type == "EMPTY"]: bpy.data.objects.remove(o, do_unlink=True)',
-    '    st["geo"] = None',
+    '    st["geo"] = None; purge()',
     '    cv = lambda a, i: (a[i] * S, -a[i + 2] * S, a[i + 1] * S)',
     '    bp = c["body"]["pos"]; bi = c["body"]["idx"]',
     '    body = mk("wk_body", [cv(bp, i) for i in range(0, len(bp), 3)], [], [tuple(bi[i:i + 3]) for i in range(0, len(bi), 3)])',
@@ -2723,7 +2741,7 @@
     '        if job.get("quit"): break',
     '        if job.get("cloth"): cloth(job)',
     '        else:',
-    '            load(job); frame(job); bpy.context.scene.render.filepath = job["out"]; bpy.ops.render.render(write_still=True)',
+    '            load(job); paint(job); frame(job); bpy.context.scene.render.filepath = job["out"]; bpy.ops.render.render(write_still=True)',
     '        print("WK DONE %s" % jid, flush=True)',
     '    except Exception as e:',
     '        print("WK FAIL %s %s" % (jid, str(e).replace("\\n", " ")[:300]), flush=True)',
@@ -2734,7 +2752,7 @@
   function blGlb() {
     const meshes = []; g3.scene.updateMatrixWorld(true);
     g3.scene.traverse((o) => { if (!o.isMesh || !o.visible || !o.geometry || !o.geometry.attributes.position) return; const mt = Array.isArray(o.material) ? o.material[0] : o.material; if (!mt || mt.side === T3.BackSide || (mt.userData && mt.userData.helper)) return; for (let p = o.parent; p; p = p.parent) if (!p.visible) return; meshes.push([o, mt]); });
-    const chunks = [], views = [], acc = [], gm = [], mats = [], imgs = [], texs = [], nodes = []; let off = 0, sig = 2166136261;
+    const chunks = [], views = [], acc = [], gm = [], mats = [], look = [], imgs = [], texs = [], nodes = []; let off = 0, sig = 2166136261, ms = 2166136261;
     const push = (arr, target) => { const b = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength), pad = (4 - (b.byteLength % 4)) % 4; chunks.push(b); if (pad) chunks.push(new Uint8Array(pad)); views.push(Object.assign({ buffer: 0, byteOffset: off, byteLength: b.byteLength }, target ? { target } : {})); off += b.byteLength + pad; return views.length - 1; };
     const matIx = new Map(), texIx = new Map();
     for (const [o, mt] of meshes) {
@@ -2751,8 +2769,12 @@
       acc.push({ bufferView: push(idx, 34963), componentType: 5125, count: idx.length, type: 'SCALAR' }); const iAcc = acc.length - 1;
       if (!matIx.has(mt)) {
         const c = mt.color || { r: 0.8, g: 0.8, b: 0.8 }, lin = (x) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)), op = mt.transparent && !mt.alphaMap && mt.opacity < 1 ? mt.opacity : 1, pbr = { baseColorFactor: [lin(c.r), lin(c.g), lin(c.b), op], roughnessFactor: mt.roughness == null ? 0.8 : mt.roughness, metallicFactor: mt.metalness || 0 };
-        if (map && uv) { if (!texIx.has(map)) { let url = ''; try { const im = map.image, cv = im.toDataURL ? im : (() => { const q = document.createElement('canvas'); q.width = im.width; q.height = im.height; q.getContext('2d').drawImage(im, 0, 0); return q; })(); url = cv.toDataURL('image/png'); } catch (e) { url = ''; } if (url) { const bin = atob(url.split(',')[1]), by = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) by[i] = bin.charCodeAt(i); imgs.push({ bufferView: push(by), mimeType: 'image/png' }); texs.push({ source: imgs.length - 1, sampler: 0 }); texIx.set(map, texs.length - 1); sig ^= by.length; sig = Math.imul(sig, 16777619); } else texIx.set(map, -1); } if (texIx.get(map) >= 0) pbr.baseColorTexture = { index: texIx.get(map) }; }
-        mats.push(Object.assign({ name: (mt.userData && mt.userData.part) || '', pbrMetallicRoughness: pbr, doubleSided: op < 1 || mt.side === T3.DoubleSide }, op < 1 ? { alphaMode: 'BLEND' } : {})); sig ^= Math.round(op * 100) + Math.round((pbr.roughnessFactor || 0) * 1000) * 128; sig = Math.imul(sig, 16777619); matIx.set(mt, mats.length - 1); sig ^= Math.round(c.r * 255) + Math.round(c.g * 255) * 256 + Math.round(c.b * 255) * 65536; sig = Math.imul(sig, 16777619);
+        if (map && uv) { if (!texIx.has(map)) { let url = ''; try { const im = map.image, cv = im.toDataURL ? im : (() => { const q = document.createElement('canvas'); q.width = im.width; q.height = im.height; q.getContext('2d').drawImage(im, 0, 0); return q; })(); url = cv.toDataURL('image/png'); } catch (e) { url = ''; } if (url) { const bin = atob(url.split(',')[1]), by = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) by[i] = bin.charCodeAt(i); imgs.push({ bufferView: push(by), mimeType: 'image/png' }); texs.push({ source: imgs.length - 1, sampler: 0 }); texIx.set(map, texs.length - 1); for (let i = 0; i < by.length; i += 997) { sig ^= by[i] + (i & 255) * 256; sig = Math.imul(sig, 16777619); } sig ^= by.length; sig = Math.imul(sig, 16777619); } else texIx.set(map, -1); } if (texIx.get(map) >= 0) pbr.baseColorTexture = { index: texIx.get(map) }; }
+        // nazwa „wk<numer>” pozwala Blenderowi podmienić sam kolor i połysk bez wczytywania sceny od nowa; przezroczystość zmienia budowę sceny, więc liczy się do jej podpisu
+        mats.push(Object.assign({ name: 'wk' + mats.length, pbrMetallicRoughness: pbr, doubleSided: op < 1 || mt.side === T3.DoubleSide }, op < 1 ? { alphaMode: 'BLEND' } : {}, mt.userData && mt.userData.part ? { extras: { part: mt.userData.part } } : {})); matIx.set(mt, mats.length - 1);
+        look.push({ c: [+lin(c.r).toFixed(4), +lin(c.g).toFixed(4), +lin(c.b).toFixed(4)], a: +op.toFixed(3), r: +pbr.roughnessFactor.toFixed(3), m: +pbr.metallicFactor.toFixed(3) });
+        sig ^= op < 1 ? 7 : 3; sig = Math.imul(sig, 16777619);
+        for (const x of [c.r, c.g, c.b, op, pbr.roughnessFactor, pbr.metallicFactor]) { ms ^= Math.round(x * 1000) + 1; ms = Math.imul(ms, 16777619); }
       }
       gm.push({ primitives: [{ attributes: attr, indices: iAcc, material: matIx.get(mt) }] }); nodes.push({ mesh: gm.length - 1 }); sig ^= n; sig = Math.imul(sig, 16777619);
     }
@@ -2762,7 +2784,7 @@
     let js = new TextEncoder().encode(JSON.stringify(json)); const jp = (4 - (js.length % 4)) % 4; if (jp) { const t = new Uint8Array(js.length + jp).fill(32); t.set(js); js = t; }
     const total = 12 + 8 + js.length + 8 + off, out = new Uint8Array(total), dv = new DataView(out.buffer); dv.setUint32(0, 0x46546c67, true); dv.setUint32(4, 2, true); dv.setUint32(8, total, true); dv.setUint32(12, js.length, true); dv.setUint32(16, 0x4e4f534a, true); out.set(js, 20);
     let p = 20 + js.length; dv.setUint32(p, off, true); dv.setUint32(p + 4, 0x004e4942, true); p += 8; for (const c of chunks) { out.set(c, p); p += c.length; }
-    return { bytes: out, sig: (sig >>> 0).toString(36) + '-' + nodes.length };
+    return { bytes: out, sig: (sig >>> 0).toString(36) + '-' + nodes.length, msig: (ms >>> 0).toString(36), mats: look };
   }
   // ---------- usługa renderująca na serwerze: te same zadania przez API, bez Blendera na komputerze ----------
   const SRV = /** @type {any} */ ({ api: '', client: '', rj: null, cj: null, imgs: new Map(), tries: 0, last: 0, why: '' });
@@ -2775,7 +2797,7 @@
   }
   async function srvInit() {
     try { SRV.client = localStorage.getItem('wykrojnik.klient') || ''; if (!/^[A-Za-z0-9_-]{16,64}$/.test(SRV.client)) { const a = new Uint8Array(18); crypto.getRandomValues(a); SRV.client = Array.from(a, (x) => (x % 36).toString(36)).join(''); localStorage.setItem('wykrojnik.klient', SRV.client); } } catch (e) { SRV.client = 'sesja' + Math.random().toString(36).slice(2, 14) + Date.now().toString(36); }
-    let base = window['__wkRender'] || ''; try { base = base || localStorage.getItem('wykrojnik.render') || ''; } catch (e) { /* zostaje adres domyślny */ }
+    let base = (TEST && window['__wkRender']) || ''; try { base = base || localStorage.getItem('wykrojnik.render') || ''; } catch (e) { /* zostaje adres domyślny */ }
     SRV.api = (base || 'api/render').replace(/\/$/, ''); SRV.last = Date.now();
     try { const r = await fetch(SRV.api + '/health', { cache: 'no-store' }); if (!r.ok) { let m = ''; try { m = (await r.json()).error || ''; } catch (e) { m = ''; } throw new Error(m && r.status === 503 ? m + ' adresem' : 'Usługa renderująca odpowiedziała błędem ' + r.status + '.'); } const j = await r.json(); if (!j || !j.ok) throw new Error('Pod tym adresem nie ma usługi renderującej.'); BL.mode = 'server'; BL.on = true; BL.why = ''; blNote(); blTouch(); return true; }
     catch (e) { const m = String((e && e.message) || ''); SRV.why = / adresem$/.test(m) ? m.replace(/ adresem$/, '') : /odpowiedziała|adresem/.test(m) ? m : 'Usługa renderująca nie odpowiada.'; blNote(); return false; }
@@ -2795,7 +2817,7 @@
   function srvImg(key, u8) { if (key !== BL.want) return; const url = URL.createObjectURL(new Blob([u8], { type: 'image/png' })); SRV.imgs.set(key, url); if (SRV.imgs.size > 40) { const k = SRV.imgs.keys().next().value; URL.revokeObjectURL(SRV.imgs.get(k)); SRV.imgs.delete(k); } blPut(url, key); }
   async function srvRender(q) {
     if (SRV.imgs.has(q.key)) { BL.last = 'nic, obraz z zapisu'; blNote(); blPut(SRV.imgs.get(q.key), q.key); return; }
-    const p = g3.camera.position, job = JSON.stringify({ kind: 'render', key: q.key + '|' + q.w + 'x' + q.h, geo: q.glb.sig, w: q.w, h: q.h, cam: { pos: [p.x, p.y, p.z], target: [0, g3.mid, 0], fov: g3.camera.fov } });
+    const p = g3.camera.position, job = JSON.stringify({ kind: 'render', key: q.key + '|' + q.w + 'x' + q.h, geo: q.glb.sig, mats: q.glb.mats, w: q.w, h: q.h, cam: { pos: [p.x, p.y, p.z], target: [0, g3.mid, 0], fov: g3.camera.fov } });
     try {
       BL.why2 = ''; blStat('Dopracowywanie podglądu…'); let fresh = false;
       let r = await (await srvCall('POST', '/jobs', job, 'application/json')).json();
@@ -2818,12 +2840,23 @@
       BL.lastC = out.cached ? 'tkanina z zapisu' : 'tkanina ułożona w Blenderze'; BL.whyC = ''; if (g3 && g3.top === tp && state.view === '3d') render3d();
     } catch (e) { blStat(''); tp.bl = 'fail'; BL.whyC = 'Blender nie ułożył tkaniny (' + String((e && e.message) || e).slice(0, 140) + '). Widzisz ułożenie z podglądu.'; blNote(); }
   }
+  // etykieta przy podglądzie: skąd wziął się kształt, który widać, i czy obraz jest już dopracowany
+  function seeFill() {
+    const e = $('seeN'); let t = '';
+    if (g3 && state.view === '3d' && $('home').hidden) {
+      const tp = g3.top && !g3.top.fail && (g3.top.ready || g3.top.prev) ? g3.top : null;
+      t = state.ref ? 'Oglądasz gotowy model 3D, bez dopasowania do wymiarów modelki.' : state.style === 'pusty' ? '' : tp ? (tp.bl === 'done' ? 'Oglądasz ubranie zszyte z elementów wykroju i ułożone w Blenderze.' : 'Oglądasz ubranie zszyte z elementów wykroju.') : 'Oglądasz bryłę policzoną z wymiarów.';
+      if (t && BL.shown) t += ' Obraz jest dopracowany.';
+    }
+    if (e.textContent !== t) e.textContent = t; e.hidden = !t; if (!t) { $('seeBox').hidden = true; e.setAttribute('aria-expanded', 'false'); }
+  }
+  $('seeN').addEventListener('click', () => { const b = $('seeBox'); b.hidden = !b.hidden; $('seeN').setAttribute('aria-expanded', String(!b.hidden)); });
   const blStat = (t) => { const e = $('blS'); if (e) e.textContent = t || ''; };
   function blNote() {
     const e = $('blStat'); if (!e) return; const inApp = !!(desktop && desktop.childProcess);
     const more = (BL.whyC ? ' ' + BL.whyC : '') + (BL.why2 ? ' ' + BL.why2 : BL.last ? ' Ostatnio przeliczone: ' + BL.last + '.' : '');
     if (BL.mode === 'server' && BL.on) { e.textContent = 'Render wysokiej jakości jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' + more; $('blPathRow').hidden = true; return; }
-    e.textContent = !inApp ? 'Render wysokiej jakości jest teraz niedostępny, więc widzisz zwykły podgląd. ' + (SRV.why || 'Sprawdzam usługę renderującą…') : BL.on ? 'Blender jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' + (BL.whyC ? ' ' + BL.whyC : '') + (BL.why2 ? ' ' + BL.why2 : BL.last ? ' Ostatnio przeliczone: ' + BL.last + '.' : '') : BL.why || (fileOk ? 'Szukam Blendera…' : 'Usługa renderująca nie odpowiada. Blender z tego komputera wymaga zgody na pliki, którą włączysz wyżej.');
+    e.textContent = !inApp ? 'Render wysokiej jakości jest teraz niedostępny, więc widzisz zwykły podgląd. ' + (SRV.why || 'Sprawdzam usługę renderującą…') : BL.on ? 'Blender jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' + (BL.whyC ? ' ' + BL.whyC : '') + (BL.why2 ? ' ' + BL.why2 : BL.last ? ' Ostatnio przeliczone: ' + BL.last + '.' : '') : BL.why || (fileOk ? 'Szukam Blendera…' : 'Usługa renderująca nie odpowiada. Blender z tego komputera wymaga zgody na pliki, którą włączysz w panelu Projekty.');
     $('blPathRow').hidden = !inApp || BL.on || !BL.why;
   }
   async function blInit(custom) {
@@ -2907,10 +2940,11 @@
     try { const b64 = await desktop.fs.readFile(file, 'base64'); blPut('data:image/png;base64,' + b64, key); }
     catch (e) { blStat(''); }
   }
-  function blPut(src, key) { if (key !== BL.want) return; const im = $('blImg'); im.onload = () => { if (key !== BL.want) return; const cs = g3.canvas.style; im.style.left = cs.left || '0'; im.style.top = '0'; im.style.width = cs.width || '100%'; im.style.height = '100%'; im.hidden = false; g3.canvas.style.opacity = '0'; BL.shown = key; blStat(''); }; im.src = src; }
-  function blHide() { const im = $('blImg'); if (im && !im.hidden) { im.hidden = true; } if (g3 && g3.canvas) g3.canvas.style.opacity = ''; BL.shown = ''; }
+  function blPut(src, key) { if (key !== BL.want) return; const im = $('blImg'); im.onload = () => { if (key !== BL.want) return; const cs = g3.canvas.style; im.style.left = cs.left || '0'; im.style.top = '0'; im.style.width = cs.width || '100%'; im.style.height = '100%'; im.hidden = false; g3.canvas.style.opacity = '0'; BL.shown = key; blStat(''); seeFill(); }; im.src = src; }
+  function blHide() { const im = $('blImg'); if (im && !im.hidden) { im.hidden = true; } if (g3 && g3.canvas) g3.canvas.style.opacity = ''; BL.shown = ''; seeFill(); }
   // wywoływane po każdym odświeżeniu podglądu: chowa gotowy obraz, gdy widok się zmienił, i zamawia nowy po sekundzie spokoju
   function blTouch() {
+    seeFill();
     if (BL.mode !== 'server' && BL.cur && BL.cur.tp && (!g3 || g3.top !== BL.cur.tp)) { blKill(); blStat(''); } // inny projekt albo inne wymiary: stare układanie nie jest już potrzebne
     if (!BL.on && BL.mode !== 'local' && SRV.api && SRV.tries < 5 && Date.now() - SRV.last > 60000 && /^https?:/.test(location.protocol)) { SRV.tries++; srvInit(); } // usługa mogła być chwilowo niedostępna przy starcie
     if (!BL.on || !g3 || state.view !== '3d' || !$('home').hidden) { blHide(); clearTimeout(BL.t); BL.want = ''; return; }
@@ -2926,7 +2960,7 @@
     if (tp && tp.bl === 'run') { clearTimeout(BL.t); BL.t = setTimeout(() => blAsk(ck), 500); return; }
     let glb; try { glb = blGlb(); } catch (e) { glb = null; } if (!glb) return;
     const r = g3.canvas.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1), sc = Math.min(1, 2000 / (Math.max(r.width, r.height) * dpr)), w = Math.round(r.width * dpr * sc), h = Math.round(r.height * dpr * sc);
-    const key = ck + '#' + glb.sig, file = BL.dir + '/' + blHash(key + '|' + w + 'x' + h) + '.png'; BL.want = key; BL.pend = { glb, key, file, w, h };
+    const key = ck + '#' + glb.sig + '.' + glb.msig, file = BL.dir + '/' + blHash(key + '|' + w + 'x' + h) + '.png'; BL.want = key; BL.pend = { glb, key, file, w, h };
     if (BL.mode === 'server') { srvRender(BL.pend); return; }
     if (await desktop.fs.exists(file).catch(() => false)) { BL.last = 'nic, obraz z zapisu'; blNote(); blShow(file, key); return; } // ten sam projekt i kadr: zapisany wynik
     BL.why2 = ''; blStat('Dopracowywanie podglądu…'); blGo();
@@ -2938,7 +2972,7 @@
       const fresh = BL.sent !== q.glb.sig; if (fresh) { await desktop.fs.writeFile(geoFile, q.glb.bytes); BL.sent = q.glb.sig; }
       if (q.key !== BL.want) { BL.busy = false; blPump(); return; }
       const p = g3.camera.position;
-      await blSend({ glb: geoFile, geo: q.glb.sig, out: q.file, w: q.w, h: q.h, cam: { pos: [p.x, p.y, p.z], target: [0, g3.mid, 0], fov: g3.camera.fov } }, (ok, msg) => {
+      await blSend({ glb: geoFile, geo: q.glb.sig, mats: q.glb.mats, out: q.file, w: q.w, h: q.h, cam: { pos: [p.x, p.y, p.z], target: [0, g3.mid, 0], fov: g3.camera.fov } }, (ok, msg) => {
         if (BL.pend === q) BL.pend = null;
         if (q.key !== BL.want) return; // spóźniony wynik starszego zadania nie zastępuje widoku
         if (ok) { BL.last = (fresh ? 'scena i obraz' : 'tylko obraz') + (BL.last && BL.last.indexOf('tkanina') === 0 ? ', ' + BL.last : ''); blShow(q.file, q.key); blNote(); } else { blStat(''); BL.why2 = 'Blender nie wyrenderował tego widoku: ' + msg; blNote(); }
@@ -2946,7 +2980,7 @@
     } catch (e) { BL.busy = false; BL.cur = null; blStat(''); BL.why2 = 'Nie udało się przekazać sceny do Blendera: ' + String((e && e.message) || e).slice(0, 140); blNote(); }
   }
   $('blPathGo').addEventListener('click', () => { const v = $('blPath').value.trim(); if (v) blInit(v); });
-  window.__bl = { BL, blGlb, blInit, get g3() { return g3; } }; // tylko do testów
+  if (TEST) window.__bl = { BL, blGlb, blInit, get g3() { return g3; } }; // tylko do testów
   // ---------- gotowy model 3D (GLB) jako wizualizacja referencyjna ----------
   // Plik zostaje w przeglądarce (IndexedDB), w projekcie zapisuje się tylko jego nazwa. Model pokazuje się na manekinie bez dopasowania do wymiarów.
   const REF = /** @type {any} */ ({ proj: '', parts: null, box: null, main: null, loading: '' });
@@ -2984,7 +3018,6 @@
   const refS2L = (x) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)), refL2S = (x) => (x <= 0.0031308 ? x * 12.92 : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
   // dodaje model do sceny; kolor projektu przebarwia wszystkie materiały z zachowaniem różnic między nimi (jaśniejszy szyfon zostaje jaśniejszy)
   function refAdd(grp, floor) {
-    const note = $('refN'); if (note) note.hidden = !state.ref;
     if (!state.ref) return null;
     if (REF.proj !== state.proj || !REF.parts) { if (REF.loading !== state.proj) { REF.loading = state.proj; const id = state.proj; refGet(id).then((b) => { if (state.proj !== id) return; if (!b) { say('Nie mam już pliku tego modelu 3D w tej przeglądarce. Wgraj go jeszcze raz.'); return; } const r = refParse(new Uint8Array(b)); Object.assign(REF, r, { proj: id }); render3d(true); }).catch(() => {}).then(() => { REF.loading = ''; }); } return null; }
     const tc = new T3.Color(state.color), tl = [refS2L(tc.r), refS2L(tc.g), refS2L(tc.b)], mats = new Map();
@@ -3035,7 +3068,7 @@
     claude.use('downloads').then((d) => (downloads = d)).catch(() => {});
     claude.use('db').then((d) => { if (d) { dbRef = d; wishPull(); } }).catch(() => {});
     claude.use('sample').then((s) => { sampleFn = s; if (s && inBlob) { $('inGo').disabled = false; $('inStat').textContent = ''; } }).catch(() => {});
-    try { desktop = window['__wkDesktop'] || (await claude.use('desktop')); } catch (e) { desktop = null; }
+    try { desktop = (TEST && window['__wkDesktop']) || (await claude.use('desktop')); } catch (e) { desktop = null; }
     blNote();
     if (!desktop || !desktop.fs) blInit();
     if (!desktop) { instState = 'none'; instFill(); return; }

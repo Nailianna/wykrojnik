@@ -379,7 +379,8 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
 #szwyBox[hidden]{display:none}
 #blImg{position:absolute;pointer-events:none;z-index:1;object-fit:fill}#blImg[hidden]{display:none}
 #blS{position:static;padding:6px 12px;border-radius:11px;font-size:12px;color:var(--mute)}#blS:empty{display:none}
-#refN{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);padding:7px 14px;border-radius:11px;font-size:12px;color:var(--mute);z-index:2;white-space:nowrap}#refN[hidden]{display:none}
+#seeN{position:static;padding:6px 12px;border-radius:11px;font:inherit;font-size:12px;color:var(--mute);pointer-events:auto;cursor:pointer;min-height:0;width:auto}#seeN:hover{color:var(--ink,inherit)}#seeN[hidden],#seeBox[hidden],nav [hidden]{display:none}
+#seeBox{position:static;pointer-events:auto;padding:12px 14px;border-radius:14px;width:min(360px,80vw)}#seeBox .note{margin:0}#seeBox .row{margin-top:10px}
 #panel [data-sec] div>h3:first-child{margin-top:22px}
 .ly .lnk{background:transparent;padding:0;font-size:13.5px;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--mute)}
 #mini{padding-bottom:10px}
@@ -460,9 +461,6 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
         <div class="row"><button id="bkOut">Zapisz do pliku</button><label class="up" style="margin:0"><input id="bkIn" type="file" accept=".json,application/json" hidden>Wczytaj z pliku</label></div>
         <p class="note" id="store"></p>
         <div class="row" id="permRow" hidden><button id="permBtn">Włącz zapis w Dokumentach</button></div>
-        <h3>Render wysokiej jakości</h3>
-        <p class="note" id="blStat"></p>
-        <div class="row" id="blPathRow" hidden><input id="blPath" placeholder="/Applications/Blender.app" aria-label="Ścieżka do Blendera" style="flex:1"><button id="blPathGo" style="flex:0 0 auto">Użyj</button></div>
       </div>
       <div data-sec="druk">
         <h3>Warstwy</h3>
@@ -652,8 +650,7 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
   </div>
   <button class="float" id="mini" data-v="3d" hidden aria-label="Przejdź do wykroju"><span id="miniS"></span></button>
   <img id="blImg" alt="" hidden>
-  <div id="chips" data-v="3d" hidden><div class="float" id="simS"></div><div class="float" id="blS"></div></div>
-  <div class="float" id="refN" data-v="3d" hidden>To gotowy model 3D. Oglądasz go w rozmiarze z pliku, bez dopasowania do wymiarów modelki.</div>
+  <div id="chips" data-v="3d" hidden><button class="float" id="seeN" aria-expanded="false" aria-controls="seeBox" hidden></button><div class="float" id="seeBox" hidden><p class="note" id="blStat"></p><div class="row" id="blPathRow" hidden><input id="blPath" placeholder="/Applications/Blender.app" aria-label="Ścieżka do Blendera" style="flex:1"><button id="blPathGo" style="flex:0 0 auto">Użyj</button></div></div><div class="float" id="simS"></div><div class="float" id="blS"></div></div>
   <div class="msg" id="msg" role="status"></div>
 </section>
 <div id="cmd" hidden><div class="float cmdBox" role="dialog" aria-label="Paleta poleceń"><input id="cmdIn" placeholder="Co chcesz zrobić?" aria-label="Szukaj polecenia" autocomplete="off"><div id="cmdList" role="listbox"></div></div></div>

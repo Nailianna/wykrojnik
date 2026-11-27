@@ -375,7 +375,7 @@
             const eB = 0.5 + 0.25 * F.st, collide = (q, kind) => figCol(q, kind ? eB + 0.1 : eB, true);
             // tkanina: sztywność steruje oporem przy zginaniu (skala logarytmiczna jak w seamer-studio), dżersej jest rozciągliwy
             const bendC = Math.exp(Math.log(6e-5) + (Math.log(2e-7) - Math.log(6e-5)) * F.st), knit = state.fabric === 'dzersej';
-            const S = window.Cloth.sim(g, { selfContact: !window.__noSelf, init, pinPos, pinned, collide, hold: stl, holdSlack: 0.4, steps: 150, subSteps: 14, stretchCompliance: knit ? 4e-7 : 2e-8, compressCompliance: 4e-7, bendCompliance: bendC, friction: 0.4, damping: 0.03 });
+            const S = window.Cloth.sim(g, { selfContact: !(TEST && window['__noSelf']), init, pinPos, pinned, collide, hold: stl, holdSlack: 0.4, steps: 150, subSteps: 14, stretchCompliance: knit ? 4e-7 : 2e-8, compressCompliance: 4e-7, bendCompliance: bendC, friction: 0.4, damping: 0.03 });
             // lico na zewnątrz: orientacja trójkątów każdego elementu względem środka bryły, którą okrywa
             const X = S.X, cen = (pred) => { let cx = 0, cy = 0, cz2 = 0, c = 0; for (let i = 0; i < g.ns; i++) if (pred(g.meta[i])) { cx += X[i * 3]; cy += X[i * 3 + 1]; cz2 += X[i * 3 + 2]; c++; } return [cx / c, cy / c, cz2 / c]; };
             const cb = cen((mt) => mt.pk !== 'S');

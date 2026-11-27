@@ -19,14 +19,28 @@ def base():
     if bg: bg.inputs[0].default_value = (1, 1, 1, 1); bg.inputs[1].default_value = 0.4
     sc.world = w
     for o in list(bpy.data.objects): bpy.data.objects.remove(o, do_unlink=True)
+def purge():
+    for blk in (bpy.data.meshes, bpy.data.materials, bpy.data.images):
+        for d in [d for d in blk if d.users == 0]: blk.remove(d)
 def load(job):
     if st["geo"] == job["geo"]: return
     for o in [o for o in bpy.data.objects if o.type == "MESH" or o.type == "EMPTY"]: bpy.data.objects.remove(o, do_unlink=True)
-    bpy.ops.import_scene.gltf(filepath=job["glb"])
+    purge(); bpy.ops.import_scene.gltf(filepath=job["glb"]); st["mats"] = {}
+    for m in bpy.data.materials:
+        if m.name.startswith("wk") and m.name[2:].split(".")[0].isdigit(): st["mats"][int(m.name[2:].split(".")[0])] = m
     for o in bpy.data.objects:
         if o.type == "MESH":
             for p in o.data.polygons: p.use_smooth = True
     st["geo"] = job["geo"]
+def paint(job):
+    for i, q in enumerate(job.get("mats") or []):
+        m = st.get("mats", {}).get(i)
+        b = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None) if m and m.node_tree else None
+        if not b: continue
+        col = b.inputs["Base Color"]; al = b.inputs["Alpha"]
+        if not col.is_linked: col.default_value = (q["c"][0], q["c"][1], q["c"][2], 1.0)
+        if not al.is_linked: al.default_value = q["a"]
+        b.inputs["Roughness"].default_value = q["r"]; b.inputs["Metallic"].default_value = q["m"]
 def aim(o, loc, to):
     o.location = loc; o.rotation_euler = (to - loc).to_track_quat("-Z", "Y").to_euler()
 def named(name, make):
@@ -53,7 +67,7 @@ def cloth(job):
     import array
     c = json.load(open(job["cloth"])); S = 0.01; sc = bpy.context.scene
     for o in [o for o in bpy.data.objects if o.type == "MESH" or o.type == "EMPTY"]: bpy.data.objects.remove(o, do_unlink=True)
-    st["geo"] = None
+    st["geo"] = None; purge()
     cv = lambda a, i: (a[i] * S, -a[i + 2] * S, a[i + 1] * S)
     bp = c["body"]["pos"]; bi = c["body"]["idx"]
     body = mk("wk_body", [cv(bp, i) for i in range(0, len(bp), 3)], [], [tuple(bi[i:i + 3]) for i in range(0, len(bi), 3)])
@@ -100,7 +114,7 @@ for line in sys.stdin:
         if job.get("quit"): break
         if job.get("cloth"): cloth(job)
         else:
-            load(job); frame(job); bpy.context.scene.render.filepath = job["out"]; bpy.ops.render.render(write_still=True)
+            load(job); paint(job); frame(job); bpy.context.scene.render.filepath = job["out"]; bpy.ops.render.render(write_still=True)
         print("WK DONE %s" % jid, flush=True)
     except Exception as e:
         print("WK FAIL %s %s" % (jid, str(e).replace("\n", " ")[:300]), flush=True)

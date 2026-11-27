@@ -126,7 +126,7 @@ def worker():
             state['cur'] = job
             msg = {'id': n, 'out': job['out']}
             if job['kind'] == 'render':
-                msg.update(glb=job['scene'], geo=job['geo'], w=job['w'], h=job['h'], cam=job['cam'])
+                msg.update(glb=job['scene'], geo=job['geo'], mats=job['mats'], w=job['w'], h=job['h'], cam=job['cam'])
             else:
                 msg['cloth'] = job['input']
         try:
@@ -320,13 +320,14 @@ class H(BaseHTTPRequestHandler):
                 wd, ht = int(d['w']), int(d['h'])
                 assert SIG.match(geo) and 16 <= wd <= MAX_PX and 16 <= ht <= MAX_PX
                 cam = {'pos': [float(x) for x in cam['pos']][:3], 'target': [float(x) for x in cam['target']][:3], 'fov': float(cam['fov'])}
+                mats = [{'c': [float(x) for x in m['c']][:3], 'a': float(m['a']), 'r': float(m['r']), 'm': float(m['m'])} for m in (d.get('mats') or [])][:200]
             except Exception:
                 return self.send(400, {'error': 'Nieczytelny opis kadru.'})
             sp = scene_path(w[0], w[1], geo)
             if not os.path.exists(sp):
                 return self.send(200, {'need': 'scene', 'geo': geo})
             os.utime(sp)
-            job.update(scene=sp, geo=geo, cam=cam, w=wd, h=ht)
+            job.update(scene=sp, geo=geo, cam=cam, w=wd, h=ht, mats=mats)
         else:
             c = d.get('data')
             if not isinstance(c, dict) or not all(k in c for k in ('ns', 'rmap', 'uv', 'tri', 'X', 'body')):

@@ -148,4 +148,4 @@
   }
   // punkt na łamanej w ułamku jej długości
   function ptOn(pts, f) { const L = swLen(pts); let acc = 0; for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (acc + d >= f * L - 1e-9) { const t = (f * L - acc) / (d || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; } acc += d; } return pts[pts.length - 1]; }
-  window.__pl = { plEdges, plAll, impPlan, plHalve, plUnfold }; // tylko do testów
+  if (TEST) window.__pl = { plEdges, plAll, impPlan, plHalve, plUnfold }; // tylko do testów

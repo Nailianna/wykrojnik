@@ -48,11 +48,13 @@
   const PT = { proj: 'Projekty', druk: 'Krojenie i druk', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Dopasowanie', modelka: 'Modelka' };
   function cardUi() { const none = state.style === 'pusty'; $('card').toggleAttribute('hidden', !state.card || none); $('cardBtn').toggleAttribute('hidden', state.card || none); }
   function layoutUi() {
+    const refOff = state.ref ? ['fason', 'wymiary', 'druk'] : []; if (refOff.includes(state.panel)) state.panel = '';
+    document.querySelectorAll('nav [data-panel]').forEach((b) => (/** @type {HTMLElement} */ (b).hidden = refOff.includes(/** @type {HTMLElement} */ (b).dataset.panel)));
     $('panel').toggleAttribute('hidden', !state.panel);
     if (state.panel && !PT[state.panel]) state.panel = 'druk'; // starsze zapisy: Warstwy i Zapasy na szwy są teraz w jednym panelu
     if (state.panel) { $('panelT').textContent = PT[state.panel]; document.querySelectorAll('[data-sec]').forEach((el) => (el.hidden = el.dataset.sec !== state.panel)); }
     document.querySelectorAll('nav [data-panel]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.panel === state.panel));
-    { const k = FLOW.indexOf(state.panel), nx = k >= 0 && k < FLOW.length - 1 ? FLOW[k + 1] : null; $('panelF').hidden = !nx; $('next').textContent = nx ? 'Dalej: ' + PT[nx].toLowerCase() : ''; $('next').dataset.to = nx || ''; }
+    { const fl = FLOW.filter((x) => !refOff.includes(x)), k = fl.indexOf(state.panel), nx = k >= 0 && k < fl.length - 1 ? fl[k + 1] : null; $('panelF').hidden = !nx; $('next').textContent = nx ? 'Dalej: ' + PT[nx].toLowerCase() : ''; $('next').dataset.to = nx || ''; }
     cardUi();
     const ins = insets(), gl0 = ins.l > 12 ? ins.l - 12 : 0, gr0 = ins.r > 12 ? ins.r - 12 : 0; $('gl').style.left = gl0 + 'px'; $('gl').style.width = 'calc(100% - ' + (gl0 + gr0) + 'px)';
     $('mini').style.left = ins.l + 'px';

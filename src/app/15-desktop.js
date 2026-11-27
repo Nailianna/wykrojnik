@@ -24,7 +24,7 @@
     claude.use('downloads').then((d) => (downloads = d)).catch(() => {});
     claude.use('db').then((d) => { if (d) { dbRef = d; wishPull(); } }).catch(() => {});
     claude.use('sample').then((s) => { sampleFn = s; if (s && inBlob) { $('inGo').disabled = false; $('inStat').textContent = ''; } }).catch(() => {});
-    try { desktop = window['__wkDesktop'] || (await claude.use('desktop')); } catch (e) { desktop = null; }
+    try { desktop = (TEST && window['__wkDesktop']) || (await claude.use('desktop')); } catch (e) { desktop = null; }
     blNote();
     if (!desktop || !desktop.fs) blInit();
     if (!desktop) { instState = 'none'; instFill(); return; }

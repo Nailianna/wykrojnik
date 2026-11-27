@@ -249,4 +249,4 @@
     }
     out.pieces = res; return out;
   }
-  window.__sw = { impAdj, swAxis, impSew, swBodice, swSleeve, swCorners, swRing }; // tylko do testów
+  if (TEST) window.__sw = { impAdj, swAxis, impSew, swBodice, swSleeve, swCorners, swRing }; // tylko do testów
