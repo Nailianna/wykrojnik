@@ -165,7 +165,12 @@
   function impSew(imp, m) {
     const r = /** @type {any} */ (impSew0(imp, m)); if (r.err) return r;
     const top = (id) => { const pc = r.pieces.find((q) => q.id === id), e = pc && pc.ed.find((q) => q.tag === 'side'); return e ? e.pts[0][0] : 0; }, xf = top('przod'), xb = top('tyl');
-    const bad = swSane(xf && xb ? 2 * (xf + xb) : 0, r.dl, m, imp && imp.an); return bad ? { err: bad } : r;
+    const bad = swSane(xf && xb ? 2 * (xf + xb) : 0, r.dl, m, imp && imp.an); if (bad) return { err: bad };
+    // duże elementy, których nie umiem doszyć (spódnica z paneli, kliny, tren): sama góra udawałaby całe ubranie, więc podglądu nie ma
+    const pcs = (imp && imp.pieces) || [], nm = (pc) => String(pc.name || ''), usedA = pcs.filter((pc) => r.used.includes(nm(pc))).reduce((s, pc) => s + pc.w * pc.h, 0);
+    const lost = pcs.filter((pc) => !r.used.includes(nm(pc)) && !(r.sleeve && /r[eę]kaw|sleeve/i.test(nm(pc))) && !/odszyci|facing|podszew|lining|lam[oó]w|binding|rami[aą]cz|strap|mankiet|cuff|ko[lł]nierz|collar|pasek|^element \d/i.test(nm(pc)) && pc.w * pc.h > 400);
+    if (usedA > 0 && lost.reduce((s, pc) => s + pc.w * pc.h, 0) > 0.5 * usedA) return { err: 'Tego wykroju nie umiem jeszcze zszyć w całości. Poza przodem i tyłem ma duże elementy, których nie doszywam: ' + lost.map((pc) => nm(pc).replace(/ \(część.*$/, '').toLowerCase()).filter((x, i, arr) => arr.indexOf(x) === i).join(', ') + '. Sam przód z tyłem udawałby całe ubranie, więc podglądu nie pokazuję.' };
+    return r;
   }
   function impSew0(imp, m) {
     const a = W.full(m), pcs = (imp && imp.pieces) || [], pick = {}, skip = [];

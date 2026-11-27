@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.84.1', n: 89, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.84.2', n: 90, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -574,7 +574,7 @@
   cv.addEventListener('pointermove', (e) => { if (!drag) return; const r = cv.getBoundingClientRect(); vb.x = drag.vx - ((e.clientX - drag.x) / r.width) * vb.w; vb.y = drag.vy - ((e.clientY - drag.y) / r.height) * vb.h; applyVb(); });
   const endDrag = () => { drag = null; cv.classList.remove('drag'); };
   cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
-  $('fit').addEventListener('click', () => draw(true));
+  $('fitV').addEventListener('click', () => { if (state.view === '3d') { cam.yaw = 0; cam.pitch = 0.06; } draw(true); });
   $('zoom').addEventListener('input', () => {
     const z = Math.pow(2, $('zoom').value / 100);
     if (state.view === '3d') { cam.dist = fitDist / z; paint3d(); showZoom(); return; }
@@ -2187,7 +2187,12 @@
   function impSew(imp, m) {
     const r = /** @type {any} */ (impSew0(imp, m)); if (r.err) return r;
     const top = (id) => { const pc = r.pieces.find((q) => q.id === id), e = pc && pc.ed.find((q) => q.tag === 'side'); return e ? e.pts[0][0] : 0; }, xf = top('przod'), xb = top('tyl');
-    const bad = swSane(xf && xb ? 2 * (xf + xb) : 0, r.dl, m, imp && imp.an); return bad ? { err: bad } : r;
+    const bad = swSane(xf && xb ? 2 * (xf + xb) : 0, r.dl, m, imp && imp.an); if (bad) return { err: bad };
+    // duże elementy, których nie umiem doszyć (spódnica z paneli, kliny, tren): sama góra udawałaby całe ubranie, więc podglądu nie ma
+    const pcs = (imp && imp.pieces) || [], nm = (pc) => String(pc.name || ''), usedA = pcs.filter((pc) => r.used.includes(nm(pc))).reduce((s, pc) => s + pc.w * pc.h, 0);
+    const lost = pcs.filter((pc) => !r.used.includes(nm(pc)) && !(r.sleeve && /r[eę]kaw|sleeve/i.test(nm(pc))) && !/odszyci|facing|podszew|lining|lam[oó]w|binding|rami[aą]cz|strap|mankiet|cuff|ko[lł]nierz|collar|pasek|^element \d/i.test(nm(pc)) && pc.w * pc.h > 400);
+    if (usedA > 0 && lost.reduce((s, pc) => s + pc.w * pc.h, 0) > 0.5 * usedA) return { err: 'Tego wykroju nie umiem jeszcze zszyć w całości. Poza przodem i tyłem ma duże elementy, których nie doszywam: ' + lost.map((pc) => nm(pc).replace(/ \(część.*$/, '').toLowerCase()).filter((x, i, arr) => arr.indexOf(x) === i).join(', ') + '. Sam przód z tyłem udawałby całe ubranie, więc podglądu nie pokazuję.' };
+    return r;
   }
   function impSew0(imp, m) {
     const a = W.full(m), pcs = (imp && imp.pieces) || [], pick = {}, skip = [];

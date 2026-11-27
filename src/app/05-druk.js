@@ -36,7 +36,7 @@
   cv.addEventListener('pointermove', (e) => { if (!drag) return; const r = cv.getBoundingClientRect(); vb.x = drag.vx - ((e.clientX - drag.x) / r.width) * vb.w; vb.y = drag.vy - ((e.clientY - drag.y) / r.height) * vb.h; applyVb(); });
   const endDrag = () => { drag = null; cv.classList.remove('drag'); };
   cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
-  $('fit').addEventListener('click', () => draw(true));
+  $('fitV').addEventListener('click', () => { if (state.view === '3d') { cam.yaw = 0; cam.pitch = 0.06; } draw(true); });
   $('zoom').addEventListener('input', () => {
     const z = Math.pow(2, $('zoom').value / 100);
     if (state.view === '3d') { cam.dist = fitDist / z; paint3d(); showZoom(); return; }
