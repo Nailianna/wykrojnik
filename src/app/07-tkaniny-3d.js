@@ -22,6 +22,8 @@
           const dx = P[b] - P[a], dy = P[b + 1] - P[a + 1], dz = P[b + 2] - P[a + 2], len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-6, f = ((len - CR[c]) / len) * CK[c] / w;
           P[a] += dx * f * wa; P[a + 1] += dy * f * wa; P[a + 2] += dz * f * wa; P[b] -= dx * f * wb; P[b + 1] -= dy * f * wb; P[b + 2] -= dz * f * wb;
         }
+        // tkanina nie rozciąga się pod własnym ciężarem: żaden punkt nie odejdzie od przypiętej krawędzi dalej, niż pozwala długość wykroju
+        for (let j = 1; j <= NV; j++) { const mx = dv * j; for (let i = 0; i < NU; i++) { const k = (j * NU + i) * 3, t = i * 3, dx = P[k] - P[t], dy = P[k + 1] - P[t + 1], dz = P[k + 2] - P[t + 2], len = Math.sqrt(dx * dx + dy * dy + dz * dz); if (len > mx) { const f = mx / len; P[k] = P[t] + dx * f; P[k + 1] = P[t + 1] + dy * f; P[k + 2] = P[t + 2] + dz * f; } } }
         move = 0;
         for (let v = NU; v < n; v++) { // kolizja z ciałem i podłogą; przy kontakcie tkanina wytraca prędkość (tarcie)
           const k = v * 3; tmp[0] = P[k]; tmp[1] = P[k + 1]; tmp[2] = P[k + 2];

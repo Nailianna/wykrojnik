@@ -18,6 +18,8 @@ interface WParams {
   /** ile cm nad talią kończy się krótki top; ustawia silnik */
   crop?: number;
   // spódnica
+  /** dół z koła w empire i princesce: '' (własny), 'polkole', 'kolo', 'kolo2' */
+  dol?: string;
   gf?: number; flare?: number; ff?: number; pasek?: number; pasT?: number; zakK?: number; bok?: number;
   // góra
   gora?: string; bk?: string; bh?: number; gr?: number; gh?: number; gd?: number; gg?: number; gp?: number;

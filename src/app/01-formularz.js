@@ -17,9 +17,14 @@
     }
     $('fTab').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { state.fTab = b.dataset.t; fillForm(); persist(true); }));
     $('dolK').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
-      const f = +b.dataset.f;
+      const v = b.dataset.f, f = +v, own = state.style === 'su_empire' || state.style === 'su_princeska';
       state.sel = {};
-      if (b.dataset.f === 'z') state.style = 'su_zakl'; else if (state.style === 'su_rybka') state.p.ff = f; else state.style = f === 2 ? 'su_2kola' : f === 1 ? 'su_kolo' : 'su_polkole';
+      if (state.style === 'su_rybka') state.p.ff = f;
+      else if (own) state.p.dol = f === 2 ? 'kolo2' : f === 1 ? 'kolo' : f === 0.5 ? 'polkole' : ''; // empire i princeska zostają sobą, zmienia się tylko dół
+      else if (v === 'z') state.style = 'su_zakl';
+      else if (v === 'p') { state.style = 'su_dopasowana'; state.p.flare = 0; }
+      else if (v === 't') { state.style = 'su_trapez'; if (!(state.p.flare > 0)) state.p.flare = 7; }
+      else state.style = f === 2 ? 'su_2kola' : f === 1 ? 'su_kolo' : 'su_polkole';
       fillForm(); persist(); draw(true);
     }));
     document.querySelectorAll('[data-pb]').forEach((c) => c.addEventListener('change', () => { state.p[c.dataset.pb] = c.checked; fillForm(); persist(); draw(true); }));
@@ -93,8 +98,10 @@
       $('fTab').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.t === tb));
       document.querySelectorAll('[data-ft]').forEach((el) => (el.hidden = el.dataset.ft !== tb));
       $('fOpts').hidden = tabOf(state.style) !== tb;
-      const cf = state.style === 'su_rybka' ? (state.p.ff === 0.5 || state.p.ff === 2 ? state.p.ff : 1) : state.style === 'su_2kola' ? 2 : state.style === 'su_kolo' ? 1 : 0.5;
-      $('dolK').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', state.style === 'su_zakl' ? b.dataset.f === 'z' : +b.dataset.f === cf)); $('dolZ').hidden = state.style === 'su_rybka'; $('dolH').textContent = state.style === 'su_rybka' ? 'Falbana' : 'Dół';
+      const s = state.style, ryb = s === 'su_rybka', emp = s === 'su_empire', pri = s === 'su_princeska', dk = state.p.dol;
+      const cur = ryb ? String(state.p.ff === 0.5 || state.p.ff === 2 ? state.p.ff : 1) : emp || pri ? (dk === 'kolo2' ? '2' : dk === 'kolo' ? '1' : dk === 'polkole' ? '0.5' : emp ? 't' : 'p') : s === 'su_zakl' ? 'z' : s === 'su_2kola' ? '2' : s === 'su_kolo' ? '1' : s === 'su_polkole' ? '0.5' : s === 'su_trapez' ? 't' : 'p';
+      $('dolK').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.f === cur));
+      $('dolZ').hidden = ryb || emp || pri; $('dolP').hidden = ryb || emp; $('dolT').hidden = ryb || pri; $('dolP').textContent = pri ? 'Z paneli' : 'Prosty'; $('dolH').textContent = ryb ? 'Falbana' : 'Dół';
     }
     document.querySelectorAll('[data-pb]').forEach((c) => (c.checked = !!state.p[c.dataset.pb]));
     { const kopOn = !!state.p.kop && fl.odcTop; $('kop').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', (b.dataset.w === '1') === kopOn)); $('kol').querySelectorAll('button').forEach((b) => (b.hidden = b.dataset.k === 'szal' ? !kopOn : b.dataset.k !== 'brak' && kopOn)); }

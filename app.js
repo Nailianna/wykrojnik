@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.74.1', n: 77, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.75.0', n: 78, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -19,7 +19,7 @@
       { id: 'p2', name: 'Rozmiar 38', og: 88, ot: 68, ob: 92, wb: 21, wzrost: 168, adv: {} },
     ],
     active: 'p1', style: 'sk_prosta',
-    p: /** @type {WParams} */ ({ dl: 58, kn: 55, gf: 9, fac: 'laczone', facW: 5, flare: 0, gora: 'ramiona', bk: 'prosta', bh: 6, gr: 5, gh: 9, gd: 11, gg: 5, gp: 6, ram: 'brak', ramW: 1, rekL: 0, fit: 'regular', baza: 'wlasna', extras: [], falN: false, falR: false, marsz: false, sciag: false, tren: 0, kop: false, pasT: 0, zakK: 2.5, rek: 'brak', mank: false, bok: 0, ff: 1, zp: 'bok', kol: 'brak', kolW: 3, rozp: 0, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, luzG: 4, luzB: 2, luzT: 1, saSzew: 1.5, saTalia: 1, saDol: 4, pasek: 3 }),
+    p: /** @type {WParams} */ ({ dl: 58, kn: 55, gf: 9, fac: 'laczone', facW: 5, flare: 0, gora: 'ramiona', bk: 'prosta', bh: 6, gr: 5, gh: 9, gd: 11, gg: 5, gp: 6, ram: 'brak', ramW: 1, rekL: 0, dol: '', fit: 'regular', baza: 'wlasna', extras: [], falN: false, falR: false, marsz: false, sciag: false, tren: 0, kop: false, pasT: 0, zakK: 2.5, rek: 'brak', mank: false, bok: 0, ff: 1, zp: 'bok', kol: 'brak', kolW: 3, rozp: 0, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, luzG: 4, luzB: 2, luzT: 1, saSzew: 1.5, saTalia: 1, saDol: 4, pasek: 3 }),
     grid: false, tiles: true, view: '2d', color: '#d9447d', fabric: 'bawelna', bust: true, seams: true, figure: false, labels: true, layers: [{ role: 'wierzch' }], print: 'gladka', color2: '#fff4e2', pscale: 100, panel: 'fason', card: true, theme: 'dark',
     inspH: [], wish: [], sim: true, sel: {}, paper: 'a4', pack: true, fabW: 140, printImg: null, projects: [], proj: null,
   };
@@ -83,7 +83,7 @@
   const cur = () => state.profiles.find((x) => x.id === state.active) || state.profiles[0];
   const flags = () => {
     const s = state.style, top = s === 'to_stanik', dress = s.indexOf('su_') === 0 || s.indexOf('to_') === 0, circ = /kol|polkole|zakl/.test(s), corset = s.indexOf('go_') === 0;
-    const kliny = s === 'su_rybka_kliny', bez = dress && state.p.gora === 'bez'; return { rekOn: dress && !bez && !!state.p.rek && state.p.rek !== 'brak' && !(state.p.bok > 0), tren: ['su_dopasowana', 'su_trapez', 'su_zakl'].includes(s), odcTop: dress && !bez && (ODC.includes(s) || s === 'to_stanik'), odc: ODC.includes(s), zakl: s === 'su_zakl', rek34: dress && !bez && state.p.rek === '34', dolsel: ODC.includes(s) || s === 'su_rybka', kol: dress && !bez && (state.p.kol === 'stojka' || state.p.kol === 'bebe'), zpok: dress && !bez && !/princeska|kliny|tshirt/.test(s), corsetU: s === 'go_pod', bez, tee: s.indexOf('to_tshirt') === 0 && s !== 'to_tshirt_s', rozp: ['sk_prosta', 'sk_olowkowa', 'sk_trapez', 'su_dopasowana', 'su_trapez'].includes(s), ram: bez && (state.p.ram === 'cienkie' || state.p.ram === 'szyja'), rekLen: dress && !bez && !!state.p.rek && state.p.rek !== 'brak' && state.p.rek !== 'bufka' && !(state.p.bok > 0), corset, len: !corset && !top, waist: !corset && !(s.indexOf('to_tshirt') === 0 && state.p.fit !== 'slim'), facw: dress && !bez && state.p.fac === 'osobne', straps: dress && !bez, nostraps: bez || s === 'go_nad', dress, circ, flare: !circ && !kliny && !corset && !top, hip: !circ && !corset && !top, pasek: !dress && !corset, rybka: s === 'su_rybka' || kliny, kliny };
+    const kliny = s === 'su_rybka_kliny', bez = dress && state.p.gora === 'bez', dolC = (s === 'su_empire' || s === 'su_princeska') && ['polkole', 'kolo', 'kolo2'].includes(state.p.dol); return { rekOn: dress && !bez && !!state.p.rek && state.p.rek !== 'brak' && !(state.p.bok > 0), tren: ['su_dopasowana', 'su_trapez', 'su_zakl'].includes(s), odcTop: dress && !bez && (ODC.includes(s) || s === 'to_stanik'), odc: ODC.includes(s), zakl: s === 'su_zakl', rek34: dress && !bez && state.p.rek === '34', dolsel: s.indexOf('su_') === 0 && !kliny, kol: dress && !bez && (state.p.kol === 'stojka' || state.p.kol === 'bebe'), zpok: dress && !bez && !/princeska|kliny|tshirt/.test(s), corsetU: s === 'go_pod', bez, tee: s.indexOf('to_tshirt') === 0 && s !== 'to_tshirt_s', rozp: ['sk_prosta', 'sk_olowkowa', 'sk_trapez', 'su_dopasowana', 'su_trapez'].includes(s), ram: bez && (state.p.ram === 'cienkie' || state.p.ram === 'szyja'), rekLen: dress && !bez && !!state.p.rek && state.p.rek !== 'brak' && state.p.rek !== 'bufka' && !(state.p.bok > 0), corset, len: !corset && !top, waist: !corset && !(s.indexOf('to_tshirt') === 0 && state.p.fit !== 'slim'), facw: dress && !bez && state.p.fac === 'osobne', straps: dress && !bez, nostraps: bez || s === 'go_nad', dress, circ, flare: !circ && !kliny && !corset && !top && !dolC, hip: !circ && !corset && !top && !dolC, pasek: !dress && !corset, rybka: s === 'su_rybka' || kliny, kliny };
   };
 
   // ---------- formularz ----------
@@ -105,9 +105,14 @@
     }
     $('fTab').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { state.fTab = b.dataset.t; fillForm(); persist(true); }));
     $('dolK').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
-      const f = +b.dataset.f;
+      const v = b.dataset.f, f = +v, own = state.style === 'su_empire' || state.style === 'su_princeska';
       state.sel = {};
-      if (b.dataset.f === 'z') state.style = 'su_zakl'; else if (state.style === 'su_rybka') state.p.ff = f; else state.style = f === 2 ? 'su_2kola' : f === 1 ? 'su_kolo' : 'su_polkole';
+      if (state.style === 'su_rybka') state.p.ff = f;
+      else if (own) state.p.dol = f === 2 ? 'kolo2' : f === 1 ? 'kolo' : f === 0.5 ? 'polkole' : ''; // empire i princeska zostają sobą, zmienia się tylko dół
+      else if (v === 'z') state.style = 'su_zakl';
+      else if (v === 'p') { state.style = 'su_dopasowana'; state.p.flare = 0; }
+      else if (v === 't') { state.style = 'su_trapez'; if (!(state.p.flare > 0)) state.p.flare = 7; }
+      else state.style = f === 2 ? 'su_2kola' : f === 1 ? 'su_kolo' : 'su_polkole';
       fillForm(); persist(); draw(true);
     }));
     document.querySelectorAll('[data-pb]').forEach((c) => c.addEventListener('change', () => { state.p[c.dataset.pb] = c.checked; fillForm(); persist(); draw(true); }));
@@ -181,8 +186,10 @@
       $('fTab').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.t === tb));
       document.querySelectorAll('[data-ft]').forEach((el) => (el.hidden = el.dataset.ft !== tb));
       $('fOpts').hidden = tabOf(state.style) !== tb;
-      const cf = state.style === 'su_rybka' ? (state.p.ff === 0.5 || state.p.ff === 2 ? state.p.ff : 1) : state.style === 'su_2kola' ? 2 : state.style === 'su_kolo' ? 1 : 0.5;
-      $('dolK').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', state.style === 'su_zakl' ? b.dataset.f === 'z' : +b.dataset.f === cf)); $('dolZ').hidden = state.style === 'su_rybka'; $('dolH').textContent = state.style === 'su_rybka' ? 'Falbana' : 'Dół';
+      const s = state.style, ryb = s === 'su_rybka', emp = s === 'su_empire', pri = s === 'su_princeska', dk = state.p.dol;
+      const cur = ryb ? String(state.p.ff === 0.5 || state.p.ff === 2 ? state.p.ff : 1) : emp || pri ? (dk === 'kolo2' ? '2' : dk === 'kolo' ? '1' : dk === 'polkole' ? '0.5' : emp ? 't' : 'p') : s === 'su_zakl' ? 'z' : s === 'su_2kola' ? '2' : s === 'su_kolo' ? '1' : s === 'su_polkole' ? '0.5' : s === 'su_trapez' ? 't' : 'p';
+      $('dolK').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.f === cur));
+      $('dolZ').hidden = ryb || emp || pri; $('dolP').hidden = ryb || emp; $('dolT').hidden = ryb || pri; $('dolP').textContent = pri ? 'Z paneli' : 'Prosty'; $('dolH').textContent = ryb ? 'Falbana' : 'Dół';
     }
     document.querySelectorAll('[data-pb]').forEach((c) => (c.checked = !!state.p[c.dataset.pb]));
     { const kopOn = !!state.p.kop && fl.odcTop; $('kop').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', (b.dataset.w === '1') === kopOn)); $('kol').querySelectorAll('button').forEach((b) => (b.hidden = b.dataset.k === 'szal' ? !kopOn : b.dataset.k !== 'brak' && kopOn)); }
@@ -348,7 +355,7 @@
       boxes[st.group].appendChild(b);
     });
   }
-  function pickStyle(st) { if (st.id !== state.style) state.sel = {}; state.fTab = tabOf(st.id); if (st.preset) { Object.assign(state.p, st.preset); if (st.preset.rek) state.p.rekL = ['krotki', '34', 'dlugi'].includes(st.preset.rek) ? rekDef(st.preset.rek) : 0; if (st.id.indexOf('to_tshirt') === 0) state.fabric = 'dzersej'; } else state.p.bok = 0; if (st.id.indexOf('to_tshirt') !== 0 && state.style.indexOf('to_tshirt') === 0 && state.fabric === 'dzersej') state.fabric = 'bawelna'; const was = W.STYLES.find((s) => s.id === state.style); state.style = st.id; state.p.flare = st.flare || 0; if (st.dl) state.p.dl = st.dl; else if (was && was.dl && state.p.dl === was.dl) state.p.dl = 58; fillForm(); persist(); draw(true); }
+  function pickStyle(st) { if (st.id !== state.style) state.sel = {}; state.fTab = tabOf(st.id); if (st.preset) { Object.assign(state.p, st.preset); if (st.preset.rek) state.p.rekL = ['krotki', '34', 'dlugi'].includes(st.preset.rek) ? rekDef(st.preset.rek) : 0; if (st.id.indexOf('to_tshirt') === 0) state.fabric = 'dzersej'; } else state.p.bok = 0; if (st.id.indexOf('to_tshirt') !== 0 && state.style.indexOf('to_tshirt') === 0 && state.fabric === 'dzersej') state.fabric = 'bawelna'; const was = W.STYLES.find((s) => s.id === state.style); state.style = st.id; state.p.flare = st.flare || 0; state.p.dol = ''; if (st.dl) state.p.dl = st.dl; else if (was && was.dl && state.p.dl === was.dl) state.p.dl = 58; fillForm(); persist(); draw(true); }
   $('addP').addEventListener('click', () => {
     const c = cur(), id = 'p' + Date.now();
     state.profiles.push({ id, name: 'Nowa modelka', og: c.og, ot: c.ot, ob: c.ob, wb: c.wb, wzrost: c.wzrost, adv: {} });
@@ -650,6 +657,8 @@
           const dx = P[b] - P[a], dy = P[b + 1] - P[a + 1], dz = P[b + 2] - P[a + 2], len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-6, f = ((len - CR[c]) / len) * CK[c] / w;
           P[a] += dx * f * wa; P[a + 1] += dy * f * wa; P[a + 2] += dz * f * wa; P[b] -= dx * f * wb; P[b + 1] -= dy * f * wb; P[b + 2] -= dz * f * wb;
         }
+        // tkanina nie rozciąga się pod własnym ciężarem: żaden punkt nie odejdzie od przypiętej krawędzi dalej, niż pozwala długość wykroju
+        for (let j = 1; j <= NV; j++) { const mx = dv * j; for (let i = 0; i < NU; i++) { const k = (j * NU + i) * 3, t = i * 3, dx = P[k] - P[t], dy = P[k + 1] - P[t + 1], dz = P[k + 2] - P[t + 2], len = Math.sqrt(dx * dx + dy * dy + dz * dz); if (len > mx) { const f = mx / len; P[k] = P[t] + dx * f; P[k + 1] = P[t + 1] + dy * f; P[k + 2] = P[t + 2] + dz * f; } } }
         move = 0;
         for (let v = NU; v < n; v++) { // kolizja z ciałem i podłogą; przy kontakcie tkanina wytraca prędkość (tarcie)
           const k = v * 3; tmp[0] = P[k]; tmp[1] = P[k + 1]; tmp[2] = P[k + 2];
@@ -1084,7 +1093,7 @@
       if (!state.sim || stiffTop || sil.tren || topFull) spec = null;
       else if (sil.lower === 'circle') spec = { yPin: 0, L: p.dl, C: sil.pleat ? (d) => Tw + (sil.hemC - Tw) * Math.min(1, d / 3) : (d) => Tw + TAU * sil.frac * d };
       else if (sil.lower === 'mermaid') spec = { yPin: -sil.kn, L: p.dl - sil.kn, C: (d) => sil.kneeC + (sil.grow || TAU) * d };
-      else if (sil.lower === 'empire') { const Le = sil.yE + p.dl; spec = { yPin: sil.yE, L: Le, C: (d) => sil.seamC + ((sil.hemC - sil.seamC) * d) / Le }; }
+      else if (sil.lower === 'empire') { const Le = sil.yE + p.dl; spec = { yPin: sil.yE, L: Le, C: sil.frac ? (d) => sil.seamC + TAU * sil.frac * d : (d) => sil.seamC + ((sil.hemC - sil.seamC) * d) / Le }; }
       else if (sil.hemC && p.dl - m.wb > 6) { const c0 = sil.hipC || m.ob + p.luzB, Ls = p.dl - m.wb; spec = { yPin: -m.wb, L: Ls, C: (d) => c0 + ((sil.hemC - c0) * d) / Ls }; }
       if (!spec) g3.sim = null;
       else {
@@ -1444,7 +1453,7 @@
       'Program umie tylko poniższe fasony (id: opis):',
       'sk_prosta: spódnica prosta z zaszewkami; sk_olowkowa: spódnica ołówkowa, zwężana; sk_trapez: spódnica trapezowa; sk_polkole: spódnica z półkola; sk_kolo: spódnica z koła; sk_2kola: spódnica z dwóch kół, bardzo obfita;',
       'su_dopasowana: sukienka dopasowana z zaszewkami; su_trapez: sukienka w literę A; su_princeska: sukienka z cięciami princeski; su_empire: sukienka odcinana pod biustem; su_rybka_kliny: rybka z klinów od kolan; su_rybka: rybka z falbaną z koła od kolan; su_polkole: sukienka odcinana w talii, dół z półkola; su_kolo: sukienka odcinana w talii, dół z koła; su_2kola: odcinana w talii, dół z dwóch kół; to_stanik: sam top dopasowany do talii.',
-      'Każda sukienka może być z ramionami albo bez ramiączek (parametr gora: "ramiona" albo "bez"; przy "bez" bk = "prosta", "luk" (łagodnie zaokrąglona w dół) albo "serce" to kształt górnej krawędzi, bh = jej wysokość nad linią biustu 2-12). Sukienki i topy mają zamek w szwie tyłu. go_pod: gorset pod biust z paneli, sznurowany z tyłu (parametry: gr = redukcja talii 0-15, gh = wysokość nad talią 5-14, gd = długość pod talią z przodu 5-16). go_nad: gorset nad biust z paneli, bez osobnych miseczek (bk = "prosta" albo "serce" to kształt górnej krawędzi; gr, gd oraz bh = wysokość górnej krawędzi nad linią biustu 2-12). to_tshirt i to_tshirt_k: t-shirt z dzianiny z długim albo krótkim rękawem, bez zaszewek; parametr fit = "slim", "regular" albo "oversize". to_tshirt_s: dopasowany top z dzianiny bez rękawów ze stójką (kol = "stojka", kolW = wysokość stójki 2-12). T-shirty też mogą mieć kol = "stojka" (półgolf). Program nie ma gorsetów z miseczkami, rękawów raglanowych i kimonowych, drapowań, asymetrii, kieszeni wszywanych ani spodni.',
+      'Każda sukienka może być z ramionami albo bez ramiączek (parametr gora: "ramiona" albo "bez"; przy "bez" bk = "prosta", "luk" (łagodnie zaokrąglona w dół) albo "serce" to kształt górnej krawędzi, bh = jej wysokość nad linią biustu 2-12). Sukienki i topy mają zamek w szwie tyłu. go_pod: gorset pod biust z paneli, sznurowany z tyłu (parametry: gr = redukcja talii 0-15, gh = wysokość nad talią 5-14, gd = długość pod talią z przodu 5-16). go_nad: gorset nad biust z paneli, bez osobnych miseczek (bk = "prosta" albo "serce" to kształt górnej krawędzi; gr, gd oraz bh = wysokość górnej krawędzi nad linią biustu 2-12). to_tshirt i to_tshirt_k: t-shirt z dzianiny z długim albo krótkim rękawem, bez zaszewek; parametr fit = "slim", "regular" albo "oversize". su_empire i su_princeska mogą mieć dół z koła zamiast własnego: parametr dol = "polkole", "kolo" albo "kolo2" (puste = dół własny). to_tshirt_s: dopasowany top z dzianiny bez rękawów ze stójką (kol = "stojka", kolW = wysokość stójki 2-12). T-shirty też mogą mieć kol = "stojka" (półgolf). Program nie ma gorsetów z miseczkami, rękawów raglanowych i kimonowych, drapowań, asymetrii, kieszeni wszywanych ani spodni.',
       'Parametry (cm): dl = długość od talii w dół (25-130, rybki od 50); flare = poszerzenie dołu na każdym szwie, ujemne zwęża (-6 do 30, tylko fasony bez koła); kn = wysokość kolan od talii dla rybek (35-90); gf = rozkloszowanie klina na szwie dla su_rybka_kliny (2-30);',
       'nk = kształt dekoltu z przodu: okragly, v, karo, serce, lodka; nd = głębokość dekoltu z przodu poniżej podstawy szyi (-4 do 24, podstawowy to 0, linia biustu wypada około 18); nw = poszerzenie dekoltu wzdłuż ramienia (0-9); nkb = kształt z tyłu: okragly albo v; nb = głębokość dekoltu z tyłu (0-30);',
       'luzG, luzT, luzB = luz w biuście, talii, biodrach (dopasowane 2-4, luźne 6-12, elastyczna dzianina ujemny).',
@@ -1558,6 +1567,7 @@
     for (const k in LIM) if (isFinite(pr[k]) && pr[k] !== null && pr[k] !== '') p[k] = Math.round(Math.max(LIM[k][0], Math.min(LIM[k][1], +pr[k])) * 2) / 2;
     if (dlMin() < 0 && isFinite(pr.dl) && pr.dl !== null && pr.dl !== '') p.dl = Math.round(Math.max(-10, Math.min(70, +pr.dl)) * 2) / 2;
     if (['serce', 'luk', 'prosta'].includes(pr.bk)) p.bk = pr.bk;
+    p.dol = ['polkole', 'kolo', 'kolo2'].includes(pr.dol) && (st.id === 'su_empire' || st.id === 'su_princeska') ? pr.dol : '';
     if (st.id.indexOf('to_tshirt') === 0) { const f = st.id === 'to_tshirt_s' ? 'slim' : ['slim', 'regular', 'oversize'].includes(pr.fit) ? pr.fit : 'regular'; p.fit = f; if (!isFinite(pr.luzG) || pr.luzG === null) Object.assign(p, f === 'slim' ? { luzG: -4, luzT: 0, luzB: -4 } : f === 'oversize' ? { luzG: 16, luzT: 12, luzB: 14 } : { luzG: 6, luzT: 8, luzB: 4 }); state.fabric = 'dzersej'; }
     p.extras = inspExtras(inLast);
     const bool = (v) => v === true || v === 'true', cm = (v, lo, hi) => (isFinite(v) && v !== null && v !== '' ? Math.round(Math.max(lo, Math.min(hi, +v)) * 2) / 2 : 0), fl0 = flags();

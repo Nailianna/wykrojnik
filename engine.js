@@ -271,8 +271,8 @@
   }
 
   // ---------- klosz: element z koła (ćwiartka na złożeniu) ----------
-  /** @param {WMeas} m @param {WParams} p @param {string} [nameOv] @param {string} [idOv] */
-  function circlePiece(T, D, frac, m, p, title, zipAt, nameOv, idOv) {
+  /** @param {WMeas} m @param {WParams} p @param {string} [nameOv] @param {string} [idOv] @param {string} [labOv] */
+  function circlePiece(T, D, frac, m, p, title, zipAt, nameOv, idOv, labOv) {
     const r = T / (2 * Math.PI * frac), R = r + D, arc = (rad, rev) => {
       const o = []; for (let i = 0; i <= 40; i++) { const a = ((rev ? 40 - i : i) / 40) * Math.PI / 2; o.push([rad * Math.sin(a), rad * Math.cos(a)]); } return o;
     };
@@ -282,7 +282,7 @@
     const pc = mkPiece({
       id: idOv || 'klosz', name: nameOv ? nameOv : frac === 2 ? 'DÓŁ Z DWÓCH KÓŁ' : frac === 1 ? 'DÓŁ Z KOŁA' : 'DÓŁ Z PÓŁKOLA',
       lines: ['wytnij ' + Math.round(frac * 2) + '× ze złożenia', title, m.name],
-      edges: [{ pts: arc(r, false), sa: p.saTalia, lab: 'talia' }, { pts: [[r, 0], [R, 0]], sa: p.saSzew, lab: 'szew' }, { pts: arc(R, true), sa: Math.min(p.saDol, 1.5), lab: 'dół' },
+      edges: [{ pts: arc(r, false), sa: p.saTalia, lab: labOv || 'talia' }, { pts: [[r, 0], [R, 0]], sa: p.saSzew, lab: 'szew' }, { pts: arc(R, true), sa: Math.min(p.saDol, 1.5), lab: 'dół' },
         { pts: [[0, R], [0, r]], sa: 0, fold: true }],
       extra, label: [mid * s2, mid * s2], grain: { x: 3.2, y0: r + 3, y1: Math.max(r + 12, R - 6) }, foldText: [1.1, r + D * 0.75],
     });
@@ -551,7 +551,7 @@
   /** @param {WMeas} m @param {WParams} p */
   function draftPrincess(m, p, title, mer) {
     p = Object.assign({}, p, { zp: 'bok' }); // w princesce zaszewka piersiowa znika w cięciu
-    const a = full(m), D = p.dl, pieces = [], rows = [];
+    const a = full(m), D = p.dl, pieces = [], rows = [], fracP = mer ? 0 : dolFrac(p), cutW = fracP > 0; // cutW: panele kończą się w talii, dół jest z koła
     const kn = mer ? Math.max(35, Math.min(p.kn || 55, D - 15)) : 0, L = D - kn, gf = mer ? Math.max(2, Math.min(p.gf || 9, L * 0.7)) : 0;
     const ye = mer ? kn + Math.sqrt(L * L - gf * gf) : D, phiG = mer ? Math.asin(gf / L) : 0;
     const pb = mer ? Object.assign({}, p, { dl: kn, flare: Math.min(p.flare, 0) }) : p, pf = mer ? 0 : Math.max(0, p.flare) * 0.5;
@@ -581,6 +581,25 @@
       const exC = [notch([pos - w / 2, 0], [1, 0], nsa), notch(apex, [1, 0], nsa), { t: 'poly', s: 'aux', pts: [[0, 0], [pos - w / 2, 0]] }, { t: 'poly', s: 'aux', pts: [[0, m.wb], [pos, m.wb]] }];
       if (!isFront) exC.push(notch([0, m.wb], [-1, 0], nsa), txt(0.6, m.wb + 0.9, 'koniec zamka', 'start'), ...zipMark(b.C, [0, m.wb], [1, 0]));
       if (mer) exC.push(notch([pos, kn], [1, 0], nsa), { t: 'poly', s: 'aux', pts: [[0, kn], [pos, kn]] }, txt(pos * 0.5, kn - 0.4, 'linia kolan'));
+      const yL = b.yg * 0.5; // środek wysokości między biustem a talią: tu trafiają opisy przy panelach uciętych w talii
+      if (cutW) {
+        const sC = splitAtY(seamC, 0)[0], sS = splitAtY(seamS, 0)[0], sd = splitAtY(side, 0)[0];
+        pieces.push(mkPiece({
+          id: isFront ? 'przod-srodek' : 'tyl-srodek', name: isFront ? 'PRZÓD ŚRODEK' : 'TYŁ ŚRODEK', lines: lines(isFront ? 'wytnij 1× ze złożenia' : 'wytnij 2×'),
+          edges: [{ pts: b.neck, sa: p.saTalia, lab: 'dekolt' }, { pts: [b.NP, b.SP], sa: p.saSzew, lab: 'ramię' }, { pts: b.armA, sa: p.saTalia, lab: 'pacha' }, { pts: sC, sa: p.saSzew, lab: 'cięcie princeski' }, { pts: [sC[sC.length - 1], [0, 0]], sa: p.saTalia, lab: 'talia' }, { pts: [[0, 0], b.C], sa: csa, fold: isFront || !!p.knit, lab: isFront ? 'środek przodu' : 'środek tyłu', labOff: 2.3 }],
+          extra: /** @type {WPrim[]} */ ([notch(apex, [1, 0], nsa)]).concat(isFront ? [] : zipMark(b.C, [0, 0], [1, 0])), label: [pos * 0.42, yL], grain: { x: pos * 0.82, y0: b.yg + 1, y1: -1.5 }, foldText: isFront ? [1.1, yL] : null, mirror: !isFront,
+        }));
+        const xs = sd[sd.length - 1][0], xp = sS[sS.length - 1][0];
+        pieces.push(mkPiece({
+          id: isFront ? 'przod-bok' : 'tyl-bok', name: isFront ? 'PRZÓD BOK' : 'TYŁ BOK', lines: lines('wytnij 2×'),
+          edges: [{ pts: armS, sa: p.saTalia, lab: 'pacha' }, { pts: sd, sa: p.saSzew, lab: 'szew boczny' }, { pts: [sd[sd.length - 1], sS[sS.length - 1]], sa: p.saTalia, lab: 'talia' }, { pts: sS.slice().reverse(), sa: p.saSzew, lab: 'cięcie princeski' }],
+          extra: [notch(apex, [-1, 0], nsa)], label: [(xp + xs) / 2 - 1, yL], grain: { x: xp + (xs - xp) * 0.8, y0: b.yg + 1, y1: -1.5 }, mirror: !isFront,
+        }));
+        waist += b.Wp[0] - w; bust += b.bustX; rr = b.r; if (isFront) gap = b.yg - b.C[1];
+        sideLen.push(plen(sd)); rows.push([isFront ? 'Cięcie przodu: środek i bok' : 'Cięcie tyłu: środek i bok', plen(sC), plen(sS)]);
+        if (isFront) prF = pos; else prB = pos;
+        continue;
+      }
       let hemC, cEdge;
       if (mer && !isFront) { const cb = flareSeg([0, kn], -1); hemC = arcHem(cEnd, cb[cb.length - 1]); cEdge = cb.slice().reverse().concat([b.C]); }
       else { hemC = mer ? half(cEnd, 0) : [cEnd, [0, D]]; cEdge = [[0, D], b.C]; }
@@ -604,22 +623,27 @@
       rows.push([isFront ? 'Cięcie przodu: środek i bok' : 'Cięcie tyłu: środek i bok', plen(seamC), plen(seamS)]);
       if (isFront) prF = pos; else prB = pos;
     }
-    const head = [['Biust w wykroju', 2 * bust, m.og + p.luzG], ['Talia w wykroju', 2 * waist, m.ot + p.luzT], ['Biodra w wykroju', 2 * hipHalf, m.ob + p.luzB]];
+    const head = [['Biust w wykroju', 2 * bust, m.og + p.luzG], ['Talia w wykroju', 2 * waist, m.ot + p.luzT]].concat(cutW ? [] : [['Biodra w wykroju', 2 * hipHalf, m.ob + p.luzB]]);
+    if (cutW) { const c = circlePiece(2 * waist, D, fracP, m, p, title, Math.min(m.wb, D - 5)); pieces.push(c.piece); hemHalf = c.hemC / 2; }
     if (mer) head.push(['Obwód na kolanach', 2 * kneeHalf, null]);
     head.push(['Obwód dołu', 2 * hemHalf, null], ['Dekolt nad linią biustu', gap, null], ['Szew boczny: przód i tył', sideLen[0], sideLen[1]]);
     const sil = { top: 'dress', frac: 0, hemC: 2 * hemHalf, a, neckGap: gap, lowerArm: Math.min(2, Math.max(0, p.luzG / 2)), seams: { side: true, cb: true, pr: [prF, prB] } };
-    if (mer) Object.assign(sil, { lower: 'mermaid', kn, kneeC: 2 * kneeHalf, grow: (2 * hemHalf - 2 * kneeHalf) / L }); else Object.assign(sil, { lower: 'straight', flareK: 1.6 });
+    if (mer) Object.assign(sil, { lower: 'mermaid', kn, kneeC: 2 * kneeHalf, grow: (2 * hemHalf - 2 * kneeHalf) / L }); else if (cutW) { Object.assign(sil, { lower: 'circle', frac: fracP, pleat: false }); sil.seams.rings = [0]; } else Object.assign(sil, { lower: 'straight', flareK: 1.6 });
     return {
       pieces, bod,
       info: {
         rows: head.concat(rows),
         darts: [['Zaszewki', 'brak, kształt dają cięcia']],
-        cut: [['Przód środek', '1 × ze złożenia'], ['Przód bok', '2 ×'], ['Tył środek', '2 ×'], ['Tył bok', '2 ×']],
+        cut: [['Przód środek', '1 × ze złożenia'], ['Przód bok', '2 ×'], ['Tył środek', '2 ×'], ['Tył bok', '2 ×']].concat(cutW ? [['Dół', Math.round(fracP * 2) + ' × ze złożenia']] : []),
         warn: (mer ? 'Obwód na kolanach to ' + fmt(2 * kneeHalf) + ' cm, więc krok będzie krótki. ' : '') + 'Cięcia zszywaj od nacinek na linii biustu, talii' + (mer ? ' i kolan' : '') + '. Łuk nad biustem na panelu bocznym przypnij gęsto przed szyciem.',
       },
       sil,
     };
   }
+
+  // dół z koła zamiast własnego dołu fasonu (empire, princeska): 0 = dół własny
+  /** @param {WParams} p */
+  function dolFrac(p) { return p.dol === 'kolo2' ? 2 : p.dol === 'kolo' ? 1 : p.dol === 'polkole' ? 0.5 : 0; }
 
   // ---------- empire: odcięcie pod biustem ----------
   /** @param {WMeas} m @param {WParams} p */
@@ -646,9 +670,11 @@
       }));
       tops.push({ isFront, wt: q.xs - we, yE, b });
     }
-    const hq = (m.ob + p.luzB) / 4;
+    const hq = (m.ob + p.luzB) / 4, fracE = dolFrac(p);
     let hemHalf = 0, seam = 0;
-    for (const t of tops) {
+    if (fracE) { // dół z koła wszyty w odcięcie pod biustem
+      const Ls = -tops[0].yE + p.dl, T = 2 * (tops[0].wt + tops[1].wt), c = circlePiece(T, Ls, fracE, m, p, title, Math.min(-tops[0].yE + m.wb, Ls - 5), null, null, 'odcięcie pod biustem'); pieces.push(c.piece); hemHalf = c.hemC / 2; seam = T / 2;
+    } else for (const t of tops) {
       const Ls = -t.yE + p.dl, yh = -t.yE + m.wb, k = Math.max((hq + 1.5 - t.wt) / yh, 0.1), hemX = t.wt + k * Ls + Math.max(0, p.flare);
       const phi = Math.atan2(hemX - t.wt, Ls), E = [t.wt + Ls * Math.sin(phi), Ls * Math.cos(phi)], hem = hemCurve(E, [-Math.cos(phi), Math.sin(phi)], Ls);
       const extra = [{ t: 'poly', s: 'aux', pts: [[0, yh], [t.wt + (E[0] - t.wt) * (yh / E[1]), yh]] }, txt(t.wt * 0.6, yh - 0.4, 'linia bioder')];
@@ -666,11 +692,11 @@
       info: {
         rows: [['Biust w wykroju', 2 * (tops[0].b.bustX + tops[1].b.bustX), m.og + p.luzG], ['Odcięcie pod biustem', 2 * seam, null], ['Obwód dołu', 2 * hemHalf, null], ['Długość ramienia', F.r, null], ['Dekolt nad linią biustu', gap, null]],
         darts: [['Pod biustem', 'po 1 na połowę przodu i tyłu'], ['Piersiowa', a.Dps - a.Dts > 0.3 ? 'z boku' : 'brak']],
-        cut: [['Stanik przód', '1 × ze złożenia'], ['Stanik tył', '2 ×'], ['Dół przód', '1 × ze złożenia'], ['Dół tył', '2 ×']],
+        cut: [['Stanik przód', '1 × ze złożenia'], ['Stanik tył', '2 ×']].concat(fracE ? [['Dół', Math.round(fracE * 2) + ' × ze złożenia']] : [['Dół przód', '1 × ze złożenia'], ['Dół tył', '2 ×']]),
         warn: (isFinite(m.opx) ? '' : 'Obwód pod biustem jest oszacowany. Wpisz zmierzony w profilu modelki, bo od niego zależy, czy odcięcie będzie leżało. ') + (est ? 'Góra korzysta z ' + est + ' wymiarów oszacowanych, uszyj próbę z surówki.' : ''),
       },
       bod: [tops[0].b, tops[1].b],
-      sil: { top: 'dress', lower: 'empire', frac: 0, hemC: 2 * hemHalf, seamC: 2 * seam, yE: -tops[0].yE, seams: { side: true, cb: true, rings: [-tops[0].yE] }, a, neckGap: gap, lowerArm: Math.min(2, Math.max(0, p.luzG / 2)) },
+      sil: { top: 'dress', lower: 'empire', frac: fracE, hemC: 2 * hemHalf, seamC: 2 * seam, yE: -tops[0].yE, seams: { side: true, cb: true, rings: [-tops[0].yE] }, a, neckGap: gap, lowerArm: Math.min(2, Math.max(0, p.luzG / 2)) },
     };
   }
 
@@ -916,7 +942,9 @@
   /** @param {WMeas} m @param {WParams} p */
   function draft(m, p, style) {
     const st = STYLES.find((s) => s.id === style) || STYLES[0];
-    const title = (st.group === 'Spódnice' ? 'spódnica ' : st.group === 'Gorsety' ? 'gorset ' : st.group === 'Topy' ? 'top ' : 'sukienka ') + st.name.toLowerCase().replace(/ \(.*\)/, '');
+    let title = (st.group === 'Spódnice' ? 'spódnica ' : st.group === 'Gorsety' ? 'gorset ' : st.group === 'Topy' ? 'top ' : 'sukienka ') + st.name.toLowerCase().replace(/ \(.*\)/, '');
+    if ((style === 'su_empire' || style === 'su_princeska') && dolFrac(p)) title += dolFrac(p) === 2 ? ', dół z dwóch kół' : dolFrac(p) === 1 ? ', dół z koła' : ', dół z półkola';
+    if (p.dol && style !== 'su_empire' && style !== 'su_princeska') p = Object.assign({}, p, { dol: '' }); // własny wybór dołu mają empire i princeska, pozostałe sukienki zmieniają fason
     const trenOk = ['su_dopasowana', 'su_trapez', 'su_zakl'].includes(style);
     if (p.tren > 0 && !trenOk) p = Object.assign({}, p, { tren: 0 });
     if (style.indexOf('to_') === 0 && p.rozp > 0) p = Object.assign({}, p, { rozp: 0 }); // top nie ma rozporka

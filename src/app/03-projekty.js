@@ -100,7 +100,7 @@
       boxes[st.group].appendChild(b);
     });
   }
-  function pickStyle(st) { if (st.id !== state.style) state.sel = {}; state.fTab = tabOf(st.id); if (st.preset) { Object.assign(state.p, st.preset); if (st.preset.rek) state.p.rekL = ['krotki', '34', 'dlugi'].includes(st.preset.rek) ? rekDef(st.preset.rek) : 0; if (st.id.indexOf('to_tshirt') === 0) state.fabric = 'dzersej'; } else state.p.bok = 0; if (st.id.indexOf('to_tshirt') !== 0 && state.style.indexOf('to_tshirt') === 0 && state.fabric === 'dzersej') state.fabric = 'bawelna'; const was = W.STYLES.find((s) => s.id === state.style); state.style = st.id; state.p.flare = st.flare || 0; if (st.dl) state.p.dl = st.dl; else if (was && was.dl && state.p.dl === was.dl) state.p.dl = 58; fillForm(); persist(); draw(true); }
+  function pickStyle(st) { if (st.id !== state.style) state.sel = {}; state.fTab = tabOf(st.id); if (st.preset) { Object.assign(state.p, st.preset); if (st.preset.rek) state.p.rekL = ['krotki', '34', 'dlugi'].includes(st.preset.rek) ? rekDef(st.preset.rek) : 0; if (st.id.indexOf('to_tshirt') === 0) state.fabric = 'dzersej'; } else state.p.bok = 0; if (st.id.indexOf('to_tshirt') !== 0 && state.style.indexOf('to_tshirt') === 0 && state.fabric === 'dzersej') state.fabric = 'bawelna'; const was = W.STYLES.find((s) => s.id === state.style); state.style = st.id; state.p.flare = st.flare || 0; state.p.dol = ''; if (st.dl) state.p.dl = st.dl; else if (was && was.dl && state.p.dl === was.dl) state.p.dl = 58; fillForm(); persist(); draw(true); }
   $('addP').addEventListener('click', () => {
     const c = cur(), id = 'p' + Date.now();
     state.profiles.push({ id, name: 'Nowa modelka', og: c.og, ot: c.ot, ob: c.ob, wb: c.wb, wzrost: c.wzrost, adv: {} });
