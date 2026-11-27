@@ -1,6 +1,6 @@
 # Analizator wykrojów PDF: kontrakt
 
-Stan: krok 1 (format i próba). Kod uploadera jeszcze nie istnieje.
+Stan: działa w aplikacji (ekran „Nowy z pliku PDF”), obie drogi połączenia gotowe.
 
 ## Podział pracy
 - Kod (pdf.js, import z Przymiarki): kontury wektorowe, warstwy rozmiarów, tekst z pozycjami, łączenie arkuszy, skala.

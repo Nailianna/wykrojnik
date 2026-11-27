@@ -52,4 +52,6 @@ Biblioteki i zasoby innych autorów są opisane w pliku `NOTICE.md`.
 
 Na pulpicie jest „Nowy z pliku PDF”. Aplikacja czyta z pliku linie, warstwy rozmiarów i napisy, a Claude opisuje ich znaczenie: nazwy elementów, ile wyciąć, nitkę, zapas na szwy i tabelę rozmiarów. Opis formatu jest w `docs/analizator.md`.
 
-Analiza działa na razie tylko w Wykrojniku otwartym w Claude. W kopii z tego repozytorium wykrój można wczytać bez analizy; połączenie własnym kluczem API jest w przygotowaniu. Repozytorium nie zawiera żadnych wykrojów w PDF, wgrywasz własne.
+W Wykrojniku otwartym w Claude analiza idzie wbudowanym kanałem i nie wymaga klucza. W kopii z tego repozytorium wklejasz własny klucz API Claude w ekranie analizy. Klucz jest zapisywany tylko w pamięci przeglądarki (`localStorage`, wpis `wykrojnik.apikey`), nie trafia do projektów ani kopii zapasowych, a zapytania są rozliczane z konta, do którego należy. Domyślny model to `claude-sonnet-5-5`; inny ustawisz wpisem `wykrojnik.apimodel`. Bez klucza wykrój można wczytać bez analizy.
+
+Repozytorium nie zawiera żadnych wykrojów w PDF ani kluczy, wgrywasz własne.

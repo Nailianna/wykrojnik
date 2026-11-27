@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.77.0', n: 80, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.78.0', n: 81, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -1727,13 +1727,34 @@
     refused: 'Claude odmówił analizy tego pliku. Możesz wczytać wykrój bez analizy.',
     session_expired: 'Sesja wygasła. Zaloguj się ponownie w Claude.',
     invalid_json: 'Odpowiedź analizatora była nieczytelna. Spróbuj jeszcze raz.',
-    no_channel: 'Analiza działa po otwarciu Wykrojnika w Claude. Tutaj możesz wczytać wykrój bez analizy.',
+    no_channel: 'Poza Claude analiza potrzebuje klucza API. Wklej go wyżej albo wczytaj wykrój bez analizy.',
+    key_rejected: 'Klucz API został odrzucony. Sprawdź, czy jest wklejony w całości i czy jest aktywny.',
+    key_model: 'Ten klucz nie ma dostępu do modelu, którego używa analiza.',
+    key_network: 'Nie udało się połączyć z API Claude. Sprawdź połączenie z internetem.',
+    key_overloaded: 'API Claude jest chwilowo przeciążone. Spróbuj za kilka minut.',
   };
+  // własny klucz API: tylko poza Claude, trzymany wyłącznie w tej przeglądarce, poza stanem aplikacji i kopiami zapasowymi
+  const AN_KEY = 'wykrojnik.apikey', AN_MODEL = 'claude-sonnet-5-5';
+  const anKey = () => { try { return (localStorage.getItem(AN_KEY) || '').trim(); } catch (e) { return ''; } };
+  const anModel = () => { try { return (localStorage.getItem('wykrojnik.apimodel') || '').trim() || AN_MODEL; } catch (e) { return AN_MODEL; } };
+  const anB64 = (blob) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => no(new Error('Nie udało się przygotować obrazu.')); r.readAsDataURL(blob); });
+  async function anApi(prompt, blobs, signal) {
+    const content = []; for (const b of blobs) content.push({ type: 'image', source: { type: 'base64', media_type: b.type || 'image/jpeg', data: await anB64(b) } });
+    content.push({ type: 'text', text: prompt });
+    let res;
+    try { res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal, headers: { 'content-type': 'application/json', 'x-api-key': anKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: anModel(), max_tokens: 16000, messages: [{ role: 'user', content }] }) }); }
+    catch (e) { throw { code: signal && signal.aborted ? 'cancelled' : 'key_network' }; }
+    let data = null; try { data = await res.json(); } catch (e) { /* odpowiedź bez JSON-u obsługuje kod statusu */ }
+    if (!res.ok) { const ty = data && data.error && data.error.type; throw { code: res.status === 401 || res.status === 403 ? 'key_rejected' : res.status === 404 || ty === 'not_found_error' ? 'key_model' : res.status === 429 ? 'rate_limited' : res.status === 529 || ty === 'overloaded_error' ? 'key_overloaded' : 'upstream_error' }; }
+    const text = ((data && data.content) || []).filter((c) => c && c.type === 'text').map((c) => c.text).join(''), i = text.indexOf('{'), j = text.lastIndexOf('}');
+    if (i < 0 || j <= i || (data && data.stop_reason === 'max_tokens')) throw { code: 'invalid_json' };
+    try { return JSON.parse(text.slice(i, j + 1)); } catch (e) { throw { code: 'invalid_json' }; }
+  }
   // jedno miejsce, przez które idzie każde pytanie do Claude; reszta analizatora nie wie, którą drogą
-  async function anLimit() { if (window.__anFake) return 8; if (!sampleFn) return 0; const l = await sampleFn.limits().catch(() => null); return l && l.images ? l.images.maxCount : 0; }
+  async function anLimit() { if (window.__anFake) return 8; if (!sampleFn) return anKey() ? 12 : 0; const l = await sampleFn.limits().catch(() => null); return l && l.images ? l.images.maxCount : 0; }
   async function anAsk(prompt, blobs, signal) {
     if (window.__anFake) return window.__anFake(prompt, blobs);
-    if (!sampleFn) throw { code: 'no_channel' };
+    if (!sampleFn) { if (!anKey()) throw { code: 'no_channel' }; return anApi(prompt, blobs, signal); }
     return sampleFn.json(prompt, { images: blobs, signal, modelTier: 'complex' });
   }
   const anLoadLib = () => new Promise((r) => { if (window.PatImport) r(undefined); else { const sc = document.createElement('script'); sc.src = 'importer.js'; sc.onload = r; sc.onerror = r; document.head.appendChild(sc); } });
@@ -1748,7 +1769,7 @@
     return [
       'Jesteś analizatorem wykrojów krawieckich. Dostajesz arkusz wykroju z pliku PDF: obrazy stron, listę konturów, które program znalazł w pliku, i napisy wyciągnięte z pliku. Na obrazach każdy kontur ma czerwoną etykietę z identyfikatorem (k1, k2, ...), postawioną tuż pod najwyższym widocznym punktem jego linii; kontur widoczny na dwóch stronach ma etykietę na obu. Na arkuszu widać naraz linie wszystkich rozmiarów; kontury z listy dotyczą rozmiaru „' + (st.size || 'jedyny') + '”.',
       'Opisz znaczenie, nie geometrię. Niczego nie mierz na obrazie; liczby bierz tylko z napisów i tabel. Napisy pisane po łuku bywają w wyciągu pocięte, wtedy czytaj je z obrazu.',
-      'Obrazy po kolei: ' + shots.map((s, i) => (i + 1) + ') strona ' + s.pn + (s.part ? ', ' + s.part : '')).join('; ') + '.' + (st.cut ? ' Plik ma więcej stron, niż mogę wysłać; dalsze strony znasz tylko z listy konturów i napisów.' : ''),
+      'Obrazy po kolei: ' + shots.map((s, i) => (i + 1) + ') strona ' + s.pn + (s.part ? ', ' + s.part : '')).join('; ') + '.' + (st.cut ? ' Plik ma więcej stron, niż mogę wysłać; pozostałe znasz tylko z listy konturów i napisów.' : ''),
       'Kontury:\n' + cons.join('\n'),
       'Wszystkie napisy z pliku, wierszami od góry strony:\n' + (outside.join('\n') || 'brak'),
       'Warstwy PDF: ' + (d.layers.join(', ') || 'brak'),
@@ -1804,7 +1825,7 @@
       return Object.assign({}, pc, { name, cut: e.cut, prims });
     });
   }
-  function anOpen() { anSt = { sheet: null, instr: null }; $('anSheet').value = ''; $('anInstr').value = ''; $('anSheetN').textContent = ''; $('anInstrN').textContent = ''; $('anRes').hidden = true; $('anStat').textContent = ''; $('anGo').disabled = true; $('anRaw').disabled = true; $('anStop').hidden = true; $('anBox').hidden = false; }
+  function anOpen() { anSt = { sheet: null, instr: null }; $('anSheet').value = ''; $('anInstr').value = ''; $('anSheetN').textContent = ''; $('anInstrN').textContent = ''; $('anRes').hidden = true; $('anStat').textContent = ''; $('anGo').disabled = true; $('anRaw').disabled = true; $('anStop').hidden = true; $('anKeyBox').hidden = !!sampleFn; $('anKeyIn').value = anKey(); $('anBox').hidden = false; }
   function anClose() { if (anCtl) anCtl.abort(); $('anBox').hidden = true; anSt = null; }
   async function anRun() {
     const st = anSt; if (!st || !st.sheet) return;
@@ -1818,10 +1839,13 @@
       if (!st.pieces.length) throw new Error('Nie znalazłam w tym pliku elementów wykroju.');
       st.instrText = st.instr ? await window.PatImport.text(st.instr, 14000).catch(() => '') : '';
       busySet(bz, 'Przygotowuję obrazy stron (krok 2 z 3).'); await paintTick();
-      const np = st.data.pages.length, tiles = np * 2 <= max ? 2 : 1, marks = st.pieces.reduce((a, pc, i) => a.concat(pc.marks.map((m) => ({ id: 'k' + (i + 1), pn: m.pn, x: m.x, y: m.y }))), []);
-      let shots = await window.PatImport.shots(st.sheet, marks, tiles); st.cut = shots.length > max; shots = shots.slice(0, max);
+      const marks = st.pieces.reduce((a, pc, i) => a.concat(pc.marks.map((m) => ({ id: 'k' + (i + 1), pn: m.pn, x: m.x, y: m.y }))), []);
+      // budżet obrazów: strony z elementami idą w dwóch połówkach, strony z samym tekstem w całości; gdy to za dużo, najpierw rezygnuję z połówek, potem ze stron bez elementów
+      const pns = st.data.pages.map((p) => p.pn), withEl = new Set(marks.map((m) => m.pn)), nW = pns.filter((p) => withEl.has(p)).length, nO = pns.length - nW;
+      const plan = 2 * nW + nO <= max ? (p) => (withEl.has(p) ? 2 : 1) : nW + nO <= max ? () => 1 : (p) => (withEl.has(p) ? 1 : 0);
+      let shots = await window.PatImport.shots(st.sheet, marks, plan); st.cut = shots.length > max || (nW + nO > max && nO > 0); shots = shots.slice(0, max);
       if (anCtl.signal.aborted) throw { code: 'cancelled' };
-      busySet(bz, 'Claude ogląda arkusz i opisuje elementy (krok 3 z 3). To zwykle trwa od pół minuty do dwóch minut.');
+      busySet(bz, 'Claude ogląda arkusz i opisuje elementy (krok 3 z 3). To zwykle trwa od pół minuty do dwóch minut.'); // obrazy mogą iść dwiema drogami: wbudowanym kanałem Claude albo przez API z kluczem użytkownika
       const raw = await anAsk(anPrompt(st, shots), shots.map((s) => s.blob), anCtl.signal);
       if (anSt !== st) return;
       st.res = anClean(raw, st.pieces.length, st.data.sizes); stat(''); anShow();
@@ -1873,10 +1897,11 @@
     say('Zapisałam wykrój jako projekt: ' + pieces.length + ' elementów' + (size ? ', rozmiar ' + size : '') + '.');
   }
   function anRaw() { const f = anSt && anSt.sheet; if (!f) return; $('anBox').hidden = true; anSt = null; homeShow(false); impLoad(f); }
-  const anPick = (inp, lab, key) => inp.addEventListener('change', () => { const f = inp.files[0] || null; if (!anSt) return; anSt[key] = f; lab.textContent = f ? f.name : ''; if (key === 'sheet') { anSt.data = null; anSt.res = null; $('anRes').hidden = true; $('anGo').disabled = !f; $('anRaw').disabled = !f; $('anStat').textContent = f && !sampleFn && !window.__anFake ? AN_ERR.no_channel : ''; } else if (anSt.res) $('anStat').textContent = f ? 'Instrukcja dołączona. Przeanalizuj wykrój jeszcze raz, żeby ją uwzględnić.' : ''; });
+  const anPick = (inp, lab, key) => inp.addEventListener('change', () => { const f = inp.files[0] || null; if (!anSt) return; anSt[key] = f; lab.textContent = f ? f.name : ''; if (key === 'sheet') { anSt.data = null; anSt.res = null; $('anRes').hidden = true; $('anGo').disabled = !f; $('anRaw').disabled = !f; $('anKeyBox').hidden = !!sampleFn; $('anStat').textContent = f && !sampleFn && !anKey() && !window.__anFake ? AN_ERR.no_channel : ''; } else if (anSt.res) $('anStat').textContent = f ? 'Instrukcja dołączona. Przeanalizuj wykrój jeszcze raz, żeby ją uwzględnić.' : ''; });
   anPick($('anSheet'), $('anSheetN'), 'sheet'); anPick($('anInstr'), $('anInstrN'), 'instr');
   $('anGo').addEventListener('click', anRun); $('anRaw').addEventListener('click', anRaw); $('anStop').addEventListener('click', () => { if (anCtl) anCtl.abort(); });
   $('anSaveB').addEventListener('click', anSave); $('anX').addEventListener('click', anClose); $('anPrz').addEventListener('click', () => { anClose(); przOpen(); });
+  $('anKeyIn').addEventListener('input', () => { const v = $('anKeyIn').value.trim(); try { if (v) localStorage.setItem(AN_KEY, v); else localStorage.removeItem(AN_KEY); } catch (e) {} if (v && $('anStat').textContent === AN_ERR.no_channel) $('anStat').textContent = ''; });
   $('hPdf').addEventListener('click', anOpen);
   // ---------- paleta poleceń (⌘K) ----------
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');

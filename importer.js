@@ -80,15 +80,18 @@
     for (const p of data.paths) { if (p.l && data.sizes.includes(p.l)) { if (p.l === size || !data.sizes.length) mine.push(p); } else common.push(p); }
     const src = data.sizes.length ? mine : common.splice(0), B = src.map((p) => bb(p.pts)), diag = (b) => Math.hypot(b[2] - b[0], b[3] - b[1]);
     // ramka arkusza (linia obejmująca prawie całą stronę) nie jest elementem i nie może wciągnąć do siebie wszystkiego, co leży w środku
-    const pgOf = (pn) => (data.pages || []).find((q) => q.pn === pn), frame = (p, b) => { const pg = pgOf(p.pn); return !!pg && b[2] - b[0] > pg.w * 0.8 && b[3] - b[1] > pg.h * 0.8; };
+    const pgOf = (pn) => (data.pages || []).find((q) => q.pn === pn), frame = (p, b) => { const pg = pgOf(p.pn); if (!pg) return false; const w = b[2] - b[0], h = b[3] - b[1]; return (w > pg.w * 0.8 && h > pg.h * 0.8) || (p.pts.length === 2 && ((w < 0.3 && h > pg.h * 0.9) || (h < 0.3 && w > pg.w * 0.9))); }; // także pojedyncze proste linie przez cały arkusz: krawędzie stron i siatka sklejania
     const seeds = []; src.forEach((p, i) => { if (diag(B[i]) > 12 && !frame(p, B[i])) seeds.push(i); });
     const par = seeds.map((_, i) => i), find = (i) => { while (par[i] !== i) i = par[i] = par[par[i]]; return i; }, ov = (a, b) => a[0] <= b[2] + 0.4 && b[0] <= a[2] + 0.4 && a[1] <= b[3] + 0.4 && b[1] <= a[3] + 0.4;
     // elementy leżą na arkuszu ciasno, więc same prostokąty otaczające nie wystarczą: linie należą do jednego elementu, gdy stykają się końcami albo jedna leży w całości w drugiej
     const ends = (p) => [p.pts[0], p.pts[p.pts.length - 1]], near = (p, q) => ends(p).some((a) => q.pts.some((b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) < 0.35)), within = (a, b) => a[0] >= b[0] - 0.3 && a[1] >= b[1] - 0.3 && a[2] <= b[2] + 0.3 && a[3] <= b[3] + 0.3;
     // linia w środku zamkniętego obrysu należy do niego, gdy jest prawie tej samej wielkości (linia szycia wewnątrz linii cięcia) albo mała (znak, zaszewka); w pozostałych przypadkach to osobny element
     const area = (b) => (b[2] - b[0]) * (b[3] - b[1]), nest = (inn, out) => area(inn) > 0.6 * area(out) || diag(inn) < 0.45 * diag(out);
+    // sama ramka otaczająca nie wystarcza: mankiet może leżeć w pustym rogu ramki rękawa; liczy się, czy linia jest naprawdę wewnątrz obrysu
+    const pip = (x, y, poly) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i], b = poly[j]; if ((a[1] > y) !== (b[1] > y) && x < ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+    const inPoly = (inn, out) => { const k = Math.max(1, Math.floor(inn.pts.length / 5)); let n = 0, m = 0; for (let i = 0; i < inn.pts.length; i += k) { m++; if (pip(inn.pts[i][0], inn.pts[i][1], out.pts)) n++; } return n >= m * 0.6; };
     const closed = (p) => Math.hypot(p.pts[0][0] - p.pts[p.pts.length - 1][0], p.pts[0][1] - p.pts[p.pts.length - 1][1]) < 0.3;
-    for (let i = 0; i < seeds.length; i++) for (let j = i + 1; j < seeds.length; j++) { const p = src[seeds[i]], q = src[seeds[j]], bi = B[seeds[i]], bj = B[seeds[j]]; if (p.pn !== q.pn || !ov(bi, bj)) continue; if (near(p, q) || near(q, p) || (within(bi, bj) && closed(q) && nest(bi, bj)) || (within(bj, bi) && closed(p) && nest(bj, bi))) par[find(i)] = find(j); }
+    for (let i = 0; i < seeds.length; i++) for (let j = i + 1; j < seeds.length; j++) { const p = src[seeds[i]], q = src[seeds[j]], bi = B[seeds[i]], bj = B[seeds[j]]; if (p.pn !== q.pn || !ov(bi, bj)) continue; if ((!closed(p) && !closed(q) && (near(p, q) || near(q, p))) || (within(bi, bj) && closed(q) && nest(bi, bj) && inPoly(p, q)) || (within(bj, bi) && closed(p) && nest(bj, bi) && inPoly(q, p))) par[find(i)] = find(j); }
     const cl = new Map(); seeds.forEach((s, i) => { const r = find(i); if (!cl.has(r)) cl.set(r, { box: [1e9, 1e9, -1e9, -1e9], cut: [], aux: [], pn: src[s].pn }); const c = cl.get(r); c.cut.push(src[s]); bb(src[s].pts, c.box); });
     let list = Array.from(cl.values()); const inside0 = (b, c) => { const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2; return cx >= c.box[0] - 1 && cx <= c.box[2] + 1 && cy >= c.box[1] - 1 && cy <= c.box[3] + 1; };
     { const thin = list.filter((c) => Math.min(c.box[2] - c.box[0], c.box[3] - c.box[1]) < 1.5), fat = list.filter((c) => !thin.includes(c)); for (const t of thin) { const host = fat.filter((c) => c.pn === t.pn && inside0(t.box, c)).sort((x, y) => diag(x.box) - diag(y.box))[0]; if (host) host.cut = host.cut.concat(t.cut); } list = fat; } // pojedyncze proste linie (zakładki, linie pomocnicze) dołączają do elementu, w którym leżą
@@ -99,12 +102,13 @@
     // punkt na etykietę: najwyższy wierzchołek konturu, który leży na jego stronie (rysunek bywa większy niż strona i jest przez nią przycięty)
     const plen = (c) => c.cut.reduce((s, p) => { for (let i = 1; i < p.pts.length; i++) s += Math.hypot(p.pts[i][0] - p.pts[i - 1][0], p.pts[i][1] - p.pts[i - 1][1]); return s; }, 0);
     for (const c of list) {
-      const pg = (data.pages || []).find((q) => q.pn === c.pn); let m = null;
-      if (pg) for (const p of c.cut) for (const v of p.pts) if (v[0] > pg.x0 + 2 && v[0] < pg.x0 + pg.w - 2 && v[1] > 1 && v[1] < pg.h - 4 && (!m || v[1] < m[1])) m = v;
+      const pg = (data.pages || []).find((q) => q.pn === c.pn); let m = null, all = 0, on = 0;
+      if (pg) for (const p of c.cut) for (const v of p.pts) { all++; if (v[0] > pg.x0 + 2 && v[0] < pg.x0 + pg.w - 2 && v[1] > 1 && v[1] < pg.h - 4) { on++; if (!m || v[1] < m[1]) m = v; } }
+      if (pg) { const ox = Math.max(0, Math.min(c.box[2], pg.x0 + pg.w) - Math.max(c.box[0], pg.x0)), oy = Math.max(0, Math.min(c.box[3], pg.h) - Math.max(c.box[1], 0)); const big = ox * oy >= 0.25 * (c.box[2] - c.box[0]) * (c.box[3] - c.box[1]); if (on < all * 0.3 && !big) m = null; else if (!m && big) m = [(Math.max(c.box[0], pg.x0) + Math.min(c.box[2], pg.x0 + pg.w)) / 2, Math.max(c.box[1], 0) + 3]; } // na tej stronie widać najwyżej skrawek elementu, etykieta tylko by myliła
       c.len = plen(c); c.main = c.cut.reduce((a, p) => (p.pts.length > a.length ? p.pts : a), []); c.marks = [{ pn: c.pn, x: m ? m[0] : (c.box[0] + c.box[2]) / 2, y: m ? m[1] : (c.box[1] + c.box[3]) / 2, seen: !!m, box: c.box.slice() }];
     }
     // ten sam element narysowany w całości na dwóch stronach (duże arkusze z jednego rysunku): zostaje jeden, z etykietami na obu stronach
-    { const keep = []; for (const c of list) { const w = c.box[2] - c.box[0], h = c.box[3] - c.box[1], same = (k) => k.main.length === c.main.length && k.main.every((v, i) => Math.abs(v[0] - k.box[0] - (c.main[i][0] - c.box[0])) < 0.2 && Math.abs(v[1] - k.box[1] - (c.main[i][1] - c.box[1])) < 0.2), o = keep.find((k) => k.pn !== c.pn && Math.abs(k.box[2] - k.box[0] - w) < 1 && Math.abs(k.box[3] - k.box[1] - h) < 1 && same(k)); if (o) o.marks = o.marks.concat(c.marks); else keep.push(c); } list = keep; }
+    { const keep = []; for (const c of list) { const w = c.box[2] - c.box[0], h = c.box[3] - c.box[1], same = (k) => k.main.length === c.main.length && k.main.every((v, i) => Math.abs(v[0] - k.box[0] - (c.main[i][0] - c.box[0])) < 0.2 && Math.abs(v[1] - k.box[1] - (c.main[i][1] - c.box[1])) < 0.2), o = keep.find((k) => k.pn !== c.pn && Math.abs(k.box[2] - k.box[0] - w) < 1 && Math.abs(k.box[3] - k.box[1] - h) < 1 && same(k)); if (o) o.marks = o.marks.concat(c.marks); else keep.push(c); } for (const c of keep) if (c.marks.some((m) => m.seen)) c.marks = c.marks.filter((m) => m.seen); list = keep; }
     return list.map((c, i) => {
       const prims = c.cut.map((p) => ({ t: 'poly', s: 'cut', pts: p.pts })).concat(c.aux.map((p) => ({ t: 'poly', s: p.d ? 'fold' : 'aux', pts: p.pts })));
       const PART = /front|back|sleeve|skirt|bodice|strap|godet|train|wing|panel|collar|cuff|facing|pocket|lining|yoke|band|binding|prz[oó]d|ty[lł]|r[eę]kaw/i;
@@ -120,12 +124,14 @@
   async function shots(file, marks, tiles) {
     const L = await lib(), doc = await L.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise, K = 2.54 / 72, out = []; let offX = 0;
     for (let pn = 1; pn <= doc.numPages; pn++) {
-      const page = await doc.getPage(pn), v1 = page.getViewport({ scale: 1 }), sc = Math.sqrt((1.1e6 * (tiles === 2 ? 1.85 : 1)) / (v1.width * v1.height)), vp = page.getViewport({ scale: sc });
+      const page = await doc.getPage(pn), v1 = page.getViewport({ scale: 1 }), nt = typeof tiles === 'function' ? tiles(pn) : tiles; // tiles: liczba albo funkcja strona -> 0 (pomiń), 1 (cała), 2 (dwie połówki)
+      if (!nt) { offX += v1.width * K + 3; continue; }
+      const sc = Math.sqrt((1.1e6 * (nt === 2 ? 1.85 : 1)) / (v1.width * v1.height)), vp = page.getViewport({ scale: sc });
       const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
       await page.render({ canvasContext: g, viewport: vp }).promise;
       const px = sc / K, fs = Math.max(15, Math.round(c.width / 80)); g.font = '700 ' + fs + 'px Arial, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
       for (const m of marks || []) { if (m.pn && m.pn !== pn) continue; const x = (m.x - offX) * px, y = m.y * px; if (x < 0 || x > c.width || y < 0 || y > c.height) continue; const w = g.measureText(m.id).width + fs * 0.7, yy = Math.min(c.height - fs, y + fs * 1.1), xx = Math.max(w / 2 + 2, Math.min(c.width - w / 2 - 2, x)); g.fillStyle = '#d0021b'; g.fillRect(xx - w / 2, yy - fs * 0.7, w, fs * 1.4); g.fillStyle = '#fff'; g.fillText(m.id, xx, yy + 1); }
-      const land = c.width >= c.height, long = land ? c.width : c.height, n = tiles === 2 ? 2 : 1, len = n === 1 ? long : Math.round(long * 0.54);
+      const land = c.width >= c.height, long = land ? c.width : c.height, n = nt === 2 ? 2 : 1, len = n === 1 ? long : Math.round(long * 0.54);
       for (let t = 0; t < n; t++) {
         const st = t === 0 ? 0 : long - len, q = document.createElement('canvas'); q.width = land ? len : c.width; q.height = land ? c.height : len;
         q.getContext('2d').drawImage(c, land ? st : 0, land ? 0 : st, q.width, q.height, 0, 0, q.width, q.height);
