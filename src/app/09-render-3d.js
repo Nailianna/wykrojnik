@@ -297,7 +297,7 @@
       return q;
     };
     const topOk = useFig && !!figCol && !!g3.sdf && state.sim && !!window.Cloth && sil.top === 'dress' && (!!(model.d.sewn && model.d.sewn.plan) || ((model.d.sewn || model.d).pieces.some((q) => q.id === 'przod' && q.ed) && (model.d.sewn || model.d).pieces.some((q) => q.id === 'tyl' && q.ed)));
-    const topFull = topOk && (sil.imported || ((sil.lower === 'straight' || sil.lower === 'trapez') && !sil.tren && p.dl >= m.wb + 1)); // sukienka i top z jednego kawałka: całość układa się jako zszyta tkanina
+    const topFull = topOk && ((sil.imported && !sil.partial) || ((sil.lower === 'straight' || sil.lower === 'trapez') && !sil.tren && p.dl >= m.wb + 1)); // sukienka i top z jednego kawałka: całość układa się jako zszyta tkanina
     // symulacja: poniżej linii przypięcia (talia, biodra, odcięcie) położenie tkaniny bierze się z symulacji, nie z reguł
     let simRef = null; $('simS').textContent = '';
     {
@@ -310,7 +310,7 @@
       else if (sil.hemC && p.dl - m.wb > 6) { const c0 = sil.hipC || m.ob + p.luzB, Ls = p.dl - m.wb; spec = { yPin: -m.wb, L: Ls, C: (d) => c0 + ((sil.hemC - c0) * d) / Ls }; }
       if (!spec) g3.sim = null;
       else {
-        const key = JSON.stringify([state.style, p, m, state.fabric, state.figure]);
+        const key = JSON.stringify([state.style, p, m, state.fabric, state.figure, sil.imported ? [sil.frac, sil.hemC] : 0]);
         if (!g3.sim || g3.sim.key !== key) {
           const manClear = (q) => { // manekin: elipsa tułowia na danej wysokości, poniżej tułowia nic nie ma
             // pod dolną krawędzią manekina zostaje niewidoczna, lekko zwężona bryła, żeby tkanina nie zawijała się pod korpus
@@ -335,7 +335,7 @@
         const toHip = sil.lower !== 'circle' && sil.lower !== 'none' && sil.lower !== 'empire', longEnough = p.dl >= m.wb + 1;
         const cutY = toHip && longEnough && !topFull ? m.wb : null, pinned = topFull ? false : toHip ? longEnough : !(sil.crop > 0), yPinW = cutY != null ? -cutY : 0, hasSl = !!sil.sleeve && !!figArmP;
         const pk = Object.assign({}, p, { extras: 0, saSzew: 0, saDol: 0, saTalia: 0, fac: 0, facW: 0, kol: 0, kolW: 0, falN: 0, falR: 0, sciag: 0 }); if (!topFull && cutY == null && pinned) Object.assign(pk, { dl: 0, flare: 0, kn: 0, gf: 0, ff: 0, zakK: 0, tren: 0, rozp: 0, pasT: 0, luzB: 0 }); else if (cutY != null) Object.assign(pk, { dl: 0, flare: 0, kn: 0, gf: 0, ff: 0, tren: 0, rozp: 0 });
-        const key = 'top' + JSON.stringify([state.style, pk, m, state.fabric, sil.imported ? [state.proj, state.imp && state.imp.size, sil.hemC, sil.impDl, sil.gather] : 0]);
+        const key = 'top' + JSON.stringify([state.style, pk, m, state.fabric, sil.imported ? [state.proj, state.imp && state.imp.size, sil.hemC, sil.impDl, sil.gather, sil.partial ? sil.frac : 0] : 0]);
         if (!g3.top || g3.top.key !== key) {
           const hh = topFull ? Math.max(1.7, Math.min(3, Math.sqrt(((m.ob + 8) * (a.Dts + p.dl) + (hasSl ? 70 * sil.sleeve.L : 0)) / 3300))) : 1.6; // gęstość siatki dobrana do wielkości ubrania
           const hP = D.plan && D.plan.area ? Math.max(1.7, Math.min(4, Math.sqrt((2 * D.plan.area) / 3300))) : 0; // plan szycia: gęstość siatki z łącznej powierzchni elementów
@@ -450,7 +450,7 @@
         return Math.max(t, Math.min(yU, ybL + 1.5));
       };
       const yTop0 = topSim ? topSim.yPinW : bez ? Math.max(yU, ybL + bhh) + 1.5 : yNP, yMid = topSim ? topSim.yPinW + (yBot - topSim.yPinW) * 0.42 : bez ? ybL - 3 : Math.min(yArm, yCf, yCb) - 1.5;
-      if (!sil.imported && (!topSim || (topSim.pinned && topSim.yPinW - yBot > 0.6))) addG(surface(200, 140, (u, v) => {
+      if ((!sil.imported || sil.partial) && (!topSim || (topSim.pinned && topSim.yPinW - yBot > 0.6))) addG(surface(200, 140, (u, v) => {
         let phi = u * TAU, cut = 0;
         const yBt = sil.tren ? yBot - sil.tren * Math.pow(Math.max(0, -Math.sin(phi)), 1.3) : yBot; // tren wydłuża dół z tyłu
         let y = v < 0.42 ? yTop0 + (yMid - yTop0) * (v / 0.42) : yMid + (yBt - yMid) * ((v - 0.42) / 0.58);
@@ -493,10 +493,16 @@
         const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.BufferAttribute(pos, 3)); geo.setAttribute('uv', new T3.BufferAttribute(uv, 2)); geo.setAttribute('normal', new T3.BufferAttribute(nr, 3)); geo.setIndex(new T3.BufferAttribute(Uint32Array.from(g.tri), 1));
         addG(new T3.Mesh(geo, gm));
         if (sil.strap && sil.strap.F && sil.strap.B && g.hold.length === 4 && figArmAt) { // ramiączka: od punktu wszycia z przodu przez bark do punktu wszycia z tyłu
-          for (const [fi, bi, sx] of [[0, 2, 1], [1, 3, -1]]) {
-            const A = g.hold[fi] * 3, B = g.hold[bi] * 3, J = figArmAt(sx, 0), rs = J.r + 0.4, xin = (v) => sx * Math.min(Math.abs(v), Math.abs(J.c[0]) - 1), top = [xin((X[A] + X[B]) / 2), J.c[1] + rs, J.c[2]];
+          // pary punktów wszycia wyznacza położenie, a nie kolejność na liście: po każdej stronie ciała punkt bardziej z przodu łączy się z tym bardziej z tyłu
+          const hs = Array.from(g.hold), sideH = (sg) => hs.filter((i) => Math.sign(X[i * 3] || 1e-9) === sg).sort((i, j) => X[j * 3 + 2] - X[i * 3 + 2]), prs = [1, -1].map((sg) => { const l = sideH(sg); return l.length === 2 ? [l[0], l[1], sg] : null; });
+          for (const [fi, bi, sx] of prs.every(Boolean) ? prs : [[g.hold[0], g.hold[2], 1], [g.hold[1], g.hold[3], -1]]) {
+            const A = fi * 3, B = bi * 3, J = figArmAt(sx, 0), rs = J.r + 0.4, xin = (v) => sx * Math.min(Math.abs(v), Math.abs(J.c[0]) - 1), top = [xin((X[A] + X[B]) / 2), J.c[1] + rs, J.c[2]];
             const via = (k) => [xin(X[k]) * 0.5 + top[0] * 0.5, (X[k + 1] + top[1]) / 2 + 1, J.c[2] + Math.sign(X[k + 2] - J.c[2] || (k === A ? 1 : -1)) * (rs + 0.6)];
-            const pts = [[X[A], X[A + 1], X[A + 2]], via(A), top, via(B), [X[B], X[B + 1], X[B + 2]]].map((q) => new T3.Vector3(q[0], q[1], q[2]));
+            // ramiączko idzie po powierzchni ciała: punkty pośrednie są wypychane na zewnątrz sylwetki, inaczej przy wszyciu bliżej środka chowałoby się w klatce piersiowej
+            const P0 = [X[A], X[A + 1], X[A + 2]], P1 = [X[B], X[B + 1], X[B + 2]], path = [P0];
+            for (const [fr, to, last] of /** @type {[number[], number[], number][]} */ ([[P0, top, 6], [top, P1, 5]])) for (let k = 1; k <= last; k++) { const t = k / 6, q = [fr[0] + (to[0] - fr[0]) * t, fr[1] + (to[1] - fr[1]) * t, fr[2] + (to[2] - fr[2]) * t]; if (figCol) figCol(q, 0.45, true); path.push(q); }
+            path.push(P1); void via;
+            const pts = path.map((q) => new T3.Vector3(q[0], q[1], q[2]));
             addG(new T3.Mesh(new T3.TubeGeometry(new T3.CatmullRomCurve3(pts), 28, 0.32, 6, false), gm));
           }
         }

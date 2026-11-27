@@ -236,7 +236,7 @@
     const e = $('seeN'); let t = '';
     if (g3 && state.view === '3d' && $('home').hidden) {
       const tp = g3.top && !g3.top.fail && (g3.top.ready || g3.top.prev) ? g3.top : null;
-      t = state.ref ? 'Oglądasz gotowy model 3D, bez dopasowania do wymiarów modelki.' : state.style === 'pusty' ? '' : model && model.d && model.d.approx ? 'Oglądasz przybliżoną bryłę policzoną z elementów wykroju, bez zszywania.' : tp ? (tp.bl === 'done' ? 'Oglądasz ubranie zszyte z elementów wykroju i ułożone w Blenderze.' : 'Oglądasz ubranie zszyte z elementów wykroju.') : 'Oglądasz bryłę policzoną z wymiarów.';
+      t = state.ref ? 'Oglądasz gotowy model 3D, bez dopasowania do wymiarów modelki.' : state.style === 'pusty' ? '' : model && model.d && model.d.approx ? 'Oglądasz przybliżoną bryłę policzoną z elementów wykroju, bez zszywania.' : model && model.d && model.d.sil && model.d.sil.partial ? 'Oglądasz górę zszytą z elementów wykroju i przybliżoną bryłę dołu.' : tp ? (tp.bl === 'done' ? 'Oglądasz ubranie zszyte z elementów wykroju i ułożone w Blenderze.' : 'Oglądasz ubranie zszyte z elementów wykroju.') : 'Oglądasz bryłę policzoną z wymiarów.';
       if (t && BL.shown) t += ' Obraz jest dopracowany.';
     }
     const d = model && model.d, why = d && d.approx && d.sewErr ? 'Elementy nie są zszyte. ' + String(d.sewErr).replace(/Tego fasonu nie umiem jeszcze pokazać w 3D/g, 'Nie umiem jeszcze zszyć tego fasonu').replace(/ Na razie działa układ przód, tył i rękaw z ramieniem i pachą\./, '') : '';
@@ -382,4 +382,4 @@
     } catch (e) { BL.busy = false; BL.cur = null; blStat(''); BL.why2 = 'Nie udało się przekazać sceny do Blendera: ' + String((e && e.message) || e).slice(0, 140); blNote(); }
   }
   $('blPathGo').addEventListener('click', () => { const v = $('blPath').value.trim(); if (v) blInit(v); });
-  if (TEST) window.__bl = { BL, blGlb, blInit, get g3() { return g3; } }; // tylko do testów
+  if (TEST) window.__bl = { BL, blGlb, blInit, cur, get g3() { return g3; }, get state() { return state; } }; // tylko do testów

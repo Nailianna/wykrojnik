@@ -97,6 +97,8 @@
       // góra: tam, gdzie do przodu dochodzą szwy z elementami leżącymi niżej (spódnica), jest dół; bez takich szwów węższy koniec jest górą
       const mineE = seams.filter((s) => s.a.P === F || s.b.P === F).map((s) => (s.a.P === F ? s.a.e : s.b.e)), longest = mineE.slice().sort((x, y) => y.len - x.len)[0]; let up = w0 > w1 * 1.15;
       if (mineE.length > 1 && longest) { const others = mineE.filter((e) => e !== longest), mv = others.reduce((s2, e) => s2 + plAp(t, plMid(e))[1], 0) / others.length, sv = plAp(t, plMid(longest))[1]; up = mv < sv; }
+      // przód z jednym szwem (stanik z cięć): szerokość końców nic nie mówi, bo w biuście jest szerszy niż w talii. Gdy środek przodu stoi na arkuszu pionowo, element jest narysowany tak, jak się go nosi, więc górą jest ten koniec, który jest wyżej na arkuszu.
+      else if (Math.abs(B[1] - A[1]) > 2 * Math.abs(B[0] - A[0])) { const hi = A[1] < B[1] ? A : B, lo = hi === A ? B : A; up = plAp(t, hi)[1] > plAp(t, lo)[1]; }
       if (up) t = [t[0], t[1], -t[2], -t[3], t[4], L - t[5]];
       if (plCen(R0.map((p) => plAp(t, p)))[0] < 0) t = [-t[0], -t[1], t[2], t[3], -t[4], t[5]];
       T[F.key] = t; }
@@ -113,7 +115,18 @@
         err = err / (N + 1) + (Math.sign(det(t)) === Math.sign(det(tp)) ? 0 : 0.15);
         if (!best || err < best.err) best = { t, err };
       }
-      if (best) { T[sQ.P.key] = best.t; sQ.P.depth = sP.P.depth + 1; sQ.P.via = sQ.e; }
+      if (best) {
+        let t = best.t;
+        // pionowy szew między dopasowanymi elementami: doszywany element staje prosto (jego pionowe krawędzie są symetryczne względem pionu), zamiast dziedziczyć pochylenie sąsiada.
+        // Inaczej panele stanika układają się w wachlarz: przód opada pod talię, a tył podjeżdża do góry.
+        if (Math.abs(p1[1] - p0[1]) > 1.5 * Math.abs(p1[0] - p0[0]) && !sQ.P.unf) {
+          const es = seams.filter((q) => q.a.P === sQ.P || q.b.P === sQ.P).map((q) => (q.a.P === sQ.P ? q.a.e : q.b.e)); if (sQ.P === cbP && cbE) es.push(cbE);
+          let sum = 0, n = 0; for (const e of es) { const A = plAp(t, e.pts[0]), B = plAp(t, e.pts[e.pts.length - 1]); let dx = B[0] - A[0], dy = B[1] - A[1]; if (dy < 0) { dx = -dx; dy = -dy; } const phi = Math.atan2(dx, dy); if (Math.abs(phi) < 0.7 && Math.hypot(dx, dy) > 6) { sum += phi; n++; } }
+          if (n >= 2) { const d = Math.max(-0.5, Math.min(0.5, sum / n)), c = Math.cos(d), sn = Math.sin(d), cx = (p0[0] + p1[0]) / 2, cy = (p0[1] + p1[1]) / 2, tx = t[4] - cx, ty = t[5] - cy;
+            t = [c * t[0] - sn * t[2], c * t[1] - sn * t[3], sn * t[0] + c * t[2], sn * t[1] + c * t[3], c * tx - sn * ty + cx, sn * tx + c * ty + cy]; }
+        }
+        T[sQ.P.key] = t; sQ.P.depth = sP.P.depth + 1; sQ.P.via = sQ.e;
+      }
     }
     const placed = Object.keys(T).map((k) => parts[k]); if (placed.length < 2) return { err: 'Szwy wskazane przez analizę nie łączą przodu z żadnym innym elementem.' };
     const E = (P, e) => e.pts.map((p) => plAp(T[P.key], p)), mine = seams.filter((s) => (s.a.P === F || s.b.P === F) && T[s.a.P.key] !== undefined && T[s.b.P.key] !== undefined).map((s) => (s.a.P === F ? s.a.e : s.b.e));
@@ -121,7 +134,14 @@
     const pit = a.Dts - a.Gp - 1, cfQ = ring(F).map((p) => plAp(T[F.key], p)), v0 = Math.min(...cfQ.map((p) => p[1])), v1 = Math.max(...cfQ.map((p) => p[1])); let dV;
     const sh = an.trzym === 'ramiona' ? mine.filter((e) => e.len < 32 && plCen(E(F, e))[1] < v0 + 0.25 * (v1 - v0)).sort((x, y) => plCen(E(F, x))[1] - plCen(E(F, y))[1])[0] : null;
     if (sh) { const q = E(F, sh), np = q[0][0] < q[q.length - 1][0] ? q[0] : q[q.length - 1]; dV = -a.Dts - np[1]; }
-    else { const sd = mine.slice().sort((x, y) => y.len - x.len)[0], q = E(F, sd), top = q[0][1] < q[q.length - 1][1] ? q[0] : q[q.length - 1]; dV = -(pit - 1.5) - top[1]; }
+    else {
+      const sd = mine.slice().sort((x, y) => y.len - x.len)[0], side = m.og / 4; let q = E(F, sd);
+      if (Math.abs(plCen(q)[0]) < 0.6 * side) { // najdłuższy szew przodu to cięcie blisko środka, a nie szew boczny: pachę wyznacza górny koniec pionowego szwu leżącego najbliżej boku
+        let best = null; for (const sm of used) { const h = sm.a; if (T[h.P.key] === undefined) continue; const pts = E(h.P, h.e), dx = Math.abs(pts[0][0] - pts[pts.length - 1][0]), dy = Math.abs(pts[0][1] - pts[pts.length - 1][1]); if (dy < 6 || dy < 1.2 * dx) continue; const d = Math.abs(Math.abs(plCen(pts)[0]) - side); if (!best || d < best.d) best = { d, pts }; }
+        if (best) q = best.pts;
+      }
+      const top = q[0][1] < q[q.length - 1][1] ? q[0] : q[q.length - 1]; dV = -(pit - 1.5) - top[1];
+    }
     for (const P of placed) { const t = T[P.key]; T[P.key] = [t[0], t[1], t[2], t[3], t[4], t[5] + dV]; }
     const cbOk = cbP && cbE && T[cbP.key] !== undefined, cbQ = cbOk ? E(cbP, cbE) : null, Ucb = cbQ ? Math.max(8, plCen(cbQ)[0]) : 0;
     const cbU = (v) => { if (!cbQ) return 1e9; const p0 = cbQ[0], p1 = cbQ[cbQ.length - 1]; return p0[0] + (p1[0] - p0[0]) * Math.max(0, Math.min(1, (v - p0[1]) / (p1[1] - p0[1] || 1))); };
@@ -136,7 +156,8 @@
       const bp = cbOk ? cbP : placed.filter((P) => P !== F).sort((x, y) => Math.min(...ring(x).map((p) => plAp(T[x.key], p)[1])) - Math.min(...ring(y).map((p) => plAp(T[y.key], p)[1])))[0], hf = topOf(F, false), hb = bp ? topOf(bp, !!Ucb) : null;
       if (hf && hb) hold.push({ key: 'p' + F.key, at: hf }, { key: 'p' + bp.key, at: hb }); }
     let dl = 0, wid = 0, area = 0; for (const p of outParts) { let ar = 0; const rr = []; for (const e of p.ed) for (const q of e.pts) { dl = Math.max(dl, q[1]); wid = Math.max(wid, q[0]); rr.push(q); } for (let k = 0; k < rr.length; k++) { const q0 = rr[k], q1 = rr[(k + 1) % rr.length]; ar += q0[0] * q1[1] - q1[0] * q0[1]; } area += Math.abs(ar); }
-    { const bad = swSane(Ucb ? 2 * cbU(-pit) : 0, dl, m, an); if (bad) return { err: bad }; }
+    // sukienka, w której udało się zszyć tylko górę, nie jest odrzucana: podgląd pokaże zszytą górę, a dół dostanie przybliżoną bryłę
+    let partial = false; { const bad = swSane(Ucb ? 2 * cbU(-pit) : 0, 99, m, an); if (bad) return { err: bad }; partial = !!(an && an.typ === 'sukienka' && dl < 22); }
     const usedPi = new Set(placed.map((P) => P.pi)), skip = pcs.filter((_, i2) => !usedPi.has(i2)).map((pc) => String(pc.name || '').replace(/ \(część.*$/, ''));
     // osie do zmiany długości: elementy sięgające dołu ubrania, każdy wzdłuż własnego pionu po złożeniu (klin wzdłuż swojej osi)
     const lenAx = [], seenPi = new Set(); for (const P of placed) { let vm = -1e9; for (const p of ring(P)) vm = Math.max(vm, plAp(T[P.key], p)[1]); if (vm < dl - 15 || seenPi.has(P.pi)) continue; seenPi.add(P.pi);
@@ -144,7 +165,7 @@
       let t0 = 1e9, t1 = -1e9; for (const e of all) if (e.pi === P.pi) for (const p of e.pts) { const tt = (p[0] - o[0]) * dir[0] + (p[1] - o[1]) * dir[1]; t0 = Math.min(t0, tt); t1 = Math.max(t1, tt); }
       if (t1 - t0 > 12) lenAx.push({ pi: P.pi, o, dir, cut: t0 + 0.5 * (t1 - t0), room: 0.4 * (t1 - t0) }); }
     const cbLine = cbQ ? (cbQ[0][1] < cbQ[cbQ.length - 1][1] ? [cbQ[0], cbQ[cbQ.length - 1]] : [cbQ[cbQ.length - 1], cbQ[0]]) : null;
-    return { lenAx, plan: { parts: outParts, seams: outSeams, hold, Ucb, cbLine, area, yMax: an.trzym === 'ramiona' ? null : pit + 8 }, dl, hemC: 4 * (Ucb || wid), used: Array.from(usedPi).map((k) => String(pcs[k].name || '')), skip: skip.filter((x, i2, arr) => x && arr.indexOf(x) === i2), strap: hold.length === 2 };
+    return { partial, lenAx, plan: { parts: outParts, seams: outSeams, hold, Ucb, cbLine, area, yMax: an.trzym === 'ramiona' ? null : pit + 8 }, dl, hemC: 4 * (Ucb || wid), used: Array.from(usedPi).map((k) => String(pcs[k].name || '')), skip: skip.filter((x, i2, arr) => x && arr.indexOf(x) === i2), strap: hold.length === 2 };
   }
   // punkt na łamanej w ułamku jej długości
   function ptOn(pts, f) { const L = swLen(pts); let acc = 0; for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (acc + d >= f * L - 1e-9) { const t = (f * L - acc) / (d || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; } acc += d; } return pts[pts.length - 1]; }
