@@ -48,7 +48,7 @@
   }
   function delProj(id) {
     if (state.projects.length < 2) return;
-    const wasCur = id === state.proj; state.projects = state.projects.filter((x) => x.id !== id);
+    const wasCur = id === state.proj; state.projects = state.projects.filter((x) => x.id !== id); refDrop(id);
     if (wasCur) { state.proj = state.projects[state.projects.length - 1].id; loadSnap(projCur().snap); histReset(); fillForm(); persist(true); draw(true); } else { persist(true); fillProj(); }
     homeFill();
   }

@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.90.0', n: 97, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.90.1', n: 98, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -356,7 +356,7 @@
       boxes[st.group].appendChild(b);
     });
   }
-  function pickStyle(st) { if (st.id !== state.style) state.sel = {}; state.fTab = tabOf(st.id); if (st.preset) { Object.assign(state.p, st.preset); if (st.preset.rek) state.p.rekL = ['krotki', '34', 'dlugi'].includes(st.preset.rek) ? rekDef(st.preset.rek) : 0; if (st.id.indexOf('to_tshirt') === 0) state.fabric = 'dzersej'; } else state.p.bok = 0; if (st.id.indexOf('to_tshirt') !== 0 && state.style.indexOf('to_tshirt') === 0 && state.fabric === 'dzersej') state.fabric = 'bawelna'; const was = W.STYLES.find((s) => s.id === state.style); state.style = st.id; state.p.flare = st.flare || 0; state.p.dol = ''; if (st.dl) state.p.dl = st.dl; else if (was && was.dl && state.p.dl === was.dl) state.p.dl = 58; fillForm(); persist(); draw(true); }
+  function pickStyle(st) { if (state.ref) { say('Ten projekt pokazuje gotowy model 3D. Fason wybierzesz w nowym projekcie.'); return; } if (st.id !== state.style) state.sel = {}; state.fTab = tabOf(st.id); if (st.preset) { Object.assign(state.p, st.preset); if (st.preset.rek) state.p.rekL = ['krotki', '34', 'dlugi'].includes(st.preset.rek) ? rekDef(st.preset.rek) : 0; if (st.id.indexOf('to_tshirt') === 0) state.fabric = 'dzersej'; } else state.p.bok = 0; if (st.id.indexOf('to_tshirt') !== 0 && state.style.indexOf('to_tshirt') === 0 && state.fabric === 'dzersej') state.fabric = 'bawelna'; const was = W.STYLES.find((s) => s.id === state.style); state.style = st.id; state.p.flare = st.flare || 0; state.p.dol = ''; if (st.dl) state.p.dl = st.dl; else if (was && was.dl && state.p.dl === was.dl) state.p.dl = 58; fillForm(); persist(); draw(true); }
   $('addP').addEventListener('click', () => {
     const c = cur(), id = 'p' + Date.now();
     state.profiles.push({ id, name: 'Nowa modelka', og: c.og, ot: c.ot, ob: c.ob, wb: c.wb, wzrost: c.wzrost, adv: {} });
@@ -1437,7 +1437,7 @@
     // zarys biustu: linia biustu, punkty szczytu i warstwice na manekinie
     $('gap').textContent = ''; $('gap').className = 'fitn';
     if (state.bust && (!useFig || sil.top === 'dress')) {
-      const dress = sil.top === 'dress', ink = new T3.MeshBasicMaterial({ color: 0x17171c, side: T3.DoubleSide });
+      const dress = sil.top === 'dress', ink = new T3.MeshBasicMaterial({ color: 0x17171c, side: T3.DoubleSide }); ink.userData.helper = true; // linia biustu to pomoc w podglądzie, nie trafia na gotowy obraz
       const bodyPt = (y, phi, o) => { const s = body(y), x = (s.a + o) * Math.cos(phi), sn = Math.sin(phi); return [x, y, s.z + (s.b + o) * sn + body.bump(x, y, sn, false)]; };
       const outer = (y, phi) => { if (!dress) return bodyPt(y, phi, 0.15); const q = sect(y, phi), l = Math.hypot(q[0], q[2] - 0.5) || 1; return [q[0] * (1 + 0.2 / l), y, q[2] + (q[2] - 0.5) * (0.2 / l)]; };
       grp.add(surface(160, 2, (u, v) => outer(body.yb + (v - 0.5) * 0.28, u * TAU), ink));
@@ -2579,7 +2579,7 @@
   }
   function delProj(id) {
     if (state.projects.length < 2) return;
-    const wasCur = id === state.proj; state.projects = state.projects.filter((x) => x.id !== id);
+    const wasCur = id === state.proj; state.projects = state.projects.filter((x) => x.id !== id); refDrop(id);
     if (wasCur) { state.proj = state.projects[state.projects.length - 1].id; loadSnap(projCur().snap); histReset(); fillForm(); persist(true); draw(true); } else { persist(true); fillProj(); }
     homeFill();
   }
@@ -2733,7 +2733,7 @@
   // scena podglądu jako GLB: siatki tak, jak stoją w świecie, z kolorem, chropowatością i wzorem tkaniny
   function blGlb() {
     const meshes = []; g3.scene.updateMatrixWorld(true);
-    g3.scene.traverse((o) => { if (!o.isMesh || !o.visible || !o.geometry || !o.geometry.attributes.position) return; const mt = Array.isArray(o.material) ? o.material[0] : o.material; if (!mt || mt.side === T3.BackSide || (mt.transparent && mt.opacity < 0.6 && !mt.map)) return; for (let p = o.parent; p; p = p.parent) if (!p.visible) return; meshes.push([o, mt]); });
+    g3.scene.traverse((o) => { if (!o.isMesh || !o.visible || !o.geometry || !o.geometry.attributes.position) return; const mt = Array.isArray(o.material) ? o.material[0] : o.material; if (!mt || mt.side === T3.BackSide || (mt.userData && mt.userData.helper)) return; for (let p = o.parent; p; p = p.parent) if (!p.visible) return; meshes.push([o, mt]); });
     const chunks = [], views = [], acc = [], gm = [], mats = [], imgs = [], texs = [], nodes = []; let off = 0, sig = 2166136261;
     const push = (arr, target) => { const b = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength), pad = (4 - (b.byteLength % 4)) % 4; chunks.push(b); if (pad) chunks.push(new Uint8Array(pad)); views.push(Object.assign({ buffer: 0, byteOffset: off, byteLength: b.byteLength }, target ? { target } : {})); off += b.byteLength + pad; return views.length - 1; };
     const matIx = new Map(), texIx = new Map();
@@ -2765,7 +2765,7 @@
     return { bytes: out, sig: (sig >>> 0).toString(36) + '-' + nodes.length };
   }
   // ---------- usługa renderująca na serwerze: te same zadania przez API, bez Blendera na komputerze ----------
-  const SRV = /** @type {any} */ ({ api: '', client: '', rj: null, cj: null, imgs: new Map() });
+  const SRV = /** @type {any} */ ({ api: '', client: '', rj: null, cj: null, imgs: new Map(), tries: 0, last: 0, why: '' });
   function srvHead() { let p = String(state.proj || 'projekt').replace(/[^A-Za-z0-9_-]/g, ''); while (p.length < 6) p += '0'; return { 'x-wk-client': SRV.client, 'x-wk-project': p.slice(0, 64) }; }
   async function srvCall(method, path, body, type) {
     const h = srvHead(); if (type) h['content-type'] = type;
@@ -2776,9 +2776,9 @@
   async function srvInit() {
     try { SRV.client = localStorage.getItem('wykrojnik.klient') || ''; if (!/^[A-Za-z0-9_-]{16,64}$/.test(SRV.client)) { const a = new Uint8Array(18); crypto.getRandomValues(a); SRV.client = Array.from(a, (x) => (x % 36).toString(36)).join(''); localStorage.setItem('wykrojnik.klient', SRV.client); } } catch (e) { SRV.client = 'sesja' + Math.random().toString(36).slice(2, 14) + Date.now().toString(36); }
     let base = window['__wkRender'] || ''; try { base = base || localStorage.getItem('wykrojnik.render') || ''; } catch (e) { /* zostaje adres domyślny */ }
-    SRV.api = (base || 'api/render').replace(/\/$/, '');
-    try { const r = await fetch(SRV.api + '/health', { cache: 'no-store' }); if (!r.ok) throw new Error('Usługa renderująca odpowiedziała błędem ' + r.status + '.'); const j = await r.json(); if (!j || !j.ok) throw new Error('Pod tym adresem nie ma usługi renderującej.'); BL.mode = 'server'; BL.on = true; BL.why = ''; blNote(); blTouch(); return true; }
-    catch (e) { SRV.why = /odpowiedziała|adresem/.test(String(e && e.message)) ? e.message : 'Usługa renderująca nie odpowiada.'; return false; }
+    SRV.api = (base || 'api/render').replace(/\/$/, ''); SRV.last = Date.now();
+    try { const r = await fetch(SRV.api + '/health', { cache: 'no-store' }); if (!r.ok) { let m = ''; try { m = (await r.json()).error || ''; } catch (e) { m = ''; } throw new Error(m && r.status === 503 ? m + ' adresem' : 'Usługa renderująca odpowiedziała błędem ' + r.status + '.'); } const j = await r.json(); if (!j || !j.ok) throw new Error('Pod tym adresem nie ma usługi renderującej.'); BL.mode = 'server'; BL.on = true; BL.why = ''; blNote(); blTouch(); return true; }
+    catch (e) { const m = String((e && e.message) || ''); SRV.why = / adresem$/.test(m) ? m.replace(/ adresem$/, '') : /odpowiedziała|adresem/.test(m) ? m : 'Usługa renderująca nie odpowiada.'; blNote(); return false; }
   }
   // czeka na zadanie; fresh() mówi, czy wynik jest jeszcze potrzebny, a label(stan) ustawia napis
   async function srvWait(slot, id, fresh, label) {
@@ -2823,12 +2823,12 @@
     const e = $('blStat'); if (!e) return; const inApp = !!(desktop && desktop.childProcess);
     const more = (BL.whyC ? ' ' + BL.whyC : '') + (BL.why2 ? ' ' + BL.why2 : BL.last ? ' Ostatnio przeliczone: ' + BL.last + '.' : '');
     if (BL.mode === 'server' && BL.on) { e.textContent = 'Render wysokiej jakości jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' + more; $('blPathRow').hidden = true; return; }
-    e.textContent = !inApp ? 'Render wysokiej jakości jest teraz niedostępny, więc widzisz zwykły podgląd. ' + (SRV.why || 'Sprawdzam usługę renderującą…') : BL.on ? 'Blender jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' + (BL.whyC ? ' ' + BL.whyC : '') + (BL.why2 ? ' ' + BL.why2 : BL.last ? ' Ostatnio przeliczone: ' + BL.last + '.' : '') : BL.why || 'Szukam Blendera…';
+    e.textContent = !inApp ? 'Render wysokiej jakości jest teraz niedostępny, więc widzisz zwykły podgląd. ' + (SRV.why || 'Sprawdzam usługę renderującą…') : BL.on ? 'Blender jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' + (BL.whyC ? ' ' + BL.whyC : '') + (BL.why2 ? ' ' + BL.why2 : BL.last ? ' Ostatnio przeliczone: ' + BL.last + '.' : '') : BL.why || (fileOk ? 'Szukam Blendera…' : 'Usługa renderująca nie odpowiada. Blender z tego komputera wymaga zgody na pliki, którą włączysz wyżej.');
     $('blPathRow').hidden = !inApp || BL.on || !BL.why;
   }
   async function blInit(custom) {
     if (!custom && (BL.mode === 'server' || (await srvInit()))) return;
-    if (!desktop || !desktop.childProcess || !desktop.fs) { blNote(); return; }
+    if (!desktop || !desktop.childProcess || !desktop.fs || !fileOk) { blNote(); return; }
     BL.mode = 'local';
     BL.on = false; BL.why = ''; blNote();
     try {
@@ -2839,8 +2839,13 @@
       if (!found) { BL.why = custom ? 'Pod tą ścieżką nie ma Blendera. Wskaż plik Blender.app.' : 'Nie znalazłam Blendera na tym komputerze. Jeśli jest zainstalowany w nietypowym miejscu, podaj ścieżkę do Blender.app.'; blNote(); return; }
       if (custom) { try { localStorage.setItem('wykrojnik.blender', found); } catch (e) { /* ścieżka zostanie tylko na tę sesję */ } }
       BL.path = found; BL.dir = home + '/Documents/Wykrojnik/render'; await desktop.fs.mkdir(BL.dir, { recursive: true }); await desktop.fs.writeFile(BL.dir + '/wykrojnik_render.py', BL_PY, 'utf8');
-      BL.on = true; blNote(); blTouch();
+      BL.on = true; blNote(); blTouch(); blSweep();
     } catch (e) { BL.why = 'Nie udało się przygotować Blendera: ' + String((e && e.message) || e).slice(0, 140); blNote(); }
+  }
+  // zapisane obrazy i ułożenia starsze niż dwa tygodnie znikają, żeby folder nie rósł bez końca
+  async function blSweep() {
+    try { const now = Date.now(), list = (await desktop.fs.readdir(BL.dir)).filter((e) => e.isFile && /^([a-z0-9]+\.png|tk-[a-z0-9]+\.bin)$/.test(e.name)).slice(0, 600);
+      for (const e of list) { const st = await desktop.fs.stat(BL.dir + '/' + e.name).catch(() => null); if (st && now - st.mtimeMs > 14 * 864e5) await desktop.fs.rm(BL.dir + '/' + e.name).catch(() => {}); } } catch (e) { /* sprzątanie nie jest krytyczne */ }
   }
   function blStart() {
     if (BL.proc || BL.starting) return; BL.starting = true; BL.ready = false; BL.buf = '';
@@ -2907,6 +2912,7 @@
   // wywoływane po każdym odświeżeniu podglądu: chowa gotowy obraz, gdy widok się zmienił, i zamawia nowy po sekundzie spokoju
   function blTouch() {
     if (BL.mode !== 'server' && BL.cur && BL.cur.tp && (!g3 || g3.top !== BL.cur.tp)) { blKill(); blStat(''); } // inny projekt albo inne wymiary: stare układanie nie jest już potrzebne
+    if (!BL.on && BL.mode !== 'local' && SRV.api && SRV.tries < 5 && Date.now() - SRV.last > 60000 && /^https?:/.test(location.protocol)) { SRV.tries++; srvInit(); } // usługa mogła być chwilowo niedostępna przy starcie
     if (!BL.on || !g3 || state.view !== '3d' || !$('home').hidden) { blHide(); clearTimeout(BL.t); BL.want = ''; return; }
     const r = g3.canvas.getBoundingClientRect(), ck = [cam.yaw.toFixed(3), cam.pitch.toFixed(3), cam.dist.toFixed(1), Math.round(r.width), Math.round(r.height), g3.mid.toFixed(1)].join('|');
     const dirty = BL.dirty; BL.dirty = false;
@@ -2946,6 +2952,7 @@
   const REF = /** @type {any} */ ({ proj: '', parts: null, box: null, main: null, loading: '' });
   function refDb() { return new Promise((res, rej) => { const q = indexedDB.open('wykrojnik-modele', 1); q.onupgradeneeded = () => q.result.createObjectStore('glb'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
   async function refPut(id, bytes) { const db = await refDb(); return new Promise((res, rej) => { const t = db.transaction('glb', 'readwrite'); t.objectStore('glb').put(bytes, id); t.oncomplete = () => res(true); t.onerror = () => rej(t.error); }); }
+  function refDrop(id) { refDb().then((db) => { db.transaction('glb', 'readwrite').objectStore('glb').delete(id); }).catch(() => {}); }
   async function refGet(id) { const db = await refDb(); return new Promise((res, rej) => { const q = db.transaction('glb').objectStore('glb').get(id); q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error); }); }
   function refParse(u8) {
     const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength); if (dv.getUint32(0, true) !== 0x46546c67) throw new Error('To nie jest plik GLB.');
@@ -3012,7 +3019,15 @@
     g.globalAlpha = 1; g.fillStyle = '#fff'; g.beginPath(); g.arc(50, 14, 3.2, 0, 7); g.fill();
     return c.toDataURL('image/png');
   }
-  function showStore() { $('store').textContent = fileOk ? 'Projekty i modelki zapisują się same w Dokumenty/Wykrojnik.' : 'Projekty i modelki zapisują się same w tej przeglądarce. Po zainstalowaniu aplikacji trafią do Dokumenty/Wykrojnik.'; }
+  function showStore() { $('store').textContent = fileOk ? 'Projekty i modelki zapisują się same w Dokumenty/Wykrojnik.' : desktop && desktop.fs ? 'Projekty i modelki zapisują się teraz w pamięci aplikacji. Po zgodzie na pliki trafią do Dokumenty/Wykrojnik.' : 'Projekty i modelki zapisują się same w tej przeglądarce. Po zainstalowaniu aplikacji trafią do Dokumenty/Wykrojnik.'; }
+  // zapis w Dokumentach: po zgodzie na pliki. Nowsza z dwóch kopii (plik albo pamięć aplikacji) wygrywa, żeby zgoda włączona po czasie nie cofnęła pracy.
+  async function fileOn(late) {
+    fileOk = true; $('permRow').hidden = true;
+    const raw = await desktop.fs.readFile(FILE, 'utf8').catch(() => null), last = (st) => Math.max(0, ...((st && st.projects) || []).map((q) => (q && q.updated) || 0));
+    let fromFile = !!raw; if (raw && late) { try { fromFile = last(JSON.parse(raw)) > last(state); } catch (e) { fromFile = false; } }
+    if (fromFile && adopt(raw)) { ensureProjects(); loadPrintImg(); histReset(); fillForm(); layoutUi(); setView(state.view); if (!$('home').hidden) homeFill(); } else if (late) persist(true);
+    showStore(); BL.mode = BL.mode === 'server' ? 'server' : ''; blInit();
+  }
   async function boot() {
     const back = uiResume(); loadPrintImg(); histReset();
     fillForm(); layoutUi(); setView(state.view === '3d' ? '3d' : '2d'); showStore(); uiReady = true; homeShow(!back);
@@ -3028,12 +3043,10 @@
       instState = 'installed'; instFill();
       desktop.app.dock.setIcon(drawIcon()).catch(() => {});
       try {
-        if ((await desktop.permissions.state('full-access')) === 'granted') {
-          fileOk = true;
-          const raw = await desktop.fs.readFile(FILE, 'utf8').catch(() => null);
-          if (raw && adopt(raw)) { ensureProjects(); loadPrintImg(); histReset(); fillForm(); layoutUi(); setView(state.view); if (!$('home').hidden) homeFill(); }
-          showStore(); blInit();
-        }
+        let ps = await desktop.permissions.state('full-access');
+        for (let i = 0; i < 3 && ps === 'unavailable'; i++) { await new Promise((r) => setTimeout(r, 2000)); ps = await desktop.permissions.state('full-access'); } // tuż po starcie aplikacja może jeszcze nie znać stanu zgody
+        if (ps === 'granted') await fileOn(false);
+        else { $('permRow').hidden = false; showStore(); blInit(); if (ps === 'prompt') say('Po aktualizacji Wykrojnik potrzebuje ponownej zgody na pliki. Włączysz ją w panelu Projekty.'); }
       } catch (e) {}
     } else if (desktop.install) {
       try {
@@ -3043,5 +3056,9 @@
       } catch (e) {}
     }
   }
+  $('permBtn').addEventListener('click', async () => {
+    try { const r = await desktop.permissions.request(['full-access']); if (r && r['full-access'] === 'granted') await fileOn(true); else say('Bez tej zgody projekty zostają w pamięci aplikacji, a Blender z tego komputera jest niedostępny.'); }
+    catch (e) { say('Nie udało się zapytać o zgodę. Spróbuj jeszcze raz za chwilę.'); }
+  });
   boot();
 })();

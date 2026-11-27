@@ -3,6 +3,7 @@
   const REF = /** @type {any} */ ({ proj: '', parts: null, box: null, main: null, loading: '' });
   function refDb() { return new Promise((res, rej) => { const q = indexedDB.open('wykrojnik-modele', 1); q.onupgradeneeded = () => q.result.createObjectStore('glb'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
   async function refPut(id, bytes) { const db = await refDb(); return new Promise((res, rej) => { const t = db.transaction('glb', 'readwrite'); t.objectStore('glb').put(bytes, id); t.oncomplete = () => res(true); t.onerror = () => rej(t.error); }); }
+  function refDrop(id) { refDb().then((db) => { db.transaction('glb', 'readwrite').objectStore('glb').delete(id); }).catch(() => {}); }
   async function refGet(id) { const db = await refDb(); return new Promise((res, rej) => { const q = db.transaction('glb').objectStore('glb').get(id); q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error); }); }
   function refParse(u8) {
     const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength); if (dv.getUint32(0, true) !== 0x46546c67) throw new Error('To nie jest plik GLB.');

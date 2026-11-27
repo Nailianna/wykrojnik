@@ -8,7 +8,15 @@
     g.globalAlpha = 1; g.fillStyle = '#fff'; g.beginPath(); g.arc(50, 14, 3.2, 0, 7); g.fill();
     return c.toDataURL('image/png');
   }
-  function showStore() { $('store').textContent = fileOk ? 'Projekty i modelki zapisują się same w Dokumenty/Wykrojnik.' : 'Projekty i modelki zapisują się same w tej przeglądarce. Po zainstalowaniu aplikacji trafią do Dokumenty/Wykrojnik.'; }
+  function showStore() { $('store').textContent = fileOk ? 'Projekty i modelki zapisują się same w Dokumenty/Wykrojnik.' : desktop && desktop.fs ? 'Projekty i modelki zapisują się teraz w pamięci aplikacji. Po zgodzie na pliki trafią do Dokumenty/Wykrojnik.' : 'Projekty i modelki zapisują się same w tej przeglądarce. Po zainstalowaniu aplikacji trafią do Dokumenty/Wykrojnik.'; }
+  // zapis w Dokumentach: po zgodzie na pliki. Nowsza z dwóch kopii (plik albo pamięć aplikacji) wygrywa, żeby zgoda włączona po czasie nie cofnęła pracy.
+  async function fileOn(late) {
+    fileOk = true; $('permRow').hidden = true;
+    const raw = await desktop.fs.readFile(FILE, 'utf8').catch(() => null), last = (st) => Math.max(0, ...((st && st.projects) || []).map((q) => (q && q.updated) || 0));
+    let fromFile = !!raw; if (raw && late) { try { fromFile = last(JSON.parse(raw)) > last(state); } catch (e) { fromFile = false; } }
+    if (fromFile && adopt(raw)) { ensureProjects(); loadPrintImg(); histReset(); fillForm(); layoutUi(); setView(state.view); if (!$('home').hidden) homeFill(); } else if (late) persist(true);
+    showStore(); BL.mode = BL.mode === 'server' ? 'server' : ''; blInit();
+  }
   async function boot() {
     const back = uiResume(); loadPrintImg(); histReset();
     fillForm(); layoutUi(); setView(state.view === '3d' ? '3d' : '2d'); showStore(); uiReady = true; homeShow(!back);
@@ -24,12 +32,10 @@
       instState = 'installed'; instFill();
       desktop.app.dock.setIcon(drawIcon()).catch(() => {});
       try {
-        if ((await desktop.permissions.state('full-access')) === 'granted') {
-          fileOk = true;
-          const raw = await desktop.fs.readFile(FILE, 'utf8').catch(() => null);
-          if (raw && adopt(raw)) { ensureProjects(); loadPrintImg(); histReset(); fillForm(); layoutUi(); setView(state.view); if (!$('home').hidden) homeFill(); }
-          showStore(); blInit();
-        }
+        let ps = await desktop.permissions.state('full-access');
+        for (let i = 0; i < 3 && ps === 'unavailable'; i++) { await new Promise((r) => setTimeout(r, 2000)); ps = await desktop.permissions.state('full-access'); } // tuż po starcie aplikacja może jeszcze nie znać stanu zgody
+        if (ps === 'granted') await fileOn(false);
+        else { $('permRow').hidden = false; showStore(); blInit(); if (ps === 'prompt') say('Po aktualizacji Wykrojnik potrzebuje ponownej zgody na pliki. Włączysz ją w panelu Projekty.'); }
       } catch (e) {}
     } else if (desktop.install) {
       try {
@@ -39,5 +45,9 @@
       } catch (e) {}
     }
   }
+  $('permBtn').addEventListener('click', async () => {
+    try { const r = await desktop.permissions.request(['full-access']); if (r && r['full-access'] === 'granted') await fileOn(true); else say('Bez tej zgody projekty zostają w pamięci aplikacji, a Blender z tego komputera jest niedostępny.'); }
+    catch (e) { say('Nie udało się zapytać o zgodę. Spróbuj jeszcze raz za chwilę.'); }
+  });
   boot();
 })();

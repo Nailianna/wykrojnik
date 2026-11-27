@@ -608,7 +608,7 @@
     // zarys biustu: linia biustu, punkty szczytu i warstwice na manekinie
     $('gap').textContent = ''; $('gap').className = 'fitn';
     if (state.bust && (!useFig || sil.top === 'dress')) {
-      const dress = sil.top === 'dress', ink = new T3.MeshBasicMaterial({ color: 0x17171c, side: T3.DoubleSide });
+      const dress = sil.top === 'dress', ink = new T3.MeshBasicMaterial({ color: 0x17171c, side: T3.DoubleSide }); ink.userData.helper = true; // linia biustu to pomoc w podglądzie, nie trafia na gotowy obraz
       const bodyPt = (y, phi, o) => { const s = body(y), x = (s.a + o) * Math.cos(phi), sn = Math.sin(phi); return [x, y, s.z + (s.b + o) * sn + body.bump(x, y, sn, false)]; };
       const outer = (y, phi) => { if (!dress) return bodyPt(y, phi, 0.15); const q = sect(y, phi), l = Math.hypot(q[0], q[2] - 0.5) || 1; return [q[0] * (1 + 0.2 / l), y, q[2] + (q[2] - 0.5) * (0.2 / l)]; };
       grp.add(surface(160, 2, (u, v) => outer(body.yb + (v - 0.5) * 0.28, u * TAU), ink));

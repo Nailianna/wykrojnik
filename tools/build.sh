@@ -9,3 +9,6 @@ node --check app.js
 tsc -p tools
 node tools/check.js | tail -1
 echo "zbudowano"
+
+# skrypt Blendera dla usługi renderującej powstaje z tego samego źródła co aplikacja
+node tools/blender-skrypt.js
