@@ -37,9 +37,9 @@
       if (!window.PatImport) throw new Error('Nie udało się wczytać modułu importu.');
       const data = await window.PatImport.load(file), size = data.sizes[Math.floor(data.sizes.length / 2)] || '', pieces = window.PatImport.pick(data, size);
       if (!pieces.length) throw new Error('Nie znalazłam w tym pliku elementów wykroju.');
-      const sn = snap(); sn.style = 'import'; sn.imp = { name: data.name, sizes: data.sizes, size, pieces }; sn.sel = {}; sn.layers = [{ role: 'wierzch' }];
+      const sn = snap(); sn.style = 'import'; sn.imp = Object.assign({ name: data.name, sizes: data.sizes, size, pieces }, data.raster ? { raster: true } : {}); sn.sel = {}; sn.layers = [{ role: 'wierzch' }];
       addProj(data.name, sn); impCache[state.proj] = data; impFill(); if (state.view !== '2d') setView('2d'); goPanel('fason');
-      say('Wczytałam ' + pieces.length + ' elementów' + (data.sizes.length ? ' w rozmiarze ' + size + '. Rozmiar zmienisz w panelu Fason.' : '.'));
+      say('Wczytałam ' + plN(pieces.length, 'element', 'elementy', 'elementów') + (data.sizes.length ? ' w rozmiarze ' + size + '. Rozmiar zmienisz w panelu Fason.' : '.'));
     } catch (e) { say(e && e.message ? e.message : 'Nie udało się wczytać tego pliku.', true); } finally { busyOff(bz); }
   }
   function impFill() {
@@ -52,7 +52,7 @@
       $('impLenN').textContent = !r.body && !r.sleeve ? (state.imp.an ? 'W tym wykroju nie umiem wskazać przodu, tyłu ani rękawa, więc długości tu nie zmienisz.' : 'Długość zmienisz po analizie wykroju, bo muszę wiedzieć, który element jest przodem, tyłem i rękawem.')
         : r.body && r.body.plan ? 'Wydłużam i skracam elementy sięgające dołu, w połowie ich długości, więc dół i jego szerokość zostają jak w oryginale. Elementy doszyte luzem popraw ręcznie.' : (r.body && r.body.loose ? 'W tym fasonie nie ma pachy, więc wydłużam i skracam w dolnej połowie elementu. Sprawdź na rysunku, czy zmienił się właściwy koniec.' : 'Wydłużam i skracam pod pachą, więc dół i jego szerokość zostają jak w oryginale.') + (!r.body ? ' Przodu i tyłu nie rozpoznałam, zmienisz tylko rękaw.' : '') + ' Podszewkę i odszycia popraw ręcznie.';
     }
-    $('impNote').textContent = sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
+    $('impNote').textContent = state.imp.raster ? 'Ten wykrój pochodzi z obrazu, więc ma jeden rozmiar: zewnętrzny obrys każdego elementu.' : sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
   }
   let model = null, vb = null, rafD = 0;
   function drawSoon() { if (rafD) return; rafD = requestAnimationFrame(() => { rafD = 0; draw(); }); }

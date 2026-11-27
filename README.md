@@ -2,7 +2,7 @@
 
 Aplikacja do konstruowania wykrojów odzieży z wymiarów: spódnice, sukienki, topy, t-shirty i gorsety. Rysuje wykrój, sprawdza go z wymiarami modelki, pokazuje podgląd 3D na sylwetce i drukuje na kartkach A4 w skali 100%.
 
-Wersja 0.95.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
+Wersja 0.96.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
 
 ## Uruchomienie
 
@@ -11,7 +11,7 @@ Do rysowania wykrojów aplikacja nie wymaga instalacji ani serwera.
 1. Pobierz repozytorium (Code, Download ZIP) i rozpakuj.
 2. Otwórz `index.html` w Chrome albo Edge na komputerze.
 
-Analiza wykrojów z PDF i dobieranie wykroju ze zdjęcia przez Claude'a potrzebują strony uruchomionej razem z serwerem (niżej). Z pliku otwartego prosto z dysku analiza nie działa.
+Analiza wykrojów z plików (PDF, JPG, PNG) i dobieranie wykroju ze zdjęcia przez Claude'a potrzebują strony uruchomionej razem z serwerem (niżej). Z pliku otwartego prosto z dysku analiza nie działa.
 
 ## Publikacja strony
 
@@ -27,7 +27,7 @@ Aplikacja jest przeznaczona na komputer. Na telefonie nie była projektowana ani
 
 Projekty i modelki zapisują się wyłącznie w pamięci Twojej przeglądarki, na Twoim komputerze. Repozytorium nie zawiera niczyich projektów, wymiarów ani wykrojów: każda osoba zaczyna z pustą listą i dwiema przykładowymi modelkami.
 
-Wykroje wczytane z własnych plików PDF też zostają tylko u Ciebie. Kupionych wykrojów nie dodawaj do repozytorium, bo ich licencje zwykle pozwalają tylko na użytek własny.
+Wykroje wczytane z własnych plików też zostają tylko u Ciebie. Kupionych wykrojów nie dodawaj do repozytorium, bo ich licencje zwykle pozwalają tylko na użytek własny.
 
 ## Co jest w środku
 
@@ -35,7 +35,7 @@ Wykroje wczytane z własnych plików PDF też zostają tylko u Ciebie. Kupionych
 |---|---|
 | `index.html`, `app.js` | interfejs, projekty, podgląd 3D; `app.js` powstaje z części w `src/app` |
 | `src/app/*.js` | źródła interfejsu podzielone tematycznie (formularz, projekty, rysunek, druk, 3D, inspiracja, pulpit) |
-| `importer.js` | czyta linie, warstwy i napisy z wykroju w PDF, przygotowuje obrazy stron dla analizatora |
+| `importer.js` | czyta linie, warstwy i napisy z wykroju w PDF, obrysy elementów z obrazów JPG i PNG oraz skanów, przygotowuje obrazy stron dla analizatora |
 | `engine.js` | konstrukcja wykrojów z wymiarów, układ na kartkach, PDF |
 | `cloth.js` | zszywanie elementów i układanie tkaniny na sylwetce |
 | `figure.js` | siatka sylwetki |
@@ -63,9 +63,9 @@ Baza „Podręcznik” liczy głębokość pachy, szerokości tyłu i przodu ora
 
 Biblioteki i zasoby innych autorów są opisane w pliku `NOTICE.md`.
 
-## Wykroje z PDF
+## Wykroje z plików
 
-Na pulpicie jest „Nowy z pliku PDF”. Aplikacja czyta z pliku linie, warstwy rozmiarów i napisy, a Claude opisuje ich znaczenie: nazwy elementów, ile wyciąć, nitkę, zapas na szwy i tabelę rozmiarów. Opis formatu jest w `docs/analizator.md`.
+Na pulpicie jest „Nowy z pliku”. Do importu dodajesz pliki PDF, JPG i PNG: arkusz wykroju, instrukcję szycia i zdjęcie albo rysunek gotowego ubrania. Z arkusza w PDF aplikacja czyta linie, warstwy rozmiarów i napisy, a z obrazu albo skanu zewnętrzny obrys każdego elementu (szczegóły i ograniczenia w `docs/analizator.md`). Claude opisuje ich znaczenie: nazwy elementów, ile wyciąć, nitkę, zapas na szwy i tabelę rozmiarów. Opis formatu jest w `docs/analizator.md`.
 
 W Wykrojniku otwartym w Claude analiza idzie wbudowanym kanałem i nie wymaga klucza. Na stronie opublikowanej z tego repozytorium każda osoba podłącza własny klucz API Anthropic („Podłącz Claude” na ekranie analizy) i sama płaci za swoje analizy. Bez klucza wykrój można wczytać bez analizy, a reszta aplikacji działa od razu.
 
@@ -80,7 +80,7 @@ Domyślny model to `claude-sonnet-5-5`; inny ustawisz wpisem `wykrojnik.apimodel
 
 Podgląd 3D wczytanego wykroju powstaje na dwa sposoby. Kroje rozpoznawane z samego kształtu (przód i tył z wszywanym rękawem, rękaw skrojony razem z przodem i tyłem, góra na ramiączkach) zszywa `src/app/12b-szycie-importu.js`. Pozostałe są szyte według szwów wskazanych przez analizę (`src/app/12c-plan-szycia.js`, opis w `docs/analizator.md`). Elementy wiszące luzem i dokrojone odszycia jeszcze nie działają.
 
-Repozytorium nie zawiera żadnych wykrojów w PDF ani kluczy, wgrywasz własne.
+Repozytorium nie zawiera żadnych wykrojów ani kluczy, wgrywasz własne.
 
 ## Render w Blenderze
 

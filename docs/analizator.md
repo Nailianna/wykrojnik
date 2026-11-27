@@ -56,3 +56,36 @@ Jeszcze nieobsługiwane: elementy wszyte jedną krawędzią i wiszące luźno (s
 Strona instrukcji z rysunkiem technicznym albo okładką zawsze trafia do analizy jako obraz. Analiza opisuje na jej podstawie gotowe ubranie w polu `sylwetka`: `gora` (dopasowana, luzna), `dekolt` (okragly, v, karo, lodka, serce, prosty), `dekolt_gleboki`, `rekaw` (brak, krotki, 34, dlugi, bufka), `talia` (odcieta, bez_odciecia, empire), `dol` (brak, prosty, trapez, polkole, kolo, rybka), `kopertowa`, `dlugosc` (biodra, mini, kolano, midi, maxi, ziemia), `rozciecie`.
 
 Podgląd 3D używa tego opisu jako bazy bryły, a wymiary zmierzone z elementów wykroju (długość, obwód dołu) ją doprecyzowują. Gdy elementów nie da się zszyć, ta bryła jest pokazywana zamiast odmowy (`src/app/12d-przyblizenie.js`).
+
+## Obrazy JPG i PNG oraz skany (od wersji 0.96)
+
+Do importu można dodać pliki PDF, JPG i PNG: przyciskiem, upuszczając je w dowolnym miejscu okna importu albo wklejając ze schowka. Obraz jest dokumentem o jednej stronie i ma jeden z trzech rodzajów:
+
+- arkusz wykroju: z obrazu powstają kontury elementów,
+- zdjęcie albo rysunek ubrania (`ilustracja`): zawsze trafia do analizy jako obraz i jest podstawą pola `sylwetka`,
+- strona instrukcji: trafia do analizy jako obraz, bez wyciągu tekstu.
+
+Rysunek kreskowy z zamkniętymi obrysami jest proponowany jako arkusz, o ile arkusza jeszcze nie ma; każdy inny obraz jako ilustracja. Rodzaj można zmienić na liście plików.
+
+### Jak powstają kontury z obrazu (`importer.js`, `traceSrc`)
+
+1. Linią jest każdy piksel, który wyraźnie odbiega od koloru tła (mediana miniatury), więc kolorowe linie rozmiarów też się liczą. Obraz jest zmniejszany do najwyżej 3400 pikseli na dłuższym boku tak, że z każdego bloku zostaje informacja „jest linia”.
+2. Elementem jest wszystko, do czego nie da się dojść od brzegu obrazu bez przecięcia linii. Linie przerywane domyka poszerzenie maski (1, 3 albo 6 pikseli; szersze wygrywa tylko wtedy, gdy wyraźnie przybywa elementów).
+3. Cienkie wąsy (napisy, strzałki, linie wymiarowe) znikają przy zwężeniu i ponownym poszerzeniu plamy.
+4. Ramka arkusza, która zamyka w sobie wszystkie elementy, jest zdejmowana, najwyżej trzy razy. Jeśli w środku nic nie ma, „ramka” była jednym elementem przyciętym na styk.
+5. Obrys idzie po krawędziach pikseli, jest lekko wygładzany i upraszczany.
+
+Na arkuszu jednego rozmiaru odchyłka obrysu od rysunku wektorowego wynosi przeciętnie pół milimetra, a obwód różni się o ułamek procenta (test: ten sam arkusz narysowany na płótnie i odczytany z PNG oraz JPG, linia ciągła i przerywana, z ramką i bez).
+
+Skala: obraz nie mówi wiarygodnie, w jakiej jest skali, więc arkusz wymaga szerokości w centymetrach. Pole jest wypełniane z rozdzielczości zapisanej w pliku (PNG `pHYs`, JPEG JFIF albo EXIF), z wyjątkiem wartości 72, 96 i 144 punktów na cal, które programy wpisują z automatu.
+
+PDF bez rysunku wektorowego (skan) jest czytany tak samo: każda strona jest renderowana i zamieniana na kontury, a skalę daje wymiar strony.
+
+### Ograniczenia
+
+- Z obrazu powstaje tylko zewnętrzny obrys elementu. Gdy kilka rozmiarów jest narysowanych jeden w drugim, jest to rozmiar największy (dokładniej: suma wszystkich rozmiarów).
+- Linie wewnątrz elementu (zaszewki, nitka prosta, linie szycia) nie są przenoszone do rysunku.
+- Element przycięty brzegiem obrazu i elementy stykające się albo nachodzące na siebie nie są rozdzielane.
+- Zdjęcie papierowego wykroju z nierównym światłem albo w perspektywie nie da dobrych konturów; potrzebny jest skan albo eksport.
+- Arkuszem może być jeden obraz. Arkusz na kilku stronach wymaga pliku PDF.
+

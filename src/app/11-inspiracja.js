@@ -199,7 +199,7 @@
   dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('over'); });
   dz.addEventListener('dragleave', () => dz.classList.remove('over'));
   dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('over'); inspSet(e.dataTransfer.files[0]); });
-  document.addEventListener('paste', (e) => { if (state.panel !== 'insp') return; const f = [...(e.clipboardData ? e.clipboardData.files : [])].find((x) => x.type.indexOf('image/') === 0); if (f) { e.preventDefault(); inspSet(f); } });
+  document.addEventListener('paste', (e) => { if (state.panel !== 'insp' || !$('anBox').hidden) return; const f = [...(e.clipboardData ? e.clipboardData.files : [])].find((x) => x.type.indexOf('image/') === 0); if (f) { e.preventDefault(); inspSet(f); } });
   $('inGo').addEventListener('click', () => inspRun(''));
   $('inMoreGo').addEventListener('click', () => { const t = $('inMore').value.trim(); if (t) inspRun(t); });
   $('inStop').addEventListener('click', () => inCtl && inCtl.abort());

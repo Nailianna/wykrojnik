@@ -1,14 +1,16 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.95.0', n: 106, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.96.0', n: 107, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
   const f1 = (v) => W.fmt(v, 1);
   const KEY = 'wykrojnik.v3', FILE = '~/Documents/Wykrojnik/wykrojnik.json';
   let desktop = null, downloads = null, fileOk = false;
-  const TEST = !!window['__wkTest']; // furtki do testów działają tylko wtedy, gdy strona została otwarta z tą flagą
+  const TEST = !!window['__wkTest'];
+  // liczebnik z rzeczownikiem po polsku: 1 element, 2 elementy, 5 elementów
+  const plN = (n, one, few, many) => n + ' ' + (n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many); // furtki do testów działają tylko wtedy, gdy strona została otwarta z tą flagą
 
   const FAB = {
     szyfon: { name: 'Szyfon, jedwab', st: 0.05, wt: 0.2 }, wiskoza: { name: 'Wiskoza, krepa', st: 0.2, wt: 0.55 }, dzersej: { name: 'Dżersej', st: 0.15, wt: 0.75 },
