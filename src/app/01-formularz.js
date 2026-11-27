@@ -51,7 +51,7 @@
       const l = mkEl('label'); l.className = 'sl'; if (cond) l.dataset.if = cond;
       const top = mkEl('span'), o = mkEl('output'), i = mkEl('input');
       top.append(name, o); o.id = 'o_' + k; i.type = 'range'; i.min = mn; i.max = mx; i.step = 0.5; i.id = 's_' + k;
-      i.addEventListener('input', () => { state.p[k] = parseFloat(i.value); $('p_' + k).value = state.p[k]; o.textContent = f1(state.p[k]) + ' cm';
+      i.addEventListener('input', () => { state.p[k] = parseFloat(i.value); { const num = $('p_' + k); if (num) num.value = state.p[k]; } o.textContent = f1(state.p[k]) + ' cm';
         if (k === 'bok' && state.p.bok > 0 && state.p.rek && state.p.rek !== 'brak') { state.p.rek = 'brak'; state.p.falR = false; fillForm(); } // odsłonięte ramiona wykluczają rękawy
         persist(); drawSoon(); });
       l.append(top, i); tg[TOPK.includes(k) ? 'top' : 'bot'].appendChild(l);

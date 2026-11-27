@@ -22,12 +22,15 @@
       if (md > tol) { keep[mi] = 1; st.push([a, mi], [mi, b]); } }
     return pts.filter((_, i) => keep[i]);
   }
-  async function load(file, onStep) {
+  // opts.pages: tylko te strony; opts.soft: bez odmowy przy długim pliku i bez rysunku wektorowego (dokumenty dodatkowe)
+  async function load(file, onStep, opts) {
+    opts = opts || {};
     const L = await lib(), buf = new Uint8Array(await file.arrayBuffer()), doc = await L.getDocument({ data: buf, disableFontFace: true, isEvalSupported: false }).promise;
     const occ = await doc.getOptionalContentConfig(), groups = (occ && occ.getGroups && occ.getGroups()) || {}, OPS = L.OPS, K = 2.54 / 72;
     const paths = [], texts = [], all = [], pages = []; let offX = 0; const counts = {};
-    if (doc.numPages > 12) throw new Error('Ten plik ma ' + doc.numPages + ' stron. Wczytaj wersję na duży arkusz (A0), nie pociętą na A4.');
+    if (doc.numPages > 12 && !opts.soft) throw new Error('Ten plik ma ' + doc.numPages + ' stron. Wczytaj wersję na duży arkusz (A0), nie pociętą na A4.');
     for (let pn = 1; pn <= doc.numPages; pn++) {
+      if (opts.pages && !opts.pages.includes(pn)) continue;
       if (onStep) onStep(pn, doc.numPages);
       const page = await doc.getPage(pn), vp = page.getViewport({ scale: 1 }), H = vp.height, ops = await page.getOperatorList();
       let ctm = [1, 0, 0, 1, 0, 0], dash = false, pend = []; const stack = [], mc = [];
@@ -69,7 +72,7 @@
       offX += vp.width * K + 3;
     }
     const names = Object.keys(counts).filter((n) => n), sizes = names.filter((n) => !COMMON.test(n));
-    if (!paths.length) throw new Error('W tym pliku nie ma rysunku wektorowego. To pewnie skan, a takiego wykroju nie umiem wczytać.');
+    if (!paths.length && !opts.soft) throw new Error('W tym pliku nie ma rysunku wektorowego. To pewnie skan, a takiego wykroju nie umiem wczytać.');
     const nm = String(file.name || 'Wykrój').replace(/\.pdf$/i, '').replace(/^[0-9a-f]{8}-/, '').replace(/[_-]+/g, ' ').replace(/print|din\s*a\d|\bA[0-4]\b|us\s*letter|letter|[\d.]+\s*x\s*[\d.]+\s*inch|size\s*\w+\s*\w*/gi, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\s+/g, ' ').trim();
     return { name: (nm || 'Wykrój z pliku').slice(0, 60), sizes, paths, texts, all, pages, layers: names };
   }
@@ -148,5 +151,25 @@
     for (let pn = 1; pn <= doc.numPages && out.length < max; pn++) { const tc = await (await doc.getPage(pn)).getTextContent(); let line = '', ly = null; for (const it of tc.items) { const y = Math.round(it.transform[5]); if (ly !== null && Math.abs(y - ly) > 3) { out += line.trim() + '\n'; line = ''; } ly = y; line += it.str + ' '; } out += line.trim() + '\n'; }
     return out.replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n').slice(0, max);
   }
-  root.PatImport = { load, pick, shots, text };
+  // podstawowe dane pliku: liczba stron i największy bok strony w centymetrach (do rozpoznania, czy to arkusz, czy instrukcja)
+  async function info(file) {
+    const L = await lib(), doc = await L.getDocument({ data: new Uint8Array(await file.arrayBuffer()), disableFontFace: true, isEvalSupported: false }).promise, K = 2.54 / 72; let mx = 0;
+    for (let pn = 1; pn <= Math.min(doc.numPages, 40); pn++) { const v = (await doc.getPage(pn)).getViewport({ scale: 1 }); mx = Math.max(mx, v.width * K, v.height * K); }
+    return { n: doc.numPages, maxCm: mx };
+  }
+  // tekst każdej strony osobno, żeby analizator mógł wskazać, z której strony pochodzi informacja
+  async function pagesText(file, perPage, maxPages) {
+    const L = await lib(), doc = await L.getDocument({ data: new Uint8Array(await file.arrayBuffer()), disableFontFace: true, isEvalSupported: false }).promise, out = [];
+    for (let pn = 1; pn <= Math.min(doc.numPages, maxPages || 60); pn++) { const tc = await (await doc.getPage(pn)).getTextContent(); let t = '', line = '', ly = null; for (const it of tc.items) { const y = Math.round(it.transform[5]); if (ly !== null && Math.abs(y - ly) > 3) { t += line.trim() + '\n'; line = ''; } ly = y; line += it.str + ' '; } t += line.trim(); out.push({ pn, text: t.replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n').slice(0, perPage) }); }
+    return { n: doc.numPages, pages: out };
+  }
+  // kwadraty kontrolne wydruku: pary współśrodkowych kwadratów w rysunku wektorowym; zwraca boki w milimetrach dla każdej strony
+  function squares(paths) {
+    const by = {};
+    for (const p of paths) { const q = p.pts; if (q.length < 5 || q.length > 8 || Math.hypot(q[0][0] - q[q.length - 1][0], q[0][1] - q[q.length - 1][1]) > 0.05) continue; const b = bb(q), w = b[2] - b[0], h = b[3] - b[1]; if (w < 1 || w > 15 || Math.abs(w - h) > 0.03) continue; if (q.some((v) => Math.min(Math.abs(v[0] - b[0]), Math.abs(v[0] - b[2])) > 0.03 || Math.min(Math.abs(v[1] - b[1]), Math.abs(v[1] - b[3])) > 0.03)) continue; (by[p.pn] = by[p.pn] || []).push(b); }
+    const out = {};
+    for (const pn in by) { const B = by[pn].slice(0, 100), pr = []; for (const a of B) for (const b of B) { const wa = a[2] - a[0], wb = b[2] - b[0]; if (wa < wb + 0.2 || Math.abs(a[0] + a[2] - b[0] - b[2]) > 0.06 || Math.abs(a[1] + a[3] - b[1] - b[3]) > 0.06) continue; const pair = [Math.round(wa * 100) / 10, Math.round(wb * 100) / 10]; if (!pr.some((x) => x[0] === pair[0] && x[1] === pair[1])) pr.push(pair); } if (pr.length) out[pn] = pr.slice(0, 4); }
+    return out;
+  }
+  root.PatImport = { load, pick, shots, text, info, pagesText, squares };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

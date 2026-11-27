@@ -31,6 +31,7 @@
   function impFill() {
     const on = state.style === 'import' && !!state.imp, box = $('impBox'); box.hidden = !on; $('fTab').hidden = on; document.querySelectorAll('[data-ft]').forEach((el) => { if (on) el.hidden = true; }); if (on) $('fOpts').hidden = true; if (!on) return;
     const sel = $('impSize'); sel.textContent = ''; for (const z of state.imp.sizes || []) { const o = document.createElement('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.value = state.imp.size || ''; sel.disabled = !(state.imp.sizes || []).length; $('impSizeRow').hidden = sel.disabled;
+    { const uw = (state.imp.an && state.imp.an.uw) || [], nb = $('impNotesB'); $('impNotes').hidden = !uw.length; nb.textContent = ''; for (const [k, title] of [['spr', 'Do sprawdzenia'], ['zapas', 'Zapasy na szwy'], ['druk', 'Druk'], ['material', 'Materiał']]) { const it = uw.filter((u) => u.k === k); if (!it.length) continue; const b = document.createElement('b'); b.textContent = title; nb.appendChild(b); it.forEach((u) => { const p = document.createElement('p'); p.textContent = u.t + (u.s ? ' (' + u.s + ')' : ''); nb.appendChild(p); }); } }
     $('impNote').textContent = sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
   }
   let model = null, vb = null, rafD = 0;
