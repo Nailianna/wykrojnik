@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.92.0', n: 100, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.92.1', n: 101, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -2648,12 +2648,21 @@
     '        try:',
     '            sc.render.engine = e; return',
     '        except Exception: pass',
+    'def cyc(sc):',
+    '    try:',
+    '        sc.cycles.samples = int(os.environ.get("WK_SAMPLES", "48")); sc.cycles.use_denoising = True; sc.cycles.device = "CPU"',
+    '    except Exception: pass',
+    'def shoot(out):',
+    '    sc = bpy.context.scene; sc.render.filepath = out',
+    '    if os.path.exists(out): os.remove(out)',
+    '    try: bpy.ops.render.render(write_still=True)',
+    '    except Exception:',
+    '        if sc.render.engine == "CYCLES": raise',
+    '    if not os.path.exists(out) and sc.render.engine != "CYCLES":',
+    '        sc.render.engine = "CYCLES"; cyc(sc); bpy.ops.render.render(write_still=True)',
     'def base():',
     '    sc = bpy.context.scene; engine(sc)',
-    '    if sc.render.engine == "CYCLES":',
-    '        try:',
-    '            sc.cycles.samples = int(os.environ.get("WK_SAMPLES", "48")); sc.cycles.use_denoising = True; sc.cycles.device = "CPU"',
-    '        except Exception: pass',
+    '    if sc.render.engine == "CYCLES": cyc(sc)',
     '    sc.render.film_transparent = True; sc.render.image_settings.file_format = "PNG"; sc.render.image_settings.color_mode = "RGBA"',
     '    try: sc.view_settings.view_transform = "Standard"',
     '    except Exception: pass',
@@ -2758,7 +2767,7 @@
     '        if job.get("quit"): break',
     '        if job.get("cloth"): cloth(job)',
     '        else:',
-    '            load(job); paint(job); frame(job); bpy.context.scene.render.filepath = job["out"]; bpy.ops.render.render(write_still=True)',
+    '            load(job); paint(job); frame(job); shoot(job["out"])',
     '        print("WK DONE %s" % jid, flush=True)',
     '    except Exception as e:',
     '        print("WK FAIL %s %s" % (jid, str(e).replace("\\n", " ")[:300]), flush=True)',
