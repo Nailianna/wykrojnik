@@ -47,6 +47,7 @@ interface Window {
   __anFake?: (prompt: string, images: Blob[]) => any;
   __sw?: any;
   __pl?: any;
+  __bl?: any;
 }
 declare const claude: any;
 

@@ -16,7 +16,8 @@
     claude.use('downloads').then((d) => (downloads = d)).catch(() => {});
     claude.use('db').then((d) => { if (d) { dbRef = d; wishPull(); } }).catch(() => {});
     claude.use('sample').then((s) => { sampleFn = s; if (s && inBlob) { $('inGo').disabled = false; $('inStat').textContent = ''; } }).catch(() => {});
-    try { desktop = await claude.use('desktop'); } catch (e) { desktop = null; }
+    try { desktop = window['__wkDesktop'] || (await claude.use('desktop')); } catch (e) { desktop = null; }
+    blNote();
     if (!desktop) { instState = 'none'; instFill(); return; }
     if (desktop.fs) {
       instState = 'installed'; instFill();
@@ -26,7 +27,7 @@
           fileOk = true;
           const raw = await desktop.fs.readFile(FILE, 'utf8').catch(() => null);
           if (raw && adopt(raw)) { ensureProjects(); loadPrintImg(); histReset(); fillForm(); layoutUi(); setView(state.view); if (!$('home').hidden) homeFill(); }
-          showStore();
+          showStore(); blInit();
         }
       } catch (e) {}
     } else if (desktop.install) {

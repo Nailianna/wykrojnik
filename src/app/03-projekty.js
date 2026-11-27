@@ -120,7 +120,7 @@
     $('v2d').setAttribute('aria-pressed', v === '2d'); $('v3d').setAttribute('aria-pressed', v === '3d');
     $('cv').toggleAttribute('hidden', v !== '2d'); $('gl').toggleAttribute('hidden', v !== '3d');
     document.querySelectorAll('[data-v]').forEach((el) => (el.hidden = el.dataset.v !== v));
-    layoutUi(); persist(); draw(true);
+    layoutUi(); persist(); draw(true); blTouch();
   }
   $('v2d').addEventListener('click', () => setView('2d'));
   $('mini').addEventListener('click', () => setView('2d'));

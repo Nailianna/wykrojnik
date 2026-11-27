@@ -32,5 +32,5 @@
     g3.renderer.setSize(r.width, r.height, false); g3.camera.aspect = r.width / r.height; g3.camera.updateProjectionMatrix();
     const cp = Math.cos(cam.pitch);
     g3.camera.position.set(Math.sin(cam.yaw) * cp * cam.dist, g3.mid + Math.sin(cam.pitch) * cam.dist, Math.cos(cam.yaw) * cp * cam.dist);
-    g3.camera.lookAt(0, g3.mid, 0); g3.renderer.render(g3.scene, g3.camera);
+    g3.camera.lookAt(0, g3.mid, 0); g3.renderer.render(g3.scene, g3.camera); blTouch();
   }
