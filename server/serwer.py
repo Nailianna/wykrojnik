@@ -3,13 +3,18 @@
 
 Bez zależności poza biblioteką standardową. Blender chodzi jako jeden stały proces ze skryptem wykrojnik_render.py
 (ten sam skrypt, którego używa aplikacja na komputerze). Zadania czekają w kolejce, mają limit czasu, a pliki są sprzątane.
-Usługa nie zna i nie przyjmuje klucza API Claude'a.
+Renderowanie i układanie tkaniny nie potrzebują klucza API Claude'a.
+
+Ta sama usługa serwuje stronę Wykrojnika (WK_STATIC) i przekazuje pytania do Claude'a pod /api/claude.
+Zasady dla /api/claude: klucz przychodzi w nagłówku x-api-key każdego żądania i żyje tylko w zmiennej tej jednej obsługi,
+usługa nie ma własnego klucza i nie czyta go ze zmiennych środowiskowych, nic nie zapisuje ani nie loguje,
+a jedyne adresy docelowe to dwa punkty API Anthropic wpisane niżej.
 """
-import hashlib, json, os, re, shlex, subprocess, sys, threading, time, uuid
+import collections, hashlib, json, os, re, shlex, subprocess, sys, threading, time, urllib.error, urllib.parse, urllib.request, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PORT = int(os.environ.get('WK_PORT', '8080'))
+PORT = int(os.environ.get('WK_PORT') or os.environ.get('PORT') or '8080')
 DATA = os.environ.get('WK_DATA', '/tmp/wykrojnik-render')
 BLENDER = os.environ.get('WK_BLENDER', sys.executable + ' ' + shlex.quote(os.path.join(HERE, 'wykrojnik_render.py')))
 TOKEN = os.environ.get('WK_TOKEN', '')
@@ -21,11 +26,19 @@ TTL = int(os.environ.get('WK_TTL_H', '168')) * 3600
 MAX_BODY = int(os.environ.get('WK_MAX_MB', '48')) * 1024 * 1024
 MAX_QUEUE = int(os.environ.get('WK_MAX_QUEUE', '40'))
 MAX_PX = int(os.environ.get('WK_MAX_PX', '2000'))
+IDLE = int(os.environ.get('WK_IDLE_S', '900'))  # po tylu sekundach bez zadań Blender jest wyłączany, żeby nie zajmował pamięci
+PER_CLIENT = int(os.environ.get('WK_MAX_ACTIVE', '6'))  # najwięcej zadań jednej przeglądarki naraz
+PER_HOUR = int(os.environ.get('WK_MAX_HOUR', '240'))  # najwięcej zadań jednej przeglądarki na godzinę
+ANTHROPIC = 'https://api.anthropic.com'
+ANTHROPIC_VERSION = '2023-06-01'
+CLAUDE_MAX = 32 * 1024 * 1024
+KEY = re.compile(r'^sk-ant-[A-Za-z0-9_-]{16,300}$')
 ID = re.compile(r'^[A-Za-z0-9_-]{6,64}$')
 SIG = re.compile(r'^[A-Za-z0-9_-]{3,40}$')
 
 lock = threading.Condition()
 jobs, queue = {}, []
+recent = collections.defaultdict(collections.deque)  # identyfikator przeglądarki -> czasy ostatnich zadań
 state = {'proc': None, 'ready': False, 'cur': None, 'version': '', 'error': ''}
 
 
@@ -103,8 +116,12 @@ def worker():
     n = 0
     while True:
         with lock:
+            idle0 = time.time()
             while not queue:
                 lock.wait(5)
+                if not queue and state['proc'] and time.time() - idle0 > IDLE:
+                    kill_blender()
+                    log('Blender wyłączony po bezczynności')
             job = queue.pop(0)
             if job['state'] != 'queued':
                 continue
@@ -174,7 +191,7 @@ def janitor():
 
 
 # ---------- HTTP ----------
-TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2'}
+TYPES = {'.mp4': 'video/mp4', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2'}
 
 
 class H(BaseHTTPRequestHandler):
@@ -202,7 +219,43 @@ class H(BaseHTTPRequestHandler):
         if self.command != 'HEAD':
             self.wfile.write(body)
 
+    def same_origin(self):
+        o = self.headers.get('Origin', '')
+        if not o or o in ORIGINS:
+            return True
+        host = urllib.parse.urlparse(o).netloc
+        return host in (self.headers.get('Host', ''), self.headers.get('X-Forwarded-Host', ''))
+
+    def claude(self):
+        """Przekazuje pytanie do API Anthropic kluczem z tego żądania. Niczego nie zapisuje i nie loguje."""
+        def err(code, typ, msg):
+            self.send(code, {'type': 'error', 'error': {'type': typ, 'message': msg}})
+        if not self.same_origin():
+            return err(403, 'forbidden', 'Zapytanie z innej strony.')
+        key = self.headers.get('x-api-key', '').strip()
+        if not KEY.match(key):
+            return err(401, 'authentication_error', 'Brak klucza API w zapytaniu.')
+        head = {'x-api-key': key, 'anthropic-version': ANTHROPIC_VERSION}
+        if self.command == 'GET':
+            req = urllib.request.Request(ANTHROPIC + '/v1/models?limit=1', headers=head, method='GET')  # bezpłatne sprawdzenie klucza
+        else:
+            n = int(self.headers.get('Content-Length', '0') or 0)
+            if n > CLAUDE_MAX:
+                return err(413, 'request_too_large', 'Zapytanie jest za duże.')
+            head['content-type'] = 'application/json'
+            req = urllib.request.Request(ANTHROPIC + '/v1/messages', data=self.rfile.read(n), headers=head, method='POST')
+        try:
+            with urllib.request.urlopen(req, timeout=900) as r:
+                return self.send(r.status, r.read(), r.headers.get('content-type') or 'application/json')
+        except urllib.error.HTTPError as e:
+            return self.send(e.code, e.read(), e.headers.get('content-type') or 'application/json')
+        except Exception:
+            return err(502, 'api_error', 'Nie udało się połączyć z API Anthropic.')
+
     def who(self):
+        if not self.same_origin():
+            self.send(403, {'error': 'Zapytanie z innej strony.'})
+            return None
         c, p = self.headers.get('X-Wk-Client', ''), self.headers.get('X-Wk-Project', '')
         if TOKEN and self.headers.get('X-Wk-Token', '') != TOKEN:
             self.send(401, {'error': 'Brak dostępu do usługi renderującej.'})
@@ -227,6 +280,8 @@ class H(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split('?')[0]
+        if path == '/api/claude':
+            return self.claude()
         if path == '/api/render/health':
             with lock:
                 return self.send(200, {'ok': True, 'blender': state['version'] or ('gotowy' if state['ready'] else 'uruchomi się przy pierwszym zadaniu'), 'queue': len(queue), 'error': state['error']})
@@ -291,6 +346,8 @@ class H(BaseHTTPRequestHandler):
         self.send(200, {'ok': True})
 
     def do_POST(self):
+        if self.path.split('?')[0] == '/api/claude':
+            return self.claude()
         if self.path.split('?')[0] != '/api/render/jobs':
             return self.send(404, {'error': 'Nie znaleziono.'})
         w = self.who()
@@ -338,6 +395,13 @@ class H(BaseHTTPRequestHandler):
         with lock:
             if sum(1 for q in queue if q['state'] == 'queued') >= MAX_QUEUE:
                 return self.send(503, {'error': 'Kolejka renderów jest pełna. Spróbuj za chwilę.'})
+            now, mine = time.time(), recent[w[0]]
+            while mine and now - mine[0] > 3600:
+                mine.popleft()
+            active = sum(1 for q in jobs.values() if q['client'] == w[0] and q['state'] in ('queued', 'starting', 'running') and not (q['project'] == w[1] and q['kind'] == kind))
+            if active >= PER_CLIENT or len(mine) >= PER_HOUR:
+                return self.send(429, {'error': 'Masz już dużo zadań w kolejce. Poczekaj na ich wynik.' if active >= PER_CLIENT else 'Limit renderów na godzinę jest wyczerpany. Spróbuj później.'})
+            mine.append(now)
             for q in list(jobs.values()):  # nowsze zadanie tego samego rodzaju w tym samym projekcie zastępuje starsze
                 if q['client'] == w[0] and q['project'] == w[1] and q['kind'] == kind and q['state'] in ('queued', 'starting', 'running'):
                     q['cancel'] = True
@@ -349,9 +413,13 @@ class H(BaseHTTPRequestHandler):
         self.send(200, {'id': job['id'], 'state': 'queued'})
 
 
-if __name__ == '__main__':
+def main():
     os.makedirs(DATA, exist_ok=True)
     threading.Thread(target=worker, daemon=True).start()
     threading.Thread(target=janitor, daemon=True).start()
     log('Usługa renderująca Wykrojnika na porcie', PORT, '| dane:', DATA, '| Blender:', BLENDER)
     ThreadingHTTPServer(('0.0.0.0', PORT), H).serve_forever()
+
+
+if __name__ == '__main__':
+    main()

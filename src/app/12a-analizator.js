@@ -52,7 +52,11 @@
   async function anApi(prompt, blobs, signal) {
     const content = []; for (const b of blobs) content.push({ type: 'image', source: { type: 'base64', media_type: b.type || 'image/jpeg', data: await anB64(b) } });
     content.push({ type: 'text', text: prompt });
-    const data = await anCall('POST', JSON.stringify({ model: anModel(), max_tokens: 16000, messages: [{ role: 'user', content }] }), signal);
+    return anMsgs([{ role: 'user', content }], signal, 16000);
+  }
+  // rozmowa z Claude'em własnym kluczem: lista wiadomości w, obiekt JSON z odpowiedzi na wyjściu
+  async function anMsgs(messages, signal, max) {
+    const data = await anCall('POST', JSON.stringify({ model: anModel(), max_tokens: max, messages }), signal);
     const text = ((data && data.content) || []).filter((c) => c && c.type === 'text').map((c) => c.text).join(''), i = text.indexOf('{'), j = text.lastIndexOf('}');
     if (i < 0 || j <= i || (data && data.stop_reason === 'max_tokens')) throw { code: 'invalid_json' };
     try { return JSON.parse(text.slice(i, j + 1)); } catch (e) { throw { code: 'invalid_json' }; }
@@ -66,9 +70,11 @@
     const v = $('anKeyIn').value.trim(); if (!/^sk-ant-[A-Za-z0-9_-]{16,}$/.test(v)) { anKeyUi('To nie wygląda na klucz API Anthropic. Klucz zaczyna się od „sk-ant-”.'); $('anKeyForm').hidden = false; return; }
     anKeyMem = v; anKeyState = 'entered'; $('anKeyIn').value = ''; $('anKeyGo').disabled = true; anKeyUi(''); $('anKeySt').textContent = 'Sprawdzam klucz…';
     let err = ''; try { await anKeyCheck(); } catch (e) { err = e && e.code === 'key_rejected' ? AN_ERR.key_rejected : (e && AN_ERR[e.code]) || AN_ERR.key_network; if (e && e.code === 'key_rejected') { anKeyMem = ''; anKeyState = ''; } }
-    $('anKeyGo').disabled = false; anKeyUi(err); if (err && !anKeyMem) $('anKeyForm').hidden = false; anDocs(); // analiza nie rusza sama: po podłączeniu klikasz „Analizuj wykrój”
+    $('anKeyGo').disabled = false; anKeyUi(err); if (err && !anKeyMem) $('anKeyForm').hidden = false; if (anSt) anDocs(); // analiza nie rusza sama: po podłączeniu klikasz „Analizuj wykrój”
   }
-  function anKeyDrop() { anKeyMem = ''; anKeyState = ''; $('anKeyIn').value = ''; anKeyUi(''); anDocs(); }
+  function anKeyDrop() { anKeyMem = ''; anKeyState = ''; $('anKeyIn').value = ''; anKeyUi(''); if (anSt) anDocs(); }
+  // jeden formularz klucza: pokazuje się tam, gdzie akurat jest potrzebny (import PDF albo inspiracja)
+  function anKeyAt(slot) { const b = $('anKeyBox'); if (b.parentElement !== $(slot)) $(slot).appendChild(b); b.hidden = !!sampleFn; anKeyUi(''); }
   // jedno miejsce, przez które idzie każde pytanie do Claude; reszta analizatora nie wie, którą drogą
   const anFake = () => (TEST && window.__anFake) || null;
   async function anLimit() { if (anFake()) return 8; if (!sampleFn) return anKey() ? 12 : 0; const l = await sampleFn.limits().catch(() => null); return l && l.images ? l.images.maxCount : 0; }
@@ -173,7 +179,7 @@
   const anEl = (tag, txt, cls) => { const e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; };
   const anSheetDoc = () => (anSt ? anSt.docs.find((x) => x.role === 'arkusz') || null : null);
   const anSrc = (list) => (list && list.length ? list.map((x) => { const p = x.split(':'); return p[0].replace(/^inne/, 'inny plik') + ', s. ' + p[1]; }).join('; ') : '');
-  function anOpen() { anSt = { docs: [] }; $('anFiles').value = ''; anDocs(); $('anRes').hidden = true; $('anStop').hidden = true; $('anKeyBox').hidden = !!sampleFn; anKeyUi(''); $('anBox').hidden = false; }
+  function anOpen() { anSt = { docs: [] }; $('anFiles').value = ''; anKeyAt('anKeySlot'); anDocs(); $('anRes').hidden = true; $('anStop').hidden = true; $('anBox').hidden = false; }
   function anClose() { if (anCtl) anCtl.abort(); $('anBox').hidden = true; anSt = null; }
   function anReset() { if (!anSt) return; anSt.data = null; anSt.res = null; $('anRes').hidden = true; }
   // lista dokumentów: każdy ma rodzaj, który można zmienić; arkusz jest jeden i to z niego pochodzą linie

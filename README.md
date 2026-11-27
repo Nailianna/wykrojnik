@@ -2,7 +2,7 @@
 
 Aplikacja do konstruowania wykrojów odzieży z wymiarów: spódnice, sukienki, topy, t-shirty i gorsety. Rysuje wykrój, sprawdza go z wymiarami modelki, pokazuje podgląd 3D na sylwetce i drukuje na kartkach A4 w skali 100%.
 
-Wersja 0.91.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
+Wersja 0.92.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
 
 ## Uruchomienie
 
@@ -11,21 +11,15 @@ Do rysowania wykrojów aplikacja nie wymaga instalacji ani serwera.
 1. Pobierz repozytorium (Code, Download ZIP) i rozpakuj.
 2. Otwórz `index.html` w Chrome albo Edge na komputerze.
 
-Analiza wykrojów z PDF przez Claude potrzebuje strony opublikowanej razem z funkcją serwerową (niżej). Z pliku otwartego prosto z dysku analiza nie działa.
+Analiza wykrojów z PDF i dobieranie wykroju ze zdjęcia przez Claude'a potrzebują strony uruchomionej razem z serwerem (niżej). Z pliku otwartego prosto z dysku analiza nie działa.
 
-## Publikacja strony (Cloudflare Pages)
+## Publikacja strony
 
-Strona i funkcja serwerowa wdrażają się razem, z jednego repozytorium, na darmowym planie.
+Wszystko wdraża się razem, z jednego repozytorium, jako jeden kontener: strona, pytania do Claude'a kluczem użytkownika (`/api/claude`) i render w Blenderze (`/api/render`). Opis krok po kroku: [docs/wdrozenie.md](docs/wdrozenie.md).
 
-1. Załóż konto na Cloudflare i w panelu wybierz Workers & Pages, Create, Pages, Connect to Git.
-2. Wskaż to repozytorium i gałąź `main`.
-3. Framework preset: None. Build command: puste. Build output directory: `/`.
-4. Nie dodawaj żadnych zmiennych środowiskowych ani sekretów. Funkcja ich nie używa.
-5. Save and Deploy. Po chwili strona działa pod adresem `https://<nazwa>.pages.dev`, a funkcja pod `https://<nazwa>.pages.dev/api/claude`.
+Na własnym komputerze: `docker compose up --build`, potem http://localhost:8080.
 
-Każde wypchnięcie zmian do `main` publikuje nową wersję. GitHub Pages nie wystarczy, bo nie uruchamia funkcji serwerowych.
-
-Sprawdzenie funkcji bez klucza: `node tools/test-funkcji.mjs`.
+Testy bez klucza i bez Blendera: `python3 tools/test-serwera.py`.
 
 Aplikacja jest przeznaczona na komputer. Na telefonie nie była projektowana ani testowana.
 
@@ -47,8 +41,10 @@ Wykroje wczytane z własnych plików PDF też zostają tylko u Ciebie. Kupionych
 | `figure.js` | siatka sylwetki |
 | `prints.js` | wzory tkanin |
 | `przymiarka.html` | pracownia importu własnych wykrojów z PDF |
-| `functions/api/claude.js` | funkcja serwerowa: przekazuje zapytania z kluczem użytkownika do API Anthropic |
-| `tools/test-funkcji.mjs` | test funkcji serwerowej na podstawionym API |
+| `server/serwer.py` | serwer: strona, pytania do Claude'a kluczem użytkownika, kolejka renderów |
+| `server/wykrojnik_render.py` | skrypt Blendera (powstaje z `src/app/14a-blender.js`) |
+| `Dockerfile`, `railway.json`, `docker-compose.yml` | wdrożenie jako jeden kontener |
+| `tools/test-serwera.py` | testy serwera na podstawionym Blenderze i podstawionym API |
 | `src/app/12c-plan-szycia.js` | zszywanie wczytanego wykroju według szwów wskazanych przez analizę |
 | `tools/check.js` | kontrola spójności wykrojów (`node tools/check.js`) |
 | `tools/types.d.ts` | typy wymiarów i parametrów fasonu, używane tylko do sprawdzania kodu |
@@ -77,8 +73,8 @@ Jak obchodzimy się z kluczem:
 
 - klucz żyje tylko w pamięci otwartej karty; odświeżenie albo zamknięcie karty go usuwa, „Odłącz klucz” usuwa go od razu,
 - nie trafia do `localStorage`, cookies, projektów, kopii zapasowych ani adresów,
-- każde zapytanie niesie go w nagłówku do funkcji `functions/api/claude.js`, która przekazuje zapytanie do API Anthropic i niczego nie zapisuje,
-- w projekcie nie ma klucza właścicielki ani klucza zapasowego; funkcja nie czyta zmiennych środowiskowych.
+- każde zapytanie niesie go w nagłówku do serwera Wykrojnika (`/api/claude` w `server/serwer.py`), który przekazuje zapytanie do API Anthropic i niczego nie zapisuje ani nie loguje,
+- w projekcie nie ma klucza właścicielki ani klucza zapasowego; serwer nie czyta klucza ze zmiennych środowiskowych.
 
 Domyślny model to `claude-sonnet-5-5`; inny ustawisz wpisem `wykrojnik.apimodel` w pamięci przeglądarki.
 

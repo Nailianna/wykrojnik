@@ -1,16 +1,13 @@
-# Cały przepływ na jednym komputerze: strona Wykrojnika i usługa renderująca z Blenderem pod adresem http://localhost:8080
+# Cały Wykrojnik na własnym komputerze pod adresem http://localhost:8080 (strona, render w Blenderze, pytania do Claude'a własnym kluczem).
 # Uruchomienie: docker compose up --build
 services:
-  render:
-    build: ./server
+  wykrojnik:
+    build: .
+    platform: linux/amd64   # moduł bpy dla Linuksa jest tylko w tej wersji; na Macu z procesorem Apple działa przez emulację, czyli wolniej
     ports: ["8080:8080"]
     env_file: [{ path: .env, required: false }]
-    environment:
-      WK_STATIC: /strona
-      WK_DATA: /dane
     volumes:
-      - ./:/strona:ro
-      - render-dane:/dane
+      - dane:/dane
     restart: unless-stopped
 volumes:
-  render-dane:
+  dane:

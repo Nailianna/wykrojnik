@@ -58,3 +58,49 @@ try:
     print('usługa renderująca: %d testów, wszystko w porządku' % n[0])
 finally:
     srv.kill()
+
+# ---------- /api/claude: pytania do Claude'a kluczem użytkownika, na podstawionym API ----------
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+seen = []
+P = 'sk-' + 'ant-'  # zmyślone klucze do testów składane z kawałków, żeby w repozytorium nie było niczego, co wygląda jak klucz
+class Fake(BaseHTTPRequestHandler):
+    def log_message(self, *a): pass
+    def reply(self):
+        body = self.rfile.read(int(self.headers.get('Content-Length', '0') or 0)); seen.append((self.command, self.path, self.headers.get('x-api-key'), body))
+        if b'WOLNO' in body: time.sleep(0.6)
+        code = 429 if b'LIMIT' in body else 200; out = json.dumps({'type': 'error', 'error': {'type': 'rate_limit_error', 'message': 'x'}} if code == 429 else {'echo': self.headers.get('x-api-key', '')[-4:]}).encode()
+        self.send_response(code); self.send_header('content-type', 'application/json'); self.send_header('content-length', str(len(out))); self.end_headers(); self.wfile.write(out)
+    do_GET = do_POST = reply
+fake = ThreadingHTTPServer(('127.0.0.1', PORT + 1), Fake); threading.Thread(target=fake.serve_forever, daemon=True).start()
+env2 = dict(os.environ, WK_PORT=str(PORT + 2), WK_DATA=os.path.join(TMP, 'dane2'), WK_BLENDER=sys.executable + ' ' + FAKE, ANTHROPIC_API_KEY=P + 'KLUCZ-WLASCICIELKI-NIE-DO-UZYCIA-0000')
+srv = subprocess.Popen([sys.executable, '-c', 'import sys; sys.path.insert(0, %r); import serwer; serwer.ANTHROPIC = "http://127.0.0.1:%d"; serwer.main()' % (os.path.join(HERE, '../server'), PORT + 1)], env=env2, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+def claude(method, key=None, body=None, origin=None):
+    h = {}
+    if key: h['x-api-key'] = key
+    if origin: h['origin'] = origin
+    if body is not None: h['content-type'] = 'application/json'
+    try:
+        r = urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:%d/api/claude' % (PORT + 2), data=body, method=method, headers=h), timeout=20); return r.status, json.loads(r.read()), r.headers.get('cache-control')
+    except urllib.error.HTTPError as e: return e.code, json.loads(e.read() or b'{}'), e.headers.get('cache-control')
+n[0] = 0; KA, KB = P + 'uzytkowniczka-A-0000000000aaaa', P + 'uzytkowniczka-B-0000000000bbbb'
+try:
+    for _ in range(50):
+        try:
+            if claude('GET')[0] == 401: break
+        except Exception: time.sleep(0.1)
+    ok(claude('POST', None, b'{}')[0] == 401 and not seen, 'bez klucza nic nie idzie do Anthropic, także gdy serwer ma klucz w zmiennych środowiskowych')
+    ok(claude('POST', 'to-nie-klucz', b'{}')[0] == 401 and not seen, 'zły format klucza jest odrzucany na miejscu')
+    s_, d_, cc = claude('GET', KA); ok(s_ == 200 and seen[-1][:3] == ('GET', '/v1/models?limit=1', KA) and cc == 'no-store', 'sprawdzenie klucza idzie do listy modeli kluczem z żądania')
+    s_, d_, cc = claude('POST', KA, b'{"x":1}'); ok(s_ == 200 and seen[-1] == ('POST', '/v1/messages', KA, b'{"x":1}'), 'pytanie idzie do /v1/messages z tą samą treścią')
+    res = {}
+    ta = threading.Thread(target=lambda: res.__setitem__('a', claude('POST', KA, b'{"WOLNO":1}'))); tb = threading.Thread(target=lambda: res.__setitem__('b', claude('POST', KB, b'{"y":2}'))); ta.start(); time.sleep(0.1); tb.start(); ta.join(); tb.join()
+    ok(res['a'][1]['echo'] == 'aaaa' and res['b'][1]['echo'] == 'bbbb', 'dwie osoby naraz: każda odpowiedź jest z własnego klucza')
+    ok(claude('POST', KA, b'{"LIMIT":1}')[0] == 429, 'błąd Anthropic wraca do przeglądarki z tym samym kodem')
+    ok(claude('POST', KA, b'{}', origin='https://obca-strona.example')[0] == 403, 'zapytanie z innej strony jest odrzucane')
+    ok(all('WLASCICIELKI' not in (k or '') for _, _, k, _ in seen), 'klucz ze zmiennych środowiskowych serwera nigdy nie został użyty')
+    srv.kill(); out = srv.stdout.read().decode(errors='ignore'); ok(P not in out and 'aaaa' not in out, 'w logach serwera nie ma kluczy')
+    ok(not [f for r_, d_, fs in os.walk(TMP) for f in fs if b'uzytkowniczka' in open(os.path.join(r_, f), 'rb').read()], 'klucz nie trafia do żadnego pliku')
+    print('pytania do Claude: %d testów, wszystko w porządku' % n[0])
+finally:
+    srv.kill(); fake.shutdown()

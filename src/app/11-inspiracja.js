@@ -140,16 +140,23 @@
     say('Ustawiłam fason i parametry z propozycji. Dopracuj je suwakami.');
   }
   const INERR = { not_granted: 'Bez zgody na użycie Claude nie mogę przeanalizować zdjęcia.', rate_limited: 'Limit zapytań do Claude jest chwilowo wyczerpany. Spróbuj za jakiś czas.', image_rejected: 'Tego pliku nie da się wysłać. Wybierz zdjęcie JPG, PNG albo WebP.', images_unavailable: 'W tym widoku nie można wysyłać zdjęć do Claude.', refused: 'Claude odmówił analizy tego zdjęcia. Spróbuj z innym.', session_expired: 'Sesja wygasła. Zaloguj się ponownie w Claude.', invalid_json: 'Odpowiedź przyszła w złym formacie. Spróbuj jeszcze raz.' };
+  // to samo pytanie własnym kluczem: zdjęcie idzie w pierwszej wiadomości, poprawki jako dalszy ciąg rozmowy
+  async function inspKey(input, blob, signal) {
+    const img = { type: 'image', source: { type: 'base64', media_type: blob.type || 'image/jpeg', data: await anB64(blob) } };
+    const msgs = typeof input === 'string' ? [{ role: 'user', content: [img, { type: 'text', text: input }] }] : input.map((m, i) => (i === 0 ? { role: 'user', content: [img, { type: 'text', text: m.content }] } : m));
+    return anMsgs(msgs, signal, 4000);
+  }
   async function inspRun(more) {
-    if (!sampleFn || !inBlob) return;
+    if (!inBlob) return;
+    if (!sampleFn && !anKey()) { anKeyAt('inKeySlot'); anKeyForm(); return; } // bez wbudowanego Claude'a potrzebny jest własny klucz; po podłączeniu nic nie rusza samo
     inCtl = new AbortController(); $('inGo').disabled = true; $('inMoreGo').disabled = true; $('inStop').hidden = false; $('inStat').textContent = ''; const bz = busyOn('Claude analizuje zdjęcie. To zwykle trwa od kilkunastu sekund do minuty.');
     const note = $('inNote').value.trim(), first = inspPrompt() + (note ? '\n\nUwaga użytkowniczki: ' + note : '');
     const input = more && inLast ? [{ role: 'user', content: first }, { role: 'assistant', content: JSON.stringify(inLast) }, { role: 'user', content: 'Popraw propozycje według tej uwagi i odpowiedz znowu samym obiektem JSON w tym samym kształcie: ' + more }] : first;
     try {
-      const res = await sampleFn.json(input, { images: [inBlob], signal: inCtl.signal, cache: more ? false : true });
+      const res = sampleFn ? await sampleFn.json(input, { images: [inBlob], signal: inCtl.signal, cache: more ? false : true }) : await inspKey(input, inBlob, inCtl.signal);
       inLast = res && typeof res === 'object' ? res : {}; inspRender(inLast, true); $('inStat').textContent = ''; inspSave();
     } catch (e) {
-      $('inStat').textContent = e && e.code === 'cancelled' ? '' : (e && INERR[e.code]) || 'Nie udało się połączyć z Claude. Spróbuj jeszcze raz.';
+      $('inStat').textContent = e && e.code === 'cancelled' ? '' : (e && INERR[e.code]) || (e && /^(key_|no_proxy)/.test(e.code || '') && AN_ERR[e.code]) || 'Nie udało się połączyć z Claude. Spróbuj jeszcze raz.'; if (!sampleFn) anKeyUi('');
     } finally { busyOff(bz); $('inGo').disabled = false; $('inMoreGo').disabled = false; $('inStop').hidden = true; }
   }
   // historia inspiracji: pomniejszone zdjęcie, uwaga i ostatnia propozycja; wspólna dla wszystkich projektów
@@ -179,13 +186,13 @@
   function inspOpen(e) {
     const bin = atob(e.img.split(',')[1]), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
     inBlob = new Blob([u8], { type: 'image/jpeg' }); inCur = e.id; inLast = e.res; $('inNote').value = e.note || ''; $('inMore').value = '';
-    const img = $('inPrev'); if (img.src && img.src.indexOf('blob:') === 0) URL.revokeObjectURL(img.src); img.src = e.img; img.hidden = false; $('dropT').hidden = true; $('inGo').disabled = !sampleFn; $('inStat').textContent = '';
+    const img = $('inPrev'); if (img.src && img.src.indexOf('blob:') === 0) URL.revokeObjectURL(img.src); img.src = e.img; img.hidden = false; $('dropT').hidden = true; $('inGo').disabled = false; $('inStat').textContent = ''; if (!sampleFn) anKeyAt('inKeySlot');
     inspRender(e.res); inspHist(); document.querySelector('#panel .body').scrollTop = 0;
   }
   function inspSet(f) {
     if (!f || !/^image\/(jpeg|png|webp|gif)$/.test(f.type)) { $('inStat').textContent = 'Wybierz zdjęcie JPG, PNG albo WebP.'; return; }
-    inBlob = f; inLast = null; inCur = null; $('inRes').textContent = ''; $('inMoreBox').hidden = true; $('inStat').textContent = sampleFn ? '' : 'Analiza zdjęć działa po otwarciu Wykrojnika w Claude.';
-    const img = $('inPrev'); if (img.src) URL.revokeObjectURL(img.src); img.src = URL.createObjectURL(f); img.hidden = false; $('dropT').hidden = true; $('inGo').disabled = !sampleFn;
+    inBlob = f; inLast = null; inCur = null; $('inRes').textContent = ''; $('inMoreBox').hidden = true; $('inStat').textContent = ''; if (!sampleFn) anKeyAt('inKeySlot');
+    const img = $('inPrev'); if (img.src) URL.revokeObjectURL(img.src); img.src = URL.createObjectURL(f); img.hidden = false; $('dropT').hidden = true; $('inGo').disabled = false;
   }
   $('inImg').addEventListener('change', () => inspSet($('inImg').files[0]));
   const dz = $('drop');

@@ -8,6 +8,9 @@ cat src/app/*.js > app.js
 node --check app.js
 tsc -p tools
 node tools/check.js | tail -1
+# dwie funkcje o tej samej nazwie w częściach interfejsu po cichu się nadpisują
+dup=$(awk '/^  (async )?function [A-Za-z0-9_]+\(/{match($0,/function [A-Za-z0-9_]+/); n=substr($0,RSTART+9,RLENGTH-9); c[n]++} END{for(k in c) if(c[k]>1) print k}' src/app/*.js)
+[ -z "$dup" ] || { echo "DUPLIKAT funkcji: $dup"; exit 1; }
 echo "zbudowano"
 
 # skrypt Blendera dla usługi renderującej powstaje z tego samego źródła co aplikacja

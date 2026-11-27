@@ -394,6 +394,7 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
 <div id="anBox" hidden><div class="anBar"><b>Wykrój z pliku PDF</b><span style="flex:1"></span><button id="anPrz">Otwórz w Przymiarce</button><button id="anX">Wróć do Wykrojnika</button></div><div class="anBody"><div class="anCol">
   <div class="anDropZ" id="anDrop"><div><b>Pliki wykroju</b><span>Dodaj arkusz na duży format (A0) i, jeśli masz, instrukcję szycia.</span></div><button id="anAddB">Dodaj pliki PDF</button><input id="anFiles" type="file" accept="application/pdf,.pdf" multiple hidden></div>
   <div id="anDocs"></div>
+  <div id="anKeySlot">
   <div id="anKeyBox" hidden style="margin-top:16px;max-width:560px">
     <div class="f2"><span id="anKeySt">Claude nie jest podłączony.</span><span style="display:flex;gap:8px"><button id="anKeyOpen">Podłącz Claude</button><button id="anKeyOff" hidden>Odłącz klucz</button></span></div>
     <div id="anKeyForm" hidden>
@@ -401,6 +402,7 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
       <p class="note" style="margin-top:0">Analizy są rozliczane na Twoim koncie Anthropic. Klucz jest przechowywany w pamięci tej karty i przesyłany do serwera Wykrojnika przy każdym zapytaniu do Claude’a. <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener noreferrer">Utwórz klucz API</a></p>
     </div>
     <p class="warn" id="anKeyErr" hidden></p>
+  </div>
   </div>
   <div class="row" style="margin-top:16px"><button class="primary" id="anGo" disabled>Analizuj wykrój</button><button id="anRaw" disabled>Wczytaj bez analizy</button><button id="anStop" hidden style="flex:0 0 auto">Przerwij</button></div>
   <p class="note" id="anStat"></p>
@@ -498,6 +500,7 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
         <label class="drop" id="drop"><input id="inImg" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><img id="inPrev" alt="Wgrane zdjęcie" hidden><span id="dropT">Wgraj zdjęcie, upuść je tutaj albo wklej ze schowka.</span></label>
         <input id="inNote" maxlength="200" placeholder="Na czym Ci zależy? Na przykład: sam dół, ale dłuższy" style="margin-top:10px">
         <div class="row"><button class="primary" id="inGo" disabled>Dobierz wykrój</button><button id="inStop" hidden style="flex:0 0 auto">Przerwij</button></div>
+        <div id="inKeySlot"></div>
         <p class="note" id="inStat"></p>
         <div id="inRes"></div>
         <div id="inHistBox" hidden><h3>Historia</h3><div id="inHist"></div></div>
