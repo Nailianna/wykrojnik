@@ -133,7 +133,10 @@
       const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
       await page.render({ canvasContext: g, viewport: vp }).promise;
       const px = sc / K, fs = Math.max(15, Math.round(c.width / 80)); g.font = '700 ' + fs + 'px Arial, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
-      for (const m of marks || []) { if (m.pn && m.pn !== pn) continue; const x = (m.x - offX) * px, y = m.y * px; if (x < 0 || x > c.width || y < 0 || y > c.height) continue; const w = g.measureText(m.id).width + fs * 0.7, yy = Math.min(c.height - fs, y + fs * 1.1), xx = Math.max(w / 2 + 2, Math.min(c.width - w / 2 - 2, x)); g.fillStyle = '#d0021b'; g.fillRect(xx - w / 2, yy - fs * 0.7, w, fs * 1.4); g.fillStyle = '#fff'; g.fillText(m.id, xx, yy + 1); }
+      for (const m of marks || []) { if (m.pn && m.pn !== pn) continue; const x = (m.x - offX) * px, y = m.y * px; if (x < 0 || x > c.width || y < 0 || y > c.height) continue;
+        // etykieta krawędzi: mniejsza, niebieska, dokładnie na środku krawędzi
+        if (m.e) { const fe = Math.round(fs * 0.8), we = g.measureText(m.id).width * 0.8 + fe * 0.6; g.font = '700 ' + fe + 'px Arial, sans-serif'; g.fillStyle = '#0b5fd8'; g.fillRect(x - we / 2, y - fe * 0.65, we, fe * 1.3); g.fillStyle = '#fff'; g.fillText(m.id, x, y + 1); g.font = '700 ' + fs + 'px Arial, sans-serif'; continue; }
+        const w = g.measureText(m.id).width + fs * 0.7, yy = Math.min(c.height - fs, y + fs * 1.1), xx = Math.max(w / 2 + 2, Math.min(c.width - w / 2 - 2, x)); g.fillStyle = '#d0021b'; g.fillRect(xx - w / 2, yy - fs * 0.7, w, fs * 1.4); g.fillStyle = '#fff'; g.fillText(m.id, xx, yy + 1); }
       const land = c.width >= c.height, long = land ? c.width : c.height, n = nt === 2 ? 2 : 1, len = n === 1 ? long : Math.round(long * 0.54);
       for (let t = 0; t < n; t++) {
         const st = t === 0 ? 0 : long - len, q = document.createElement('canvas'); q.width = land ? len : c.width; q.height = land ? c.height : len;

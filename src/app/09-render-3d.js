@@ -295,7 +295,7 @@
       if (figClear) { figClear(q); if (figDrape) figDrape(q, eOf(y)); }
       return q;
     };
-    const topOk = useFig && !!figCol && !!g3.sdf && state.sim && !!window.Cloth && sil.top === 'dress' && (model.d.sewn || model.d).pieces.some((q) => q.id === 'przod' && q.ed) && (model.d.sewn || model.d).pieces.some((q) => q.id === 'tyl' && q.ed);
+    const topOk = useFig && !!figCol && !!g3.sdf && state.sim && !!window.Cloth && sil.top === 'dress' && (!!(model.d.sewn && model.d.sewn.plan) || ((model.d.sewn || model.d).pieces.some((q) => q.id === 'przod' && q.ed) && (model.d.sewn || model.d).pieces.some((q) => q.id === 'tyl' && q.ed)));
     const topFull = topOk && (sil.imported || ((sil.lower === 'straight' || sil.lower === 'trapez') && !sil.tren && p.dl >= m.wb + 1)); // sukienka i top z jednego kawałka: całość układa się jako zszyta tkanina
     // symulacja: poniżej linii przypięcia (talia, biodra, odcięcie) położenie tkaniny bierze się z symulacji, nie z reguł
     let simRef = null; $('simS').textContent = '';
@@ -342,7 +342,12 @@
           else {
             const stl = p.gora === 'bez', yTopW = sil.strap ? Math.min(a.Dts - 0.3, sil.strap.yMax) : a.Dts - 0.3, FI = g.info.F, BI = g.info.B, SB = g.info.S ? g.info.S.box : null, SL = sil.sleeve, rr = SB ? (SB[2] - SB[0]) / TAU : 0;
             const phiOf = (mt, sFr) => (mt.pk === 'F' ? Math.PI / 2 - mt.sx * sFr * Math.PI / 2 : 1.5 * Math.PI + mt.sx * sFr * Math.PI / 2);
+            const halfG = (y) => { let s = 0, pv = sectRaw(y, Math.PI / 2); for (let k = 1; k <= 12; k++) { const q = sectRaw(y, Math.PI / 2 - (k / 12) * Math.PI); s += Math.hypot(q[0] - pv[0], q[2] - pv[2]); pv = q; } return s; };
             const init = (mt) => {
+              if (g.plan) { // plan szycia: arkusz od środka przodu (u = 0) do środka tyłu owinięty wokół połowy sylwetki
+                const yw = Math.min(-mt.v, yTopW), cl = D.plan.cbLine, span = cl ? Math.max(10, cl[0][0] + (cl[1][0] - cl[0][0]) * Math.max(0, Math.min(1, (mt.v - cl[0][1]) / (cl[1][1] - cl[0][1] || 1)))) : Math.max(20, halfG(Math.min(yw, yTopW)) + 2), fr = Math.max(0, Math.min(1, mt.u / span)), q = sectRaw(yw, Math.PI / 2 - mt.sx * fr * Math.PI);
+                return [q[0], q[1], q[2]];
+              }
               if (mt.pk === 'S') {
                 const tP = figArmP.tPit, t = mt.v >= SL.H ? tP + (mt.v - SL.H) : tP * Math.max(0, mt.v / SL.H), A = figArmAt(mt.sx, t), th = mt.u / rr, r0 = Math.max(rr * 0.9, A.r + 1.2), cu = Math.cos(th), su = Math.sin(th);
                 return [A.c[0] + r0 * cu * mt.sx * A.ca, A.c[1] + r0 * cu * A.sa, A.c[2] + r0 * su];

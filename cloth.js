@@ -93,9 +93,9 @@
   }
 
   function build(d, o) {
-    const h = o.h || 1.6, pcs = {}; for (const pc of d.pieces) if (pc.ed) pcs[pc.id] = pc;
+    const h = o.h || 1.6, pcs = {}, plan = d.plan || null; for (const pc of d.pieces || []) if (pc.ed) pcs[pc.id] = pc;
     const srcF = pcs['przod'] || pcs['stanik-przod'], srcB = pcs['tyl'] || pcs['stanik-tyl'], srcS = o.sleeve ? pcs['stanik-rekaw'] : null;
-    if (!srcF || !srcB) return null;
+    if (!plan && (!srcF || !srcB)) return null;
     const parts = {};
     const prep = (pc, key, half) => {
       let ch = ringOf(pc);
@@ -108,7 +108,8 @@
       ch = ch.filter((c) => plen(c.pts) > 1e-4); ch.forEach((c) => { c.len = plen(c.pts); c.segs = []; });
       parts[key] = { key, ch, holes, half };
     };
-    prep(srcF, 'F', true); prep(srcB, 'B', true); if (srcS) prep(srcS, 'S', false);
+    if (plan) for (const pt of plan.parts) { const ch = ringOf(pt).filter((c) => plen(c.pts) > 1e-4); ch.forEach((c) => { c.len = plen(c.pts); c.segs = []; }); parts[pt.key] = { key: pt.key, ch, holes: [], half: false, plan: true }; } // plan szycia: dowolne elementy, środek oznaczony w krawędziach
+    else { prep(srcF, 'F', true); prep(srcB, 'B', true); if (srcS) prep(srcS, 'S', false); }
     // pary zszywanych krawędzi; podział na wspólne odcinki, żeby po obu stronach szwu wypadło tyle samo węzłów
     const N = {}, side = (pk, tag, rev) => { let cs = parts[pk].ch.filter((c) => c.tag === tag); if (rev) cs = cs.slice().reverse(); return { cs, rev }; };
     const pair = (id, A, B) => {
@@ -125,8 +126,9 @@
       seg.forEach((l, k) => { N[id + ':' + k] = Math.max(1, Math.round(l / h)); });
       return true;
     };
-    pair('sh', side('F', 'shoulder'), side('B', 'shoulder')); pair('sd', side('F', 'side'), side('B', 'side')); pair('us', side('F', 'under'), side('B', 'under')); // us: spód rękawa skrojonego razem z przodem i tyłem
-    if (parts.S) { pair('cf', side('S', 'capF'), side('F', 'arm')); pair('cb', side('S', 'capB', true), side('B', 'arm')); pair('un', side('S', 'underF'), side('S', 'underB', true)); }
+    if (plan) plan.seams.forEach((sm, i) => { if (parts[sm.a.key] && parts[sm.b.key]) pair('q' + i, side(sm.a.key, sm.a.tag), side(sm.b.key, sm.b.tag, sm.rev)); });
+    else { pair('sh', side('F', 'shoulder'), side('B', 'shoulder')); pair('sd', side('F', 'side'), side('B', 'side')); pair('us', side('F', 'under'), side('B', 'under')); // us: spód rękawa skrojonego razem z przodem i tyłem
+    if (parts.S) { pair('cf', side('S', 'capF'), side('F', 'arm')); pair('cb', side('S', 'capB', true), side('B', 'arm')); pair('un', side('S', 'underF'), side('S', 'underB', true)); } }
     // węzły na obrysie, w otworach i w środku; triangulacja
     for (const pk in parts) {
       const P = parts[pk], pts = [], ring = [], seam = {}, legs = {}, bot = [];
@@ -183,22 +185,25 @@
       let sideTop = null, sideX = null;
       if (P.half) { const sc = P.ch.filter((c) => c.tag === 'side' || /^d[LR]/.test(c.tag) && false), sp = []; for (const c of sc) for (const p of c.pts) sp.push(p); sp.sort((a, b) => a[1] - b[1]);
         if (sp.length) { sideTop = sp[0][1]; sideX = (y) => { if (y <= sp[0][1]) return sp[0][0]; for (let i = 1; i < sp.length; i++) if (y <= sp[i][1]) { const t = (y - sp[i - 1][1]) / (sp[i][1] - sp[i - 1][1] || 1); return sp[i - 1][0] + (sp[i][0] - sp[i - 1][0]) * t; } return sp[sp.length - 1][0]; }; } }
-      Object.assign(P, { pts, nb, tris, seam, weld, bot, top: by0, sideTop, sideX, box: [bx0, by0, bx1, by1] });
+      const cen = new Set(); if (P.plan) for (const c of P.ch) if (c.tag === 'center') for (const i of c.ids) cen.add(i);
+      Object.assign(P, { pts, nb, tris, seam, weld, bot, cen, top: by0, sideTop, sideX, box: [bx0, by0, bx1, by1] });
     }
     // egzemplarze: przód i tył z dwóch lustrzanych połówek, rękawy prawy i lewy
     const inst = [], gid = []; let ng = 0;
     const addInst = (pk, sx) => {
       const P = parts[pk], map = new Int32Array(P.pts.length), I = { pk, sx, P, map, base: ng };
-      for (let i = 0; i < P.pts.length; i++) { const twin = P.half && sx < 0 && Math.abs(P.pts[i][0]) < 1e-6 ? inst.find((q) => q.pk === pk && q.sx > 0) : null; if (twin) map[i] = twin.map[i]; else { map[i] = ng++; gid.push([pk, sx, P.pts[i][0], P.pts[i][1]]); } }
+      for (let i = 0; i < P.pts.length; i++) { const twin = sx < 0 && ((P.half && Math.abs(P.pts[i][0]) < 1e-6) || (P.plan && P.cen.has(i))) ? inst.find((q) => q.pk === pk && q.sx > 0) : null; if (twin) map[i] = twin.map[i]; else { map[i] = ng++; gid.push([pk, sx, P.pts[i][0], P.pts[i][1]]); } }
       inst.push(I); return I;
     };
-    const F1 = addInst('F', 1), F2 = addInst('F', -1), B1 = addInst('B', 1), B2 = addInst('B', -1), S1 = parts.S ? addInst('S', 1) : null, S2 = parts.S ? addInst('S', -1) : null;
+    if (plan) for (const pt of plan.parts) { addInst(pt.key, 1); addInst(pt.key, -1); }
+    const F1 = plan ? null : addInst('F', 1), F2 = plan ? null : addInst('F', -1), B1 = plan ? null : addInst('B', 1), B2 = plan ? null : addInst('B', -1), S1 = !plan && parts.S ? addInst('S', 1) : null, S2 = !plan && parts.S ? addInst('S', -1) : null;
     const par = new Int32Array(ng); for (let i = 0; i < ng; i++) par[i] = i;
     const find = (i) => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; }, uni = (a, b) => { a = find(a); b = find(b); if (a !== b) par[Math.max(a, b)] = Math.min(a, b); };
     for (const I of inst) for (const w of I.P.weld) uni(I.map[w[0]], I.map[w[1]]);
     const sew = (IA, IB, id) => { for (const k in IA.P.seam) if (k.indexOf(id + ':') === 0 && k[k.length - 1] === 'a') { const a = IA.P.seam[k], b = IB.P.seam[k.slice(0, -1) + 'b']; if (b && a.length === b.length) for (let i = 0; i < a.length; i++) uni(IA.map[a[i]], IB.map[b[i]]); } };
-    sew(F1, B1, 'sh'); sew(F2, B2, 'sh'); sew(F1, B1, 'sd'); sew(F2, B2, 'sd'); sew(F1, B1, 'us'); sew(F2, B2, 'us');
-    if (S1) { sew(S1, F1, 'cf'); sew(S1, B1, 'cb'); sew(S1, S1, 'un'); sew(S2, F2, 'cf'); sew(S2, B2, 'cb'); sew(S2, S2, 'un'); }
+    if (plan) plan.seams.forEach((sm, i) => { for (const sx of [1, -1]) { const IA = inst.find((q) => q.pk === sm.a.key && q.sx === sx), IB = inst.find((q) => q.pk === sm.b.key && q.sx === sx); if (IA && IB) sew(IA, IB, 'q' + i); } });
+    else { sew(F1, B1, 'sh'); sew(F2, B2, 'sh'); sew(F1, B1, 'sd'); sew(F2, B2, 'sd'); sew(F1, B1, 'us'); sew(F2, B2, 'us');
+    if (S1) { sew(S1, F1, 'cf'); sew(S1, B1, 'cb'); sew(S1, S1, 'un'); sew(S2, F2, 'cf'); sew(S2, B2, 'cb'); sew(S2, S2, 'un'); } }
     const sid = new Int32Array(ng).fill(-1); let ns = 0; for (let i = 0; i < ng; i++) { const r = find(i); if (sid[r] < 0) sid[r] = ns++; sid[i] = sid[r]; }
     // siatka do rysowania zachowuje osobne wierzchołki po obu stronach szwu (każdy element ma własny układ nitek), symulacja liczy na zszytych
     const rmap = [], ruv = [], tri = [], grp = [], meta = new Array(ns), pin = new Float32Array(ns).fill(-1), E = new Map(), TE = new Map();
@@ -226,6 +231,11 @@
     TE.forEach((l) => { if (l.length !== 2) return; const s0 = sid[l[0][0].map[l[0][1]]], s1 = sid[l[1][0].map[l[1][1]]]; if (s0 === s1) return; const flat = l[0][2] + l[1][2], same = l[0][0] === l[1][0] ? dist(l[0][0].P.pts[l[0][1]], l[1][0].P.pts[l[1][1]]) : 1e9; bends.push([s0, s1, same < flat * 1.25 ? same : flat * 0.97]); });
     // linie szwów do narysowania
     const seams = [], chain = (I, ids) => ids.map((i) => sid[I.map[i]]);
+    if (plan) { // plan szycia: linie wszystkich szwów, bez pętli dekoltu; przytrzymane są punkty wskazane w planie
+      for (const I of inst) for (const k in I.P.seam) if (/a$/.test(k)) seams.push(chain(I, I.P.seam[k]));
+      const hold = []; for (const hp of plan.hold || []) for (const sx of [1, -1]) { const I = inst.find((q) => q.pk === hp.key && q.sx === sx); if (!I) continue; let bi = -1, bd = 1e9; for (let i = 0; i < I.P.nb; i++) { const dd = Math.hypot(I.P.pts[i][0] - hp.at[0], I.P.pts[i][1] - hp.at[1]); if (dd < bd) { bd = dd; bi = i; } } if (bi >= 0) hold.push(sid[I.map[bi]]); }
+      return { h, hold, neck: [], ns, nr: rmap.length, rmap: Int32Array.from(rmap), ruv: Float32Array.from(ruv), tri: Int32Array.from(tri), grp, meta, pin, edges, bends, seams, info: {}, plan: true };
+    }
     for (const I of [F1, F2]) { for (const k in I.P.seam) if (/^(sh|sd|us):/.test(k)) seams.push(chain(I, I.P.seam[k])); for (const c of I.P.ch) if (/^dL/.test(c.tag)) seams.push(chain(I, c.ids)); }
     for (const I of [B1, B2]) for (const c of I.P.ch) if (/^dL/.test(c.tag)) seams.push(chain(I, c.ids));
     { const c = B1.P.ch.find((q) => q.tag === 'center'); if (c) seams.push(chain(B1, c.ids)); }
