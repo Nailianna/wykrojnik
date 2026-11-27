@@ -233,7 +233,10 @@
     // linia dekoltu jako zamknięta pętla węzłów: środek przodu, prawe ramię, środek tyłu, lewe ramię
     const neck = []; { const nk = (I, rev) => { let tags = I.P.ch.filter((q) => q.tag === 'neck'); if (!tags.length && I.pk === 'F') tags = I.P.ch.filter((q) => q.tag === 'free'); let ids = []; for (const q of tags) ids = ids.concat(q.ids); if (rev) ids.reverse(); for (const i of ids) { const s = sid[I.map[i]]; if (neck[neck.length - 1] !== s) neck.push(s); } };
       nk(F1, false); nk(B1, true); nk(B2, false); nk(F2, true); if (neck.length > 2 && neck[0] === neck[neck.length - 1]) neck.pop(); }
-    const hold = []; for (const I of [F1, F2, B1, B2]) for (const c of I.P.ch) if (c.tag === 'neck' || c.tag === 'arm') for (const i of c.ids) hold.push(sid[I.map[i]]);
+    // przytrzymane węzły: cała górna krawędź (góra bez ramiączek) albo tylko punkty, w których wszyte są ramiączka (o.holdAt)
+    const hold = []; for (const I of [F1, F2, B1, B2]) { const at = o.holdAt ? o.holdAt[I.pk] : null;
+      if (at) { let bi = -1, bd = 1e9; for (const c of I.P.ch) if (c.tag === 'neck' || c.tag === 'arm') for (const i of c.ids) { const dd = Math.hypot(I.P.pts[i][0] - at[0], I.P.pts[i][1] - at[1]); if (dd < bd) { bd = dd; bi = i; } } if (bi >= 0) hold.push(sid[I.map[bi]]); }
+      else for (const c of I.P.ch) if (c.tag === 'neck' || c.tag === 'arm') for (const i of c.ids) hold.push(sid[I.map[i]]); }
     const info = { F: { top: parts.F.top, sideTop: parts.F.sideTop, sideX: parts.F.sideX }, B: { top: parts.B.top, sideTop: parts.B.sideTop, sideX: parts.B.sideX }, S: parts.S ? { box: parts.S.box } : null };
     return { h, hold, neck, ns, nr: rmap.length, rmap: Int32Array.from(rmap), ruv: Float32Array.from(ruv), tri: Int32Array.from(tri), grp, meta, pin, edges, bends, seams, info };
   }

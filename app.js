@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.82.0', n: 86, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.83.0', n: 87, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -424,9 +424,9 @@
     // zszyte elementy do podglądu 3D: liczone raz na wykrój i modelkę
     const sk = adjK + (imp.size || '') + '|' + pcs.length + '|' + (pcs[0] ? pcs[0].name + pcs[0].w : '') + '|' + [m.og, m.ot, m.ob, m.wzrost].join(',');
     if (!impSewC || impSewC.k !== sk || impSewC.imp !== imp) { let sw; try { sw = impSew(Object.assign({}, imp, { pieces: pcs }), m); } catch (e) { sw = { err: 'Nie umiem jeszcze zszyć tego fasonu.' }; } impSewC = { k: sk, imp, sw }; }
-    const sw = impSewC.sw, sew3 = !sw.err ? ' Podgląd 3D pokazuje przód, tył' + (sw.kim ? ' razem z rękawami' : sw.sleeve ? ' i rękawy' + (sw.gather ? ' zmarszczone do długości mankietu' : '') : '') + (sw.skip.length ? '; bez elementów: ' + sw.skip.join(', ').toLowerCase() : '') + '.' : '';
+    const sw = impSewC.sw, sew3 = !sw.err ? ' Podgląd 3D pokazuje przód' + (sw.strap ? (sw.strap.F && sw.strap.B ? ' i tył na ramiączkach' : ' i tył z górną krawędzią przytrzymaną na miejscu') : ', tył') + (sw.kim ? ' razem z rękawami' : sw.sleeve ? ' i rękawy' + (sw.gather ? ' zmarszczone do długości mankietu' : '') : '') + (sw.skip.length ? '; bez elementów: ' + sw.skip.join(', ').toLowerCase() : '') + '.' : '';
     return { pieces: pcs, sewn: sw.err ? null : { pieces: sw.pieces }, sewErr: sw.err || '', info: { rows: [], darts: [], cut: pcs.map((q) => [q.name, q.cut ? q.cut.replace(/^wytnij /, '') : 'według oryginału']), warn: 'Wykrój wczytany z pliku, rozmiar ' + (imp.size || 'jedyny') + '. ' + saT + fit + sew3 },
-      sil: sw.err ? { top: 'import', lower: 'none', hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 } : { top: 'dress', lower: 'straight', imported: true, impDl: sw.dl, frac: 0, hemC: sw.hemC, a: W.full(m), neckGap: 99, lowerArm: 0, sleeve: sw.sleeve, kim: sw.kim || null, gather: sw.gather, seams: { side: true } }, title: (imp.name || 'Wykrój z pliku') + (imp.size ? ' · ' + imp.size : ''), notions: an && an.pasm ? an.pasm.map((x) => [x, '']) : [], bases: {}, imported: true };
+      sil: sw.err ? { top: 'import', lower: 'none', hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 } : { top: 'dress', lower: 'straight', imported: true, impDl: sw.dl, frac: 0, hemC: sw.hemC, a: W.full(m), neckGap: 99, lowerArm: 0, sleeve: sw.sleeve, kim: sw.kim || null, strap: sw.strap || null, gather: sw.gather, seams: { side: true } }, title: (imp.name || 'Wykrój z pliku') + (imp.size ? ' · ' + imp.size : ''), notions: an && an.pasm ? an.pasm.map((x) => [x, '']) : [], bases: {}, imported: true };
   }
   // nowy projekt zaczyna od pustego manekina: fason wybiera się dopiero w panelu
   function emptyDraft(m) { return { pieces: [], info: { rows: [], darts: [], cut: [], warn: '' }, sil: { top: 'waist', lower: 'none', empty: true, hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: 'bez fasonu', notions: [], bases: {}, empty: true }; }
@@ -814,7 +814,7 @@
     if (!init3d()) { say('Podgląd 3D nie działa w tym widoku (brak WebGL).', true); return; }
     const m = cur(), sil = model.d.sil, a = W.full(m), body = bodyFn(m, a), TAU = Math.PI * 2;
     // wczytany wykrój nie ma parametrów fasonu: podgląd dostaje obojętne wartości i długość odczytaną z elementów
-    const p = sil.imported ? Object.assign({}, state.p, { gora: 'ramiona', dl: sil.impDl, kn: 0, gf: 0, ff: 1, flare: 0, tren: 0, rozp: 0, pasek: 0, pasT: 0, zakK: 0, crop: 0, bok: 0, ram: 'brak', ramW: 0, rek: sil.sleeve ? 'dlugi' : 'brak', mank: false, kol: 'brak', kolW: 0, kop: false, falN: false, falR: false, marsz: false, sciag: false, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, bk: 'prosta', luzG: 4, luzT: 4, luzB: 4, fac: 'brak', extras: [] }) : state.p;
+    const p = sil.imported ? Object.assign({}, state.p, { gora: sil.strap ? 'bez' : 'ramiona', dl: sil.impDl, kn: 0, gf: 0, ff: 1, flare: 0, tren: 0, rozp: 0, pasek: 0, pasT: 0, zakK: 0, crop: 0, bok: 0, ram: 'brak', ramW: 0, rek: sil.sleeve ? 'dlugi' : 'brak', mank: false, kol: 'brak', kolW: 0, kop: false, falN: false, falR: false, marsz: false, sciag: false, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, bk: 'prosta', luzG: 4, luzT: 4, luzB: 4, fac: 'brak', extras: [] }) : state.p;
     if (g3.group) { g3.scene.remove(g3.group); g3.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
     const FG = figData(), fs = FG ? m.wzrost / FG.H : 0, headLen = FG ? (FG.H - FG.lv.neck) * fs : m.wzrost * 0.165;
     const grp = new T3.Group(), floor = -(m.wzrost - a.Dts - headLen);
@@ -1149,10 +1149,10 @@
         const key = 'top' + JSON.stringify([state.style, pk, m, state.fabric, sil.imported ? [state.proj, state.imp && state.imp.size, sil.hemC, sil.impDl, sil.gather] : 0]);
         if (!g3.top || g3.top.key !== key) {
           const hh = topFull ? Math.max(1.7, Math.min(3, Math.sqrt(((m.ob + 8) * (a.Dts + p.dl) + (hasSl ? 70 * sil.sleeve.L : 0)) / 3300))) : 1.6; // gęstość siatki dobrana do wielkości ubrania
-          let g = null; try { g = window.Cloth.build(D, { h: hh, sleeve: hasSl, cutY, gather: sil.gather || null }); } catch (e) { g = null; }
+          let g = null; try { g = window.Cloth.build(D, { h: hh, sleeve: hasSl, cutY, gather: sil.gather || null, holdAt: sil.strap ? { F: sil.strap.F, B: sil.strap.B } : null }); } catch (e) { g = null; }
           if (!g) g3.top = { key, fail: true };
           else {
-            const stl = p.gora === 'bez', yTopW = a.Dts - 0.3, FI = g.info.F, BI = g.info.B, SB = g.info.S ? g.info.S.box : null, SL = sil.sleeve, rr = SB ? (SB[2] - SB[0]) / TAU : 0;
+            const stl = p.gora === 'bez', yTopW = sil.strap ? Math.min(a.Dts - 0.3, sil.strap.yMax) : a.Dts - 0.3, FI = g.info.F, BI = g.info.B, SB = g.info.S ? g.info.S.box : null, SL = sil.sleeve, rr = SB ? (SB[2] - SB[0]) / TAU : 0;
             const phiOf = (mt, sFr) => (mt.pk === 'F' ? Math.PI / 2 - mt.sx * sFr * Math.PI / 2 : 1.5 * Math.PI + mt.sx * sFr * Math.PI / 2);
             const init = (mt) => {
               if (mt.pk === 'S') {
@@ -1289,6 +1289,14 @@
         for (let r = 0; r < g.nr; r++) { const k = g.rmap[r] * 3; nr[r * 3] = nrm[k]; nr[r * 3 + 1] = nrm[k + 1]; nr[r * 3 + 2] = nrm[k + 2]; }
         const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.BufferAttribute(pos, 3)); geo.setAttribute('uv', new T3.BufferAttribute(uv, 2)); geo.setAttribute('normal', new T3.BufferAttribute(nr, 3)); geo.setIndex(new T3.BufferAttribute(Uint32Array.from(g.tri), 1));
         addG(new T3.Mesh(geo, gm));
+        if (sil.strap && sil.strap.F && sil.strap.B && g.hold.length === 4 && figArmAt) { // ramiączka: od punktu wszycia z przodu przez bark do punktu wszycia z tyłu
+          for (const [fi, bi, sx] of [[0, 2, 1], [1, 3, -1]]) {
+            const A = g.hold[fi] * 3, B = g.hold[bi] * 3, J = figArmAt(sx, 0), rs = J.r + 0.4, xin = (v) => sx * Math.min(Math.abs(v), Math.abs(J.c[0]) - 1), top = [xin((X[A] + X[B]) / 2), J.c[1] + rs, J.c[2]];
+            const via = (k) => [xin(X[k]) * 0.5 + top[0] * 0.5, (X[k + 1] + top[1]) / 2 + 1, J.c[2] + Math.sign(X[k + 2] - J.c[2] || (k === A ? 1 : -1)) * (rs + 0.6)];
+            const pts = [[X[A], X[A + 1], X[A + 2]], via(A), top, via(B), [X[B], X[B + 1], X[B + 2]]].map((q) => new T3.Vector3(q[0], q[1], q[2]));
+            addG(new T3.Mesh(new T3.TubeGeometry(new T3.CatmullRomCurve3(pts), 28, 0.32, 6, false), gm));
+          }
+        }
         if (state.seams) for (const ch of g.seams) { const pts = ch.map((i) => new T3.Vector3(X[i * 3] + nrm[i * 3] * 0.12, X[i * 3 + 1] + nrm[i * 3 + 1] * 0.12, X[i * 3 + 2] + nrm[i * 3 + 2] * 0.12)); grp.add(new T3.Line(new T3.BufferGeometry().setFromPoints(pts), new T3.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.42 }))); }
       }
       if (sil.sleeve && !bez && !sil.imported && !(topSim && topSim.hasSl)) { // rękaw: rura wzdłuż ręki sylwetki, a na manekinie pod stałym kątem od barku
@@ -1999,7 +2007,11 @@
     if (!cl.length) { // obrys z kilku otwartych linii: łączę je końcami w łańcuch; brakujący bok (element „ze złożenia”) domyka prosta, która jest wtedy linią środka
       const op = pc.prims.filter((q) => q.t === 'poly' && q.s === 'cut' && q.pts.length > 1).map((q) => ({ pts: q.pts, len: swLen(q.pts), used: false })).sort((a, b) => b.len - a.len);
       if (!op.length) return null;
-      let chain = op[0].pts.slice(); op[0].used = true; const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.6;
+      const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.6;
+      // ta sama linia narysowana w pliku dwa razy (dwie warstwy jednego rozmiaru) liczy się raz, inaczej łańcuch wraca po własnym śladzie
+      op.forEach((o, k) => { const a0 = o.pts[0], a1 = o.pts[o.pts.length - 1]; for (let q = 0; q < k; q++) { const e = op[q]; if (e.used || Math.abs(e.len - o.len) > 0.01 * o.len + 0.05) continue; const b0 = e.pts[0], b1 = e.pts[e.pts.length - 1]; if ((near(a0, b0) && near(a1, b1)) || (near(a0, b1) && near(a1, b0))) { o.used = true; break; } } });
+      const first = op.find((o) => !o.used); if (!first) return null;
+      let chain = first.pts.slice(); first.used = true;
       for (let guard = 0; guard < 40; guard++) {
         const end = chain[chain.length - 1], start = chain[0]; let done = true;
         for (const o of op) { if (o.used || o.len < 3) continue; const a = o.pts[0], b = o.pts[o.pts.length - 1];
@@ -2025,7 +2037,7 @@
   }
   const swSub = (pts, i, j) => { const n = pts.length, out = [pts[i]]; let k = i; while (k !== j) { k = (k + 1) % n; out.push(pts[k]); } return out; };
   // przód albo tył: połowa elementu od linii środka. Zwraca krawędzie w układzie silnika tkaniny (x od środka w bok, y w dół, punkt szyjny na wysokości -top)
-  function swBodice(pc, top) {
+  function swBodice(pc, top, pit, want) {
     const R = swRing(pc); if (!R) return { err: 'nie ma zamkniętego obrysu' };
     const pts = R.pts, C = swCorners(pts); if (C.idx.length < 4) return { err: 'obrys ma za mało narożników' };
     // linia środka: najdłuższy prosty odcinek obrysu, po którego jednej stronie leży cały element (dekolt może do niej dochodzić łagodnie, bez narożnika)
@@ -2053,18 +2065,45 @@
     const order = []; { const step = iTop === iB ? 1 : n - 1; let c = iTop; for (let s = 0; s <= n; s++) { order.push(c); if (c === iBot) break; c = (c + step) % n; } }
     const W = order.map((i) => Q[i]), isC = new Set(cset), cor = []; order.forEach((i, t) => { if (isC.has(i) && t > 0 && t < order.length - 1) cor.push(t); });
     { const K = swKimono(W, cor, top, ax0, R.sa); if (K) return K; }
-    if (cor.length < 4) return { err: 'nie umiem wskazać ramienia i pachy', ax0, top: W[0][1], bot: W[W.length - 1][1] };
+    if (cor.length < 4) { const St = pit != null ? swStrap(W, cor, pit, ax0, R.sa, want) : null; return St || { err: 'nie umiem wskazać ramienia i pachy', ax0, top: W[0][1], bot: W[W.length - 1][1] }; }
     // narożnik dołu przy boku: najdalej od środka wśród narożników na wysokości dołu
     const yB = W[W.length - 1][1], hgt = yB - Math.min(...W.map((p) => p[1])); let hc = -1;
     for (const t of cor) if (W[t][1] > yB - 0.15 * hgt && (hc < 0 || W[t][0] > W[hc][0])) hc = t;
-    const ci = cor.indexOf(hc); if (hc < 0 || ci < 3) return { err: 'nie umiem wskazać ramienia i pachy' };
+    const ci = cor.indexOf(hc); if (hc < 0 || ci < 3) { const St = pit != null ? swStrap(W, cor, pit, ax0, R.sa, want) : null; return St || { err: 'nie umiem wskazać ramienia i pachy', ax0, top: W[0][1], bot: W[W.length - 1][1] }; }
     const ua = cor[ci - 1], sp = cor[ci - 2], np = cor[ci - 3], sh = W.slice(np, sp + 1), shL = swLen(sh);
     const nkL = swLen(W.slice(0, np + 1)), arL = swLen(W.slice(sp, ua + 1));
-    if (shL < 3 || shL > 30 || W[ua][1] < W[sp][1] || arL < 12 || nkL > 48 || W[np][0] < 3 || W[np][0] > 16) return { err: 'kształt nie przypomina przodu ani tyłu z ramieniem i pachą' };
+    if (shL < 3 || shL > 30 || W[ua][1] < W[sp][1] || arL < 12 || nkL > 48 || W[np][0] < 3 || W[np][0] > 16) { const St = pit != null ? swStrap(W, cor, pit, ax0, R.sa, want) : null; return St || { err: 'kształt nie przypomina przodu ani tyłu z ramieniem i pachą', ax0, top: W[0][1], bot: W[W.length - 1][1] }; }
     const dy = -top - W[np][1], T = (a) => a.map((p) => [Math.max(0, p[0]), p[1] + dy]);
     const ed = [{ pts: T(W.slice(0, np + 1)), tag: 'neck' }, { pts: T(sh), tag: 'shoulder' }, { pts: T(W.slice(sp, ua + 1)), tag: 'arm' }, { pts: T(W.slice(ua, hc + 1)), tag: 'side' }, { pts: T(W.slice(hc)), tag: 'bottom' }];
     ed.push({ pts: [[0, ed[4].pts[ed[4].pts.length - 1][1]], [0, ed[0].pts[0][1]]], tag: 'center' }); ed[4].pts[ed[4].pts.length - 1][0] = 0; ed[0].pts[0][0] = 0;
     return { ax: { o: ax0.o, dir: ax0.dir, ua: W[ua][1], hem: Math.min(...W.slice(hc).map((p) => p[1])) }, cb: W[W.length - 1][1] - W[0][1], ed, sh: shL, arm: swLen(ed[2].pts), side: swLen(ed[3].pts), hem: W[hc][0], bot: Math.max(...ed.map((e) => Math.max(...e.pts.map((p) => p[1])))), sa: R.sa };
+  }
+  // przód albo tył bez ramienia: góra na ramiączkach albo bez ramiączek. Od środka biegnie górna krawędź (dekolt, czasem ze szczytem pod ramiączko,
+  // potem podkrój pachy), za nią szew boczny i dół. Szczyt boku to najszerszy narożnik w górnej części elementu; staje na wysokości pachy sylwetki.
+  function swStrap(W, cor, pit, ax0, sa, want) {
+    const n = W.length; if (!cor.length) return null;
+    const yT = Math.min(...W.map((p) => p[1])), yB = W[n - 1][1], hgt = yB - yT; if (hgt < 20) return null;
+    let hc = -1; for (const t of cor) if (W[t][1] > yB - 0.15 * hgt && (hc < 0 || W[t][0] > W[hc][0])) hc = t;
+    if (hc < 0) return null;
+    // kandydaci na szczyt boku: narożniki oraz miejsca, w których element jest lokalnie najszerszy (linia biustu nad wcięciem talii).
+    // Który jest właściwy, rozstrzyga długość szwu bocznego drugiego elementu (want), bo przód i tył zszywa się na całej długości boku.
+    const arc = [0]; for (let t = 1; t < n; t++) arc.push(arc[t - 1] + Math.hypot(W[t][0] - W[t - 1][0], W[t][1] - W[t - 1][1]));
+    const cands = [];
+    for (let t = 1; t < hc; t++) {
+      if (W[t][1] > yT + 0.6 * hgt || W[t][0] < 8) continue;
+      let isMax = true, drop = false; for (let q = 1; q < hc && isMax; q++) { const da = arc[q] - arc[t]; if (Math.abs(da) < 5 && W[q][0] > W[t][0] + 1e-6) isMax = false; if (da > 4 && da < 30 && W[q][0] < W[t][0] - 0.8) drop = true; }
+      if (cor.includes(t) || (isMax && drop)) cands.push({ t, L: arc[hc] - arc[t], mx: isMax && drop });
+    }
+    if (!cands.length) return null;
+    let pickC = null; if (want > 0) { for (const c of cands) if (!pickC || Math.abs(c.L - want) < Math.abs(pickC.L - want)) pickC = c; } else { for (const c of cands) if (c.mx) pickC = c; if (!pickC) pickC = cands[cands.length - 1]; }
+    const ua = pickC.t;
+    let pk = -1; for (const t of cor) if (t < ua && W[t][0] > 3 && W[t][1] < W[ua][1] - 3 && (pk < 0 || W[t][1] < W[pk][1])) pk = t;
+    const side = W.slice(ua, hc + 1); if (swLen(side) < 12) return null;
+    const dy = -(pit - 1.5) - W[ua][1], T = (a) => a.map((p) => [Math.max(0, p[0]), p[1] + dy]);
+    const ed = pk > 0 ? [{ pts: T(W.slice(0, pk + 1)), tag: 'neck' }, { pts: T(W.slice(pk, ua + 1)), tag: 'arm' }] : [{ pts: T(W.slice(0, ua + 1)), tag: 'neck' }];
+    ed.push({ pts: T(side), tag: 'side' }, { pts: T(W.slice(hc)), tag: 'bottom' });
+    const bt = ed[ed.length - 1]; ed.push({ pts: [[0, bt.pts[bt.pts.length - 1][1]], [0, ed[0].pts[0][1]]], tag: 'center' }); bt.pts[bt.pts.length - 1][0] = 0; ed[0].pts[0][0] = 0;
+    return { strap: { pk: pk > 0 ? T([W[pk]])[0] : null, cands: cands.map((c) => ({ L: c.L, mx: c.mx })) }, ax: { o: ax0.o, dir: ax0.dir, ua: W[ua][1], hem: Math.min(...W.slice(hc).map((p) => p[1])) }, cb: W[n - 1][1] - W[0][1], ed, sh: 0, arm: 0, side: swLen(side), hem: W[hc][0], bot: Math.max(...ed.map((q) => Math.max(...q.pts.map((p) => p[1])))), sa };
   }
   // przód albo tył skrojony razem z rękawem (kimono, nietoperz, rękaw „anielski”): od punktu szyjnego biegnie długi szew wierzchu rękawa,
   // potem otwarty dół rękawa, szew spodu rękawa do pachy i szew boczny. Pacha jest zaokrąglona, więc szukam jej jako najwyższego punktu za rękawem.
@@ -2120,10 +2159,21 @@
     // rola z analizy ma pierwszeństwo przed nazwą elementu
     for (const pc of pcs) { const nm = String(pc.name || ''), r0 = pc.role ? (/^[FBS]$/.test(pc.role) ? pc.role : null) : (SW_NOT.test(nm) ? null : (SW_ROLE.find((x) => x.re.test(nm)) || { r: null }).r), r = r0; if (r && !pick[r]) pick[r] = pc; else skip.push(nm.replace(/ \(część.*$/, '')); }
     if (!pick.F || !pick.B) return { err: 'Podgląd 3D potrzebuje przodu i tyłu, a na liście elementów ich nie rozpoznałam.' };
-    const F = swBodice(pick.F, a.Dts), B = swBodice(pick.B, a.Dts);
+    const pit = a.Dts - a.Gp - 1; let F = /** @type {any} */ (swBodice(pick.F, a.Dts, pit)), B = /** @type {any} */ (swBodice(pick.B, a.Dts, pit));
+    if (F.strap && B.strap && Math.abs(F.side - B.side) > Math.max(2.5, 0.05 * F.side)) { // boki nie pasują: szukam pary szczytów boku, przy której szwy boczne mają tę samą długość
+      let best = null; for (const cf of F.strap.cands) for (const cb of B.strap.cands) { const dd = Math.abs(cf.L - cb.L); if (dd > Math.max(2.5, 0.04 * cf.L)) continue; const sc = (cf.mx ? 1 : 0) + (cb.mx ? 1 : 0); if (!best || sc > best[3] || (sc === best[3] && dd < best[0])) best = [dd, cf.L, cb.L, sc]; } // pierwszeństwo ma para, w której szczyt boku wypada na linii biustu
+      if (best) { F = /** @type {any} */ (swBodice(pick.F, a.Dts, pit, best[1])); B = /** @type {any} */ (swBodice(pick.B, a.Dts, pit, best[2])); }
+    }
     if (F.err || B.err) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (' + (F.err ? 'przód: ' + F.err : 'tył: ' + B.err) + '). Na razie działa układ przód, tył i rękaw z ramieniem i pachą.' };
     // przód i tył muszą do siebie pasować: te same ramiona i szwy boczne; inaczej krawędzie zostały rozpoznane źle
     if (Math.abs(F.sh - B.sh) > 1.5 || Math.abs(F.side - B.side) > Math.max(2, 0.08 * F.side)) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (ramiona albo boki przodu i tyłu nie pasują do siebie).' };
+    if (!!F.strap !== !!B.strap) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (przód i tył mają różny układ góry).' };
+    if (F.strap) { // góra bez ramion: zszywane są tylko boki, górną krawędź trzymają ramiączka
+      if (Math.abs(F.side - B.side) > Math.max(2.5, 0.1 * F.side)) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (szwy boczne przodu i tyłu nie pasują do siebie).' };
+      for (const r of ['S']) if (pick[r]) skip.push(String(pick[r].name));
+      const mk1 = (id, o) => ({ id, ed: o.ed, prims: [] });
+      return { pieces: [mk1('przod', F), mk1('tyl', B)], dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: null, strap: { F: F.strap.pk, B: B.strap.pk, yMax: pit + 8 }, gather: null, skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: '', sa: F.sa };
+    }
     if (!!F.kim !== !!B.kim) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (przód i tył mają różny układ rękawa).' };
     if (F.kim) { // rękaw skrojony razem z przodem i tyłem: osobnego rękawa nie ma, zszywa się spód rękawa i bok
       if (Math.abs(F.under - B.under) > Math.max(2, 0.1 * F.under)) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (szwy spodu rękawa z przodu i z tyłu nie pasują do siebie).' };
