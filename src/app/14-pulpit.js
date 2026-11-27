@@ -73,9 +73,8 @@
     const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {};
     homeShow(false); addProj('Projekt z inspiracji', sn); goPanel('insp'); if (e) inspOpen(e); else { $('inRes').textContent = ''; $('inMoreBox').hidden = true; }
   }
-  $('hNew').addEventListener('click', () => { homeShow(false); $('prNew').click(); if (state.view !== '3d') setView('3d'); goPanel('fason'); draw(true); });
+  $('hNew').addEventListener('click', () => { homeShow(false); newProj(); if (state.view !== '3d') setView('3d'); goPanel('fason'); draw(true); });
   $('hInsp').addEventListener('click', () => newFromInsp(null));
-  $('prInsp').addEventListener('click', () => newFromInsp(null));
   $('prHome').addEventListener('click', () => homeShow(true));
   $('logoB').addEventListener('click', () => homeShow($('home').hidden));
   // ekran startowy: znika po niecałych trzech sekundach albo po kliknięciu

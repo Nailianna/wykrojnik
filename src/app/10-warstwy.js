@@ -7,11 +7,13 @@
       const row = el('div', null, 'ly'), hd = el('b', W.ROLES[L.role]);
       if (i) { const x = el('button', '✕', 'x'); x.setAttribute('aria-label', 'Usuń warstwę'); x.addEventListener('click', () => { state.layers.splice(i, 1); persist(); draw(true); }); hd.append(x); }
       row.append(hd);
-      const fs = document.createElement('select'); fs.setAttribute('aria-label', 'Tkanina warstwy');
-      for (const k in FAB) { const o = el('option', FAB[k].name); o.value = k; fs.append(o); }
-      fs.value = i ? L.fabric : state.fabric;
-      fs.addEventListener('change', () => { if (i) L.fabric = fs.value; else { state.fabric = fs.value; fillForm(); } persist(); draw(); });
-      row.append(fs);
+      if (!i) { // tkaninę wierzchu wybiera się tylko w panelu Tkanina
+        const ln = el('button', (FAB[state.fabric] || FAB.bawelna).name, 'lnk'); ln.title = 'Zmień w panelu Tkanina'; ln.addEventListener('click', () => goPanel('tkanina')); row.append(ln);
+      } else {
+        const fs = document.createElement('select'); fs.setAttribute('aria-label', 'Tkanina warstwy');
+        for (const k in FAB) { const o = el('option', FAB[k].name); o.value = k; fs.append(o); }
+        fs.value = L.fabric; fs.addEventListener('change', () => { L.fabric = fs.value; persist(); draw(); }); row.append(fs);
+      }
       if (i && dress && (L.role === 'podszewka' || L.role === 'narzutka')) {
         const zs = document.createElement('select'); zs.setAttribute('aria-label', 'Zakres warstwy');
         for (const [v, t] of [['calosc', 'Cała sukienka'], ['gora', 'Tylko góra'], ['dol', 'Tylko dół']]) { const o = el('option', t); o.value = v; zs.append(o); }

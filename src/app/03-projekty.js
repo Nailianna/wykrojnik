@@ -10,7 +10,6 @@
       box.appendChild(b);
     });
     if (document.activeElement !== $('prName')) $('prName').value = projCur().name;
-    $('prDel').disabled = state.projects.length < 2; $('prDel').textContent = 'Usuń projekt';
   }
   function loadSnap(sn) {
     const o = JSON.parse(JSON.stringify(sn)); o.p = Object.assign({}, DEF_P, o.p);
@@ -35,18 +34,15 @@
     if (!fr.getAttribute('src')) { const bz = busyOn('Otwieram Przymiarkę.'); fr.addEventListener('load', () => { busyOff(bz); setTimeout(fill, 300); }, { once: true }); fr.setAttribute('src', 'przymiarka.html'); } else fill();
   }
   $('przX').addEventListener('click', () => { $('przBox').hidden = true; });
-  $('prPdf').addEventListener('click', anOpen);
-  $('prPdfIn').addEventListener('change', () => { const f = $('prPdfIn').files[0]; $('prPdfIn').value = ''; impLoad(f); });
   $('impSize').addEventListener('change', () => { const data = impCache[state.proj]; if (!data) { impFill(); say('Wczytaj plik jeszcze raz, żeby zmienić rozmiar.'); return; } { const an = state.imp.an, z = $('impSize').value, rz = an && (an.rozm || []).find((x) => x.w === z); state.imp = Object.assign({}, state.imp, { size: z, pieces: anApply(window.PatImport.pick(data, z), an) }, an ? { an: Object.assign({}, an, { body: rz ? { n: rz.n, b: rz.b, t: rz.t, h: rz.h } : null }) } : {}); } state.sel = {}; persist(); draw(true); });
-  $('prNew').addEventListener('click', () => { const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {}; addProj('Nowy projekt', sn); });
+  function newProj() { const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {}; addProj('Nowy projekt', sn); }
+  for (const [id, k] of [['lb', 'b'], ['ls', 's']]) for (const e of [$('i_' + id), $('is_' + id)]) e.addEventListener('input', () => {
+    const v = parseFloat(String(e.value).replace(',', '.')); if (!isFinite(v) || !state.imp) return;
+    state.imp = Object.assign({}, state.imp, { adj: Object.assign({}, state.imp.adj, { [k]: Math.max(+e.min, Math.min(+e.max, v)) }) });
+    const o = e === $('i_' + id) ? $('is_' + id) : $('i_' + id); o.value = String(state.imp.adj[k]); persist(); drawSoon();
+  });
   $('prDup').addEventListener('click', () => addProj((projCur().name || 'Projekt') + ' (kopia)', snap()));
   $('prName').addEventListener('input', () => { projCur().name = $('prName').value; persist(true); fillProj(); draw(); });
-  $('prDel').addEventListener('click', () => {
-    const b = $('prDel');
-    if (b.textContent === 'Usuń projekt') { b.textContent = 'Na pewno usunąć?'; setTimeout(() => (b.textContent = 'Usuń projekt'), 3000); return; }
-    state.projects = state.projects.filter((x) => x.id !== state.proj); state.proj = state.projects[state.projects.length - 1].id; loadSnap(projCur().snap); histReset();
-    fillForm(); persist(true); draw(true);
-  });
   $('undo').addEventListener('click', () => histGo(-1)); $('redo').addEventListener('click', () => histGo(1));
   document.addEventListener('keydown', (e) => {
     if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'z') return;
@@ -132,7 +128,7 @@
   const P = window.WykrojPrints; let customImg = null, swT = 0;
   function fillFabricPanel() {
     $('fabC').textContent = '';
-    for (const k in FAB) { const b = document.createElement('button'); b.textContent = FAB[k].name; b.setAttribute('aria-pressed', k === state.fabric); b.addEventListener('click', () => { state.fabric = k; $('fab').value = k; persist(); fillFabricPanel(); draw(); }); $('fabC').appendChild(b); }
+    for (const k in FAB) { const b = document.createElement('button'); b.textContent = FAB[k].name; b.setAttribute('aria-pressed', k === state.fabric); b.addEventListener('click', () => { state.fabric = k; persist(); fillFabricPanel(); draw(); }); $('fabC').appendChild(b); }
     $('colA').value = state.color; $('colB').value = state.color2; $('pscale').value = state.pscale; $('o_pscale').textContent = state.pscale + '%';
     const plain = state.print === 'gladka'; $('colBrow').hidden = plain || state.print === 'wlasny'; $('pscaleRow').hidden = plain;
     const box = $('prints'); box.textContent = '';
@@ -148,7 +144,7 @@
     img.src = src;
   }
   const swatchesSoon = () => { clearTimeout(swT); swT = setTimeout(fillFabricPanel, 250); };
-  $('colA').addEventListener('input', () => { state.color = $('colA').value; $('col').value = state.color; persist(); draw(); swatchesSoon(); });
+  $('colA').addEventListener('input', () => { state.color = $('colA').value; persist(); draw(); swatchesSoon(); });
   $('colB').addEventListener('input', () => { state.color2 = $('colB').value; persist(); draw(); swatchesSoon(); });
   $('pscale').addEventListener('input', () => { state.pscale = +$('pscale').value; $('o_pscale').textContent = state.pscale + '%'; persist(); draw(); });
   $('upImg').addEventListener('change', () => {
@@ -156,7 +152,4 @@
     const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 512; const s = Math.min(img.width, img.height); c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 512, 512); c._id = Date.now(); customImg = c; state.print = 'wlasny'; try { const k = document.createElement('canvas'); k.width = k.height = 256; k.getContext('2d').drawImage(c, 0, 0, 256, 256); state.printImg = k.toDataURL('image/jpeg', 0.8); } catch (e) {} persist(); fillFabricPanel(); draw(); URL.revokeObjectURL(img.src); };
     img.onerror = () => say('Nie udało się wczytać tego pliku jako obrazu.'); img.src = URL.createObjectURL(f);
   });
-  for (const k in FAB) { const o = document.createElement('option'); o.value = k; o.textContent = FAB[k].name; $('fab').appendChild(o); }
-  $('fab').addEventListener('change', () => { state.fabric = $('fab').value; persist(); fillFabricPanel(); draw(); });
-  $('col').addEventListener('input', () => { state.color = $('col').value; persist(); draw(); swatchesSoon(); });
 

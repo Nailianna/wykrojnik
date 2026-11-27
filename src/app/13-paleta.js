@@ -3,10 +3,10 @@
   let cmdSel = 0, cmdItems = [];
   function cmdAll() {
     const L = [], add = (t, g, run) => L.push({ t, g, run });
-    for (const k of ['proj', 'modelka', 'fason', 'wymiary', 'tkanina', 'warstwy', 'szwy', 'druk', 'insp']) add(PT[k], 'Panel', () => goPanel(k));
+    for (const k of ['proj', 'modelka', 'fason', 'wymiary', 'tkanina', 'druk']) add(PT[k], 'Panel', () => goPanel(k));
     add('Pulpit', 'Widok', () => homeShow(true)); add('Nowy projekt z inspiracji', 'Akcja', () => newFromInsp(null));
     add('Zapisz PDF', 'Akcja', () => $('pdf').click()); add('Cofnij', 'Akcja', () => histGo(-1)); add('Ponów', 'Akcja', () => histGo(1));
-    add('Nowy projekt', 'Akcja', () => { goPanel('proj'); $('prNew').click(); }); add('Duplikuj projekt', 'Akcja', () => { goPanel('proj'); $('prDup').click(); });
+    add('Nowy projekt', 'Akcja', () => homeShow(true)); add('Warstwy', 'Panel', () => goPanel('druk')); add('Zapasy na szwy', 'Panel', () => { goPanel('druk'); $('szwyBox').scrollIntoView({ block: 'start' }); }); add('Duplikuj projekt', 'Akcja', () => { goPanel('proj'); $('prDup').click(); });
     add('Pokaż wykrój', 'Widok', () => setView('2d')); add('Pokaż podgląd 3D', 'Widok', () => setView('3d'));
     add(state.theme === 'dark' ? 'Jasny motyw' : 'Ciemny motyw', 'Widok', () => $('theme').click());
     add(state.figure ? 'Schowaj sylwetkę' : 'Pokaż sylwetkę', 'Widok', () => { if (state.view !== '3d') setView('3d'); $('tFig').click(); });

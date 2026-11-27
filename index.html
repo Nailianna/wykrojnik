@@ -120,7 +120,6 @@ h3:first-child{margin-top:6px}
 .prop.alt button{background:var(--surface);color:var(--ink)}
 #inRes>p{font-size:13px;margin:12px 0 0}
 /* suwaki pod manekinem */
-#tune{bottom:12px;padding:12px 18px 10px}
 #tuneG{display:flex;gap:26px;overflow-x:auto;padding-bottom:2px}
 .tgrp{flex:1 0 auto}.tgrp[hidden]{display:none}.tgrp>b{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);opacity:.75;margin-bottom:6px;font-weight:600}
 .tgrp>div{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,auto);grid-auto-columns:minmax(180px,1fr);gap:6px 22px}
@@ -130,10 +129,7 @@ h3:first-child{margin-top:6px}
 .sl output{font-family:"DM Mono",monospace;color:var(--ink)}
 .sl input{width:100%;padding:0;margin:2px 0 0;accent-color:var(--accent);background:transparent;border:0}
 #chips{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;align-items:center;z-index:2;pointer-events:none}
-#gap,#hemGap{position:static;padding:8px 16px;border-radius:999px;font-size:13px;white-space:nowrap}
 #chips b{font-family:"DM Mono",monospace;font-weight:500}
-#gap.low,#hemGap.low{background:color-mix(in srgb,var(--hot) 14%,var(--surface))}
-#gap:empty,#hemGap:empty{display:none}
 #mini{top:12px;width:132px;padding:10px 10px 6px;border-radius:18px;display:flex;flex-direction:column;gap:4px;align-items:stretch;background:var(--surface)}
 #mini:hover{background:var(--surface);outline:2px solid var(--accent)}
 #mini svg{width:100%;height:118px}
@@ -218,7 +214,7 @@ button.primary{background:var(--accent);color:var(--onacc);border-radius:10px;pa
 button.primary:hover{background:var(--accent-h)}
 nav{background:var(--chrome);backdrop-filter:blur(20px);border-right:1px solid var(--line);padding:10px 0}
 .logo{width:38px;height:38px}.logo svg{width:38px;height:38px}
-nav button{position:relative;width:58px;border-radius:12px;font-size:10.5px;padding:7px 0 5px;letter-spacing:0}
+nav button{position:relative;width:66px;margin:0 3px;border-radius:12px;font-size:10.5px;padding:7px 0 5px;letter-spacing:0}
 nav button svg{width:20px;height:20px;stroke-width:1.7}
 nav button[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--ink)}
 nav button[aria-pressed="true"] svg{stroke:var(--accent)}
@@ -263,8 +259,6 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
 .up{border-radius:10px}
 .drop{border-radius:14px;border-width:1.5px}
 p.warn,.verdict{border-radius:11px}
-#gap,#hemGap{border-radius:11px;padding:7px 13px;font-size:12.5px}
-#tune{bottom:10px;border-radius:16px}
 footer{background:var(--chrome);backdrop-filter:blur(20px);border-top:1px solid var(--line);font-size:12.5px;gap:6px;padding:0 12px}
 footer button{padding:5px 10px;font-size:12.5px;border-radius:8px;background:transparent;color:var(--mute)}
 footer button:hover{background:var(--field);color:var(--ink)}
@@ -376,6 +370,15 @@ footer select{border-radius:8px}
 .hempty{color:var(--mute);margin:0;grid-column:1/-1}
 .logo{cursor:pointer;background:none;border:0;padding:0;border-radius:12px}
 #przBox[hidden]{display:none!important}
+.f .rg{grid-column:1/-1;width:100%;padding:0;margin:-2px 0 4px;accent-color:var(--accent);background:transparent;border:0;height:18px}
+.lab{font-size:12.5px;color:var(--mute);margin:10px 0 6px}
+.fitn{margin:8px 0 0;padding:8px 12px;border-radius:11px;background:color-mix(in srgb,var(--ink) 5%,transparent);font-size:12.5px;line-height:1.4}
+.fitn.low{background:color-mix(in srgb,var(--hot) 14%,var(--surface))}.fitn:empty{display:none}.fitn b{font-family:"Geist Mono","DM Mono",ui-monospace,monospace;font-weight:500}
+.num.nou::after{content:""}.num.nou input{padding-right:10px}
+#szwyBox[hidden]{display:none}
+#panel [data-sec] div>h3:first-child{margin-top:22px}
+.ly .lnk{background:transparent;padding:0;font-size:13.5px;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--mute)}
+#mini{padding-bottom:10px}
 </style>
 </head>
 <body>
@@ -415,13 +418,9 @@ footer select{border-radius:8px}
   <button data-panel="proj"><svg viewBox="0 0 24 24"><path d="M3.5 7.500a2 2 0 0 1 2-2h4l2 2.500h7a2 2 0 0 1 2 2v7.500a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/></svg>Projekty</button>
   <button data-panel="modelka"><svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="3"/><path d="M8 21l1-7-2-3q5-3 10 0l-2 3 1 7"/></svg>Modelka</button>
   <button data-panel="fason"><svg viewBox="0 0 24 24"><path d="M12 7a2 2 0 1 0-2-2M12 7v2l8.5 6a1.5 1.5 0 0 1-.9 2.700H4.400a1.5 1.5 0 0 1-.9-2.700L12 9"/></svg>Fason</button>
-  <button data-panel="wymiary"><svg viewBox="0 0 24 24"><path d="M3 15.5 15.5 3 21 8.5 8.5 21ZM7 11.500l2 2M10 8.500l2 2M13 5.500l2 2"/></svg>Wymiary</button>
+  <button data-panel="wymiary"><svg viewBox="0 0 24 24"><path d="M3 15.5 15.5 3 21 8.5 8.5 21ZM7 11.500l2 2M10 8.500l2 2M13 5.500l2 2"/></svg>Dopasowanie</button>
   <button data-panel="tkanina"><svg viewBox="0 0 24 24"><path d="M4 5q4-2 8 0t8 0v14q-4 2-8 0t-8 0ZM4 10q4-2 8 0t8 0M4 14.5q4-2 8 0t8 0"/></svg>Tkanina</button>
-  <button data-panel="warstwy"><svg viewBox="0 0 24 24"><path d="M12 4 3.5 8.5 12 13l8.5-4.5ZM3.5 12.5 12 17l8.5-4.5M3.5 16.5 12 21l8.5-4.5"/></svg>Warstwy</button>
-  <button data-panel="szwy"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M7.5 16 17 4M16.5 16 7 4"/></svg>Szwy</button>
-  <button data-panel="druk"><svg viewBox="0 0 24 24"><path d="M7 8.500v-4.500h10v4.500M7 17.500h-1.500a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1.500M7 14h10v6h-10Z"/></svg>Druk</button>
-  <hr>
-  <button data-panel="insp"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/></svg>Inspiracja</button>
+  <button data-panel="druk"><svg viewBox="0 0 24 24"><path d="M7 8.500v-4.500h10v4.500M7 17.500h-1.500a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1.500M7 14h10v6h-10Z"/></svg>Krojenie</button>
   <span class="grow"></span>
   <button id="theme" aria-label="Przełącz motyw jasny i ciemny"><svg viewBox="0 0 24 24"><path d="M20 14.500A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.500Z"/></svg>Motyw</button>
 </nav>
@@ -434,7 +433,6 @@ footer select{border-radius:8px}
   <div class="seg"><button id="v2d" aria-pressed="true">Wykrój</button><button id="v3d" aria-pressed="false">Podgląd 3D</button></div>
   <div class="sp"></div>
   <button id="cmdBtn" aria-label="Otwórz paletę poleceń">Szukaj poleceń <kbd>⌘K</kbd></button>
-  <button id="install" hidden>Zainstaluj jako aplikację</button>
   <button id="pdf" class="primary">Zapisz PDF</button>
 </header>
 <section class="stage" id="stage">
@@ -445,16 +443,30 @@ footer select{border-radius:8px}
     <div class="body">
       <div data-sec="proj">
         <div id="prList"></div>
-        <div class="row"><button id="prNew">Nowy projekt</button><button id="prDup">Duplikuj</button></div>
-        <div class="row"><button id="prPdf">Wczytaj wykrój z PDF</button><input id="prPdfIn" type="file" accept="application/pdf,.pdf" hidden></div>
-        <div class="row"><button id="prInsp">Nowy z inspiracji</button><button id="prHome">Pulpit</button></div>
+        <div class="row"><button id="prHome">Nowy projekt</button><button id="prDup">Duplikuj ten</button></div>
         <label class="f" style="grid-template-columns:70px 1fr;margin-top:16px"><span>Nazwa</span><input id="prName" maxlength="60"></label>
-        <div class="row"><button id="prDel">Usuń projekt</button></div>
         <h3>Kopia zapasowa</h3>
         <div class="row"><button id="bkOut">Zapisz do pliku</button><label class="up" style="margin:0"><input id="bkIn" type="file" accept=".json,application/json" hidden>Wczytaj z pliku</label></div>
         <p class="note" id="store"></p>
       </div>
       <div data-sec="druk">
+        <h3>Warstwy</h3>
+        <div id="lyList"></div>
+        <p class="lab">Dodaj warstwę</p>
+        <div class="chips" id="lyAdd"></div>
+        <div id="lyOut"></div>
+        <div id="szwyBox"><h3>Zapasy na szwy</h3>
+        <label class="f"><span>Boki, ramiona, środek tyłu</span><span class="num"><input id="p_saSzew" type="number" min="0" max="4" step="0.1"></span></label>
+        <label class="f"><span>Talia, dekolt, pachy</span><span class="num"><input id="p_saTalia" type="number" min="0" max="4" step="0.1"></span></label>
+        <label class="f" data-if="len"><span>Podwinięcie dołu</span><span class="num"><input id="p_saDol" type="number" min="0" max="10" step="0.5"></span></label>
+        <div data-if="straps">
+          <h3>Odszycia dekoltu i pach</h3>
+          <div class="seg" id="fac" style="margin-bottom:8px"><button data-v3="laczone">Łączone</button><button data-v3="osobne">Osobne</button><button data-v3="brak">Brak</button></div>
+          <label class="f" data-if="facw"><span>Szerokość odszycia</span><span class="num"><input id="p_facW" type="number" min="3" max="8" step="0.5"></span></label>
+          <p class="note">Odszycia podklej fizeliną. Wewnętrzną krawędź obrzuć, nie ma na niej zapasu.</p>
+        </div>
+        <label class="f" data-if="pasek"><span>Szerokość paska</span><span class="num"><input id="p_pasek" type="number" min="0" max="10" step="0.5"></span></label>
+        </div>
         <h3>Elementy do druku</h3>
         <div id="selList"></div>
         <h3>Papier</h3>
@@ -464,7 +476,7 @@ footer select{border-radius:8px}
         <h3>Ile tkaniny</h3>
         <div class="f2"><span>Szerokość beli</span><div class="seg" id="fabW"><button data-fw="110">110</button><button data-fw="140">140</button><button data-fw="150">150</button></div></div>
         <dl id="usage"></dl>
-        <h3>Dodatki</h3>
+        <h3>Pasmanteria</h3>
         <dl id="notions"></dl>
         <h3>Do wycięcia</h3>
         <dl id="cutlist"></dl>
@@ -484,15 +496,32 @@ footer select{border-radius:8px}
         <div id="impBox" hidden><h3>Wykrój z pliku</h3><div class="f2" id="impSizeRow"><span>Rozmiar</span><select id="impSize" style="width:150px" aria-label="Rozmiar wykroju"></select></div><p class="note" id="impNote"></p><details id="impNotes" hidden><summary>Uwagi z analizy</summary><div id="impNotesB"></div></details></div>
         <div data-ft="gory"><div class="gal" id="galGo"></div></div>
         <div data-ft="doly"><div class="gal" id="galSk"></div></div>
-        <div data-ft="suk"><h3>Sylwetka</h3><div class="gal" id="galSu"></div></div>
+        <div data-ft="suk"><div class="gal" id="galSu"></div></div>
+      </div>
+      <div data-sec="wymiary">
+        <p class="note" id="dopEmpty" hidden>Najpierw wybierz fason, a pokażę tu wszystko, co da się w nim dopasować.</p>
+        <div id="dopImp" hidden>
+          <h3>Długość</h3>
+          <div id="impLenBox">
+            <label class="f"><span>Przód i tył dłuższe o</span><span class="num"><input id="i_lb" type="number" min="-40" max="80" step="0.5"></span><input id="is_lb" class="rg" type="range" min="-40" max="80" step="0.5" aria-label="Zmiana długości przodu i tyłu"></label>
+            <label class="f" id="impLsRow"><span>Rękaw dłuższy o</span><span class="num"><input id="i_ls" type="number" min="-40" max="40" step="0.5"></span><input id="is_ls" class="rg" type="range" min="-40" max="40" step="0.5" aria-label="Zmiana długości rękawa"></label>
+          </div>
+          <p class="note" id="impLenN"></p>
+        </div>
         <div id="fOpts">
-          <div data-if="dolsel"><h3 id="dolH">Dół</h3><div class="seg" id="dolK" style="display:inline-flex;flex-wrap:wrap"><button data-f="p" id="dolP">Prosty</button><button data-f="t" id="dolT">Trapez</button><button data-f="0.5">Z półkola</button><button data-f="1">Z koła</button><button data-f="2">Z dwóch kół</button><button data-f="z" id="dolZ">Z zakładkami</button></div>
-          <label class="f" data-if="odc" style="margin-top:8px"><span>Pasek w talii (0 = brak)</span><span class="num"><input id="p_pasT" type="number" min="0" max="12" step="0.5"></span></label></div>
         <div data-if="dress">
           <h3>Góra</h3>
-          <div class="f2" style="margin-bottom:10px"><span>Baza konstrukcji</span><div class="seg" id="baza"><button data-bz="wlasna">Wykrojnik</button><button data-bz="stark">Podręcznik</button></div></div>
+          <div class="f2" style="margin-bottom:10px"><span>Baza</span><div class="seg" id="baza"><button data-bz="wlasna">Wykrojnik</button><button data-bz="stark">Podręcznik</button></div></div>
           <div data-if="tee" style="margin-bottom:10px"><div class="f2"><span>Krój</span><div class="seg" id="fit"><button data-fit="slim">Slim</button><button data-fit="regular">Regular</button><button data-fit="oversize">Oversize</button></div></div></div>
           <div class="seg" id="gora" style="display:inline-flex;margin-bottom:8px"><button data-g="ramiona">Z ramionami</button><button data-g="bez">Bez ramiączek</button></div>
+        </div>
+        <div data-if="corset">
+          <h3>Gorset</h3>
+          <label class="f"><span>Redukcja talii</span><span class="num"><input id="p_gr" type="number" min="0" max="15" step="0.5"></span></label>
+          <label class="f" data-if="corsetU"><span>Wysokość nad talią</span><span class="num"><input id="p_gh" type="number" min="5" max="14" step="0.5"></span></label>
+          <label class="f"><span>Długość pod talią z przodu</span><span class="num"><input id="p_gd" type="number" min="5" max="16" step="0.5"></span></label>
+          <label class="f"><span>Odstęp sznurowania z tyłu</span><span class="num"><input id="p_gg" type="number" min="0" max="10" step="0.5"></span></label>
+          <div class="f2"><span>Panele na stronę</span><div class="seg" id="gp"><button data-n="5">5</button><button data-n="6">6</button></div></div>
         </div>
         <div data-if="nostraps">
           <div class="f2"><span>Górna krawędź</span><div class="seg" id="bk"><button data-b="prosta">Prosta</button><button data-b="luk" data-if="bez">Łuk</button><button data-b="serce">Serce</button></div></div>
@@ -501,23 +530,53 @@ footer select{border-radius:8px}
           <label class="f" data-if="ram"><span>Szerokość ramiączka</span><span class="num"><input id="p_ramW" type="number" min="0.5" max="4" step="0.5"></span></label>
         </div>
         <div data-if="straps">
-          <div class="f2"><span>Rękawy</span><div class="seg" id="rek"><button data-r="brak">Brak</button><button data-r="krotki">Krótkie</button><button data-r="34">3/4</button><button data-r="dlugi">Długie</button><button data-r="bufka">Bufki</button></div></div>
-          <label class="f" data-if="rekLen"><span>Długość rękawa od ramienia</span><span class="num"><input id="p_rekL" type="number" min="12" max="75" step="0.5"></span></label>
-          <label class="chk" data-if="rek34"><input type="checkbox" id="mankT">Z mankietem</label>
+          <h3>Dekolt</h3>
+          <div class="shapes" id="nk" role="group" aria-label="Kształt dekoltu z przodu"></div>
+          <label class="f"><span>Głębokość z przodu</span><span class="num"><input id="p_nd" type="number" min="-4" max="24" step="0.5"></span></label>
+          <label class="f"><span>Szerokość</span><span class="num"><input id="p_nw" type="number" min="0" max="9" step="0.5"></span></label>
+          <label class="f"><span>Głębokość z tyłu</span><span class="num"><input id="p_nb" type="number" min="0" max="30" step="0.5"></span></label>
+          <div class="f2"><span>Kształt z tyłu</span><div class="seg" id="nkb"><button data-v2="okragly">Okrągły</button><button data-v2="v">V</button></div></div>
           <div class="f2" data-if="odcTop"><span>Przód</span><div class="seg" id="kop"><button data-w="0">Zwykły</button><button data-w="1">Kopertowy</button></div></div>
           <div class="f2"><span>Kołnierz</span><div class="seg" id="kol"><button data-k="brak">Brak</button><button data-k="stojka">Stójka</button><button data-k="bebe">Bebe</button><button data-k="szal">Szalowy</button></div></div>
           <label class="f" data-if="kol"><span>Szerokość kołnierza</span><span class="num"><input id="p_kolW" type="number" min="2" max="12" step="0.5"></span></label>
+          <h3>Rękawy i ramiona</h3>
+          <div class="f2"><span>Rękawy</span><div class="seg" id="rek"><button data-r="brak">Brak</button><button data-r="krotki">Krótkie</button><button data-r="34">3/4</button><button data-r="dlugi">Długie</button><button data-r="bufka">Bufki</button></div></div>
+          <label class="f" data-if="rekLen"><span>Długość rękawa od ramienia</span><span class="num"><input id="p_rekL" type="number" min="12" max="75" step="0.5"></span></label>
+          <label class="chk" data-if="rek34"><input type="checkbox" id="mankT">Z mankietem</label>
+          <label class="f"><span>Zwężenie ramienia</span><span class="num"><input id="p_bok" type="number" min="0" max="12" step="0.5"></span></label>
+          <div data-if="zpok">
+            <h3>Modelowanie</h3>
+            <div class="f2"><span>Zaszewka piersiowa</span><select id="zp" style="width:140px" aria-label="Położenie zaszewki piersiowej"><option value="bok">W szwie bocznym</option><option value="pacha">Z pachy</option><option value="ramie">Z ramienia</option><option value="dekolt">Z dekoltu</option></select></div>
+          </div>
+        </div>
+        <div data-if="len">
+          <h3 id="dolSec">Dół</h3>
+          <div data-if="dolsel"><p class="lab" id="dolH">Krój dołu</p><div class="seg" id="dolK" style="display:inline-flex;flex-wrap:wrap"><button data-f="p" id="dolP">Prosty</button><button data-f="t" id="dolT">Trapezowy</button><button data-f="0.5">Z półkola</button><button data-f="1">Z koła</button><button data-f="2">Z dwóch kół</button><button data-f="z" id="dolZ">Z zakładkami</button></div>
+          <label class="f" data-if="odc" style="margin-top:8px"><span>Pasek w talii (0 = brak)</span><span class="num"><input id="p_pasT" type="number" min="0" max="12" step="0.5"></span></label></div>
+        <label class="f" data-if="len"><span>Długość od talii</span><span class="num"><input id="p_dl" type="number" min="25" max="130" step="0.5"></span></label>
+        <label class="f" data-if="rybka"><span>Odcięcie falbany od talii</span><span class="num"><input id="p_kn" type="number" min="35" max="90" step="0.5"></span></label>
+        <label class="f" data-if="kliny"><span>Rozkloszowanie klina na szwie</span><span class="num"><input id="p_gf" type="number" min="2" max="30" step="0.5"></span></label>
+        <label class="f" data-if="flare"><span>Poszerzenie dołu na szwie</span><span class="num"><input id="p_flare" type="number" min="-6" max="30" step="0.5"></span></label>
+          <div id="zakSl" data-if="zakl"></div>
+        <label class="f" data-if="tren"><span>Tren z tyłu</span><span class="num"><input id="p_tren" type="number" min="0" max="80" step="1"></span></label>
+        <label class="f" data-if="rozp"><span>Rozporek z tyłu</span><span class="num"><input id="p_rozp" type="number" min="0" max="40" step="1"></span></label>
+        </div>
+        <div data-if="luz">
+          <h3>Luz</h3>
+        <label class="f" data-if="dress"><span>W biuście</span><span class="num"><input id="p_luzG" type="number" min="-10" max="16" step="0.5"></span></label>
+        <label class="f" data-if="waist"><span>W talii</span><span class="num"><input id="p_luzT" type="number" min="-8" max="12" step="0.5"></span></label>
+        <label class="f" data-if="hip"><span>W biodrach</span><span class="num"><input id="p_luzB" type="number" min="-12" max="16" step="0.5"></span></label>
+        <p class="note" data-if="waist">Przy elastycznej dzianinie ustaw luz ujemny.</p>
         </div>
         <div data-if="dress">
-          <h3>Dodatki</h3>
+          <h3>Ozdoby</h3>
           <label class="chk"><input type="checkbox" data-pb="falN">Falbanka przy dekolcie</label>
           <label class="chk" data-if="rekOn"><input type="checkbox" data-pb="falR">Falbanka przy rękawach</label>
           <label class="chk" data-if="odcTop"><input type="checkbox" data-pb="marsz">Marszczony stanik zamiast zaszewek w talii</label>
           <label class="chk"><input type="checkbox" data-pb="sciag">Ściągacz pod biustem</label>
         </div>
-        </div>
         <div id="exBox">
-          <h3>Dodatki z prostokątów</h3>
+          <h3>Elementy z prostokątów</h3>
           <div id="exList"></div>
           <details id="exForm"><summary>Dodaj własny dodatek</summary>
             <label class="f" style="grid-template-columns:70px 1fr"><span>Nazwa</span><input id="exName" maxlength="40" placeholder="Na przykład: szarfa"></label>
@@ -529,39 +588,7 @@ footer select{border-radius:8px}
             <div class="row"><button id="exAdd">Dodaj do projektu</button></div>
           </details>
         </div>
-      </div>
-      <div data-sec="wymiary">
-        <div data-if="corset">
-          <label class="f"><span>Redukcja talii</span><span class="num"><input id="p_gr" type="number" min="0" max="15" step="0.5"></span></label>
-          <label class="f" data-if="corsetU"><span>Wysokość nad talią</span><span class="num"><input id="p_gh" type="number" min="5" max="14" step="0.5"></span></label>
-          <label class="f"><span>Długość pod talią z przodu</span><span class="num"><input id="p_gd" type="number" min="5" max="16" step="0.5"></span></label>
-          <label class="f"><span>Odstęp sznurowania z tyłu</span><span class="num"><input id="p_gg" type="number" min="0" max="10" step="0.5"></span></label>
-          <div class="f2"><span>Panele na stronę</span><div class="seg" id="gp"><button data-n="5">5</button><button data-n="6">6</button></div></div>
         </div>
-        <label class="f" data-if="len"><span>Długość od talii</span><span class="num"><input id="p_dl" type="number" min="25" max="130" step="0.5"></span></label>
-        <label class="f" data-if="rybka"><span>Odcięcie falbany od talii</span><span class="num"><input id="p_kn" type="number" min="35" max="90" step="0.5"></span></label>
-        <label class="f" data-if="kliny"><span>Rozkloszowanie klina na szwie</span><span class="num"><input id="p_gf" type="number" min="2" max="30" step="0.5"></span></label>
-        <label class="f" data-if="flare"><span>Poszerzenie dołu na szwie</span><span class="num"><input id="p_flare" type="number" min="-6" max="30" step="0.5"></span></label>
-        <div data-if="straps">
-          <h3>Dekolt</h3>
-          <div class="shapes" id="nk" role="group" aria-label="Kształt dekoltu z przodu"></div>
-          <label class="f"><span>Głębokość z przodu</span><span class="num"><input id="p_nd" type="number" min="-4" max="24" step="0.5"></span></label>
-          <label class="f"><span>Szerokość</span><span class="num"><input id="p_nw" type="number" min="0" max="9" step="0.5"></span></label>
-          <label class="f"><span>Głębokość z tyłu</span><span class="num"><input id="p_nb" type="number" min="0" max="30" step="0.5"></span></label>
-          <label class="f"><span>Szerokość ramienia (0 = pełna)</span><span class="num"><input id="p_bok" type="number" min="0" max="12" step="0.5"></span></label>
-          <div class="f2"><span>Kształt z tyłu</span><div class="seg" id="nkb"><button data-v2="okragly">Okrągły</button><button data-v2="v">V</button></div></div>
-          <div data-if="zpok">
-            <h3>Modelowanie</h3>
-            <div class="f2"><span>Zaszewka piersiowa</span><select id="zp" style="width:140px" aria-label="Położenie zaszewki piersiowej"><option value="bok">W szwie bocznym</option><option value="pacha">Z pachy</option><option value="ramie">Z ramienia</option><option value="dekolt">Z dekoltu</option></select></div>
-          </div>
-        </div>
-        <label class="f" data-if="tren"><span>Tren z tyłu</span><span class="num"><input id="p_tren" type="number" min="0" max="80" step="1"></span></label>
-        <label class="f" data-if="rozp"><span>Rozporek z tyłu</span><span class="num"><input id="p_rozp" type="number" min="0" max="40" step="1"></span></label>
-        <h3 data-if="waist">Luz</h3>
-        <label class="f" data-if="dress"><span>W biuście</span><span class="num"><input id="p_luzG" type="number" min="-10" max="16" step="0.5"></span></label>
-        <label class="f" data-if="waist"><span>W talii</span><span class="num"><input id="p_luzT" type="number" min="-8" max="12" step="0.5"></span></label>
-        <label class="f" data-if="hip"><span>W biodrach</span><span class="num"><input id="p_luzB" type="number" min="-12" max="16" step="0.5"></span></label>
-        <p class="note" data-if="waist">Przy elastycznej dzianinie ustaw luz ujemny.</p>
       </div>
       <div data-sec="modelka">
         <select id="prof" aria-label="Wybierz modelkę"></select>
@@ -593,24 +620,6 @@ footer select{border-radius:8px}
         <label class="up"><input id="upImg" type="file" accept="image/*" hidden>Wgraj zdjęcie własnej tkaniny</label>
         <p class="note">Wzory są poglądowe. Na kloszach układają się tak, jak na tkaninie ciętej z koła.</p>
       </div>
-      <div data-sec="warstwy">
-        <div id="lyList"></div>
-        <h3>Dodaj warstwę</h3>
-        <div class="chips" id="lyAdd"></div>
-        <div id="lyOut"></div>
-      </div>
-      <div data-sec="szwy">
-        <label class="f"><span>Boki, ramiona, środek tyłu</span><span class="num"><input id="p_saSzew" type="number" min="0" max="4" step="0.1"></span></label>
-        <label class="f"><span>Talia, dekolt, pachy</span><span class="num"><input id="p_saTalia" type="number" min="0" max="4" step="0.1"></span></label>
-        <label class="f" data-if="len"><span>Podwinięcie dołu</span><span class="num"><input id="p_saDol" type="number" min="0" max="10" step="0.5"></span></label>
-        <div data-if="straps">
-          <h3>Odszycia dekoltu i pach</h3>
-          <div class="seg" id="fac" style="margin-bottom:8px"><button data-v3="laczone">Łączone</button><button data-v3="osobne">Osobne</button><button data-v3="brak">Brak</button></div>
-          <label class="f" data-if="facw"><span>Szerokość odszycia</span><span class="num"><input id="p_facW" type="number" min="3" max="8" step="0.5"></span></label>
-          <p class="note">Odszycia podklej fizeliną. Wewnętrzną krawędź obrzuć, nie ma na niej zapasu.</p>
-        </div>
-        <label class="f" data-if="pasek"><span>Szerokość paska</span><span class="num"><input id="p_pasek" type="number" min="0" max="10" step="0.5"></span></label>
-      </div>
     </div>
     <div id="panelF"><button id="next"></button></div>
   </div>
@@ -619,15 +628,15 @@ footer select{border-radius:8px}
     <div class="head"><h2>Kontrola</h2><button class="x" id="cardX" aria-label="Zwiń kontrolę wymiarów">✕</button></div>
     <div class="body">
       <p class="verdict" id="verdict"></p>
+      <div id="fitN" data-v="3d" hidden><p class="fitn" id="gap"></p><p class="fitn" id="hemGap"></p></div>
       <dl id="info"></dl>
       <p class="warn" id="warn"></p>
       <details id="moreBox"><summary>Pozostałe wymiary</summary><dl id="info2"></dl></details>
       <details id="dartsH"><summary>Zaszewki</summary><dl id="darts"></dl></details>
     </div>
   </div>
-  <button class="float" id="mini" data-v="3d" hidden aria-label="Przejdź do wykroju"><span id="miniS"></span><span class="cap">Wykrój na żywo</span></button>
-  <div id="chips" data-v="3d" hidden><div class="float" id="gap"></div><div class="float" id="hemGap"></div><div class="float" id="simS"></div></div>
-  <div class="float" id="tune" data-v="3d" hidden><div id="tuneG"></div></div>
+  <button class="float" id="mini" data-v="3d" hidden aria-label="Przejdź do wykroju"><span id="miniS"></span></button>
+  <div id="chips" data-v="3d" hidden><div class="float" id="simS"></div></div>
   <div class="msg" id="msg" role="status"></div>
 </section>
 <div id="cmd" hidden><div class="float cmdBox" role="dialog" aria-label="Paleta poleceń"><input id="cmdIn" placeholder="Co chcesz zrobić?" aria-label="Szukaj polecenia" autocomplete="off"><div id="cmdList" role="listbox"></div></div></div>
@@ -636,14 +645,11 @@ footer select{border-radius:8px}
   <button id="tTiles" aria-pressed="true" data-v="2d">Strony A4</button>
   <button id="tLab" aria-pressed="true" data-v="2d">Opisy</button>
   <button id="tBust" aria-pressed="true" data-v="3d" hidden>Zarys biustu</button>
-  <button id="tSeams" aria-pressed="true" data-v="3d" hidden>Szwy</button>
+  <button id="tSeams" aria-pressed="true" data-v="3d" hidden>Linie szwów</button>
   <button id="tFig" aria-pressed="false" data-v="3d" hidden>Sylwetka</button>
   <button id="tSim" aria-pressed="true" data-v="3d" hidden>Symulacja tkaniny</button>
   <div class="seg" id="views" data-v="3d" hidden><button data-yaw="0">Przód</button><button data-yaw="1.5708">Bok</button><button data-yaw="3.1416">Tył</button></div>
-  <label data-v="3d" hidden>Tkanina <select id="fab"></select></label>
-  <label data-v="3d" hidden>Kolor <input id="col" type="color"></label>
   <span class="sp"></span>
-  <span id="pages" data-v="2d"></span>
   <input id="zoom" type="range" min="-100" max="200" value="0" aria-label="Powiększenie">
   <span id="zoomV">100%</span>
   <button id="fit">Dopasuj</button>

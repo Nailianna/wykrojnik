@@ -44,22 +44,24 @@
     vb = { x: cx - (vb.w * k) / 2, y: cy - (vb.h * k) / 2, w: nw, h: vb.h * k }; applyVb();
   });
   // panele i motyw
-  const FLOW = ['modelka', 'fason', 'wymiary', 'tkanina', 'warstwy', 'szwy', 'druk'];
-  const PT = { proj: 'Projekty', druk: 'Druk i materiały', warstwy: 'Warstwy', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Wymiary fasonu', modelka: 'Modelka', szwy: 'Zapasy na szwy' };
+  const FLOW = ['modelka', 'fason', 'wymiary', 'tkanina', 'druk'];
+  const PT = { proj: 'Projekty', druk: 'Krojenie i druk', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Dopasowanie', modelka: 'Modelka' };
+  function cardUi() { const none = state.style === 'pusty'; $('card').toggleAttribute('hidden', !state.card || none); $('cardBtn').toggleAttribute('hidden', state.card || none); }
   function layoutUi() {
     $('panel').toggleAttribute('hidden', !state.panel);
+    if (state.panel && !PT[state.panel]) state.panel = 'druk'; // starsze zapisy: Warstwy i Zapasy na szwy są teraz w jednym panelu
     if (state.panel) { $('panelT').textContent = PT[state.panel]; document.querySelectorAll('[data-sec]').forEach((el) => (el.hidden = el.dataset.sec !== state.panel)); }
     document.querySelectorAll('nav [data-panel]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.panel === state.panel));
-    { const k = FLOW.indexOf(state.panel), nx = k >= 0 && k < FLOW.length - 1 ? FLOW[k + 1] : null; $('panelF').hidden = !nx && state.panel !== 'druk'; $('next').textContent = state.panel === 'druk' ? 'Zapisz PDF' : nx ? 'Dalej: ' + PT[nx].toLowerCase() : ''; $('next').dataset.to = nx || ''; }
-    $('card').toggleAttribute('hidden', !state.card); $('cardBtn').toggleAttribute('hidden', state.card);
+    { const k = FLOW.indexOf(state.panel), nx = k >= 0 && k < FLOW.length - 1 ? FLOW[k + 1] : null; $('panelF').hidden = !nx; $('next').textContent = nx ? 'Dalej: ' + PT[nx].toLowerCase() : ''; $('next').dataset.to = nx || ''; }
+    cardUi();
     const ins = insets(), gl0 = ins.l > 12 ? ins.l - 12 : 0, gr0 = ins.r > 12 ? ins.r - 12 : 0; $('gl').style.left = gl0 + 'px'; $('gl').style.width = 'calc(100% - ' + (gl0 + gr0) + 'px)';
-    $('tune').style.left = ins.l + 'px'; $('tune').style.right = ins.r + 'px'; $('mini').style.left = ins.l + 'px';
+    $('mini').style.left = ins.l + 'px';
 
     document.documentElement.dataset.theme = state.theme === 'dark' ? 'dark' : 'light';
   }
   function goPanel(id) { if (id && !$('home').hidden) $('home').hidden = true; state.panel = id; if (id === 'tkanina' && state.view !== '3d') { layoutUi(); setView('3d'); return; } if (id === 'druk' && state.view !== '2d') { layoutUi(); setView('2d'); return; } layoutUi(); persist(true); draw(true); }
   document.querySelectorAll('nav [data-panel]').forEach((b) => b.addEventListener('click', () => goPanel(state.panel === b.dataset.panel && $('home').hidden ? null : b.dataset.panel)));
-  $('next').addEventListener('click', () => { if ($('next').dataset.to) { goPanel($('next').dataset.to); document.querySelector('#panel .body').scrollTop = 0; } else $('pdf').click(); });
+  $('next').addEventListener('click', () => { if ($('next').dataset.to) { goPanel($('next').dataset.to); document.querySelector('#panel .body').scrollTop = 0; } });
   $('views').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { cam.yaw = +b.dataset.yaw; cam.pitch = 0.06; paint3d(); }));
   $('panelX').addEventListener('click', () => { state.panel = null; layoutUi(); persist(); draw(true); });
   $('cardX').addEventListener('click', () => { state.card = false; layoutUi(); persist(); draw(true); });

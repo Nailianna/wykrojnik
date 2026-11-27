@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.80.0', n: 83, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.81.0', n: 84, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -90,7 +90,7 @@
   const cur = () => state.profiles.find((x) => x.id === state.active) || state.profiles[0];
   const flags = () => {
     const s = state.style, top = s === 'to_stanik', dress = s.indexOf('su_') === 0 || s.indexOf('to_') === 0, circ = /kol|polkole|zakl/.test(s), corset = s.indexOf('go_') === 0;
-    const kliny = s === 'su_rybka_kliny', bez = dress && state.p.gora === 'bez', dolC = (s === 'su_empire' || s === 'su_princeska') && ['polkole', 'kolo', 'kolo2'].includes(state.p.dol); return { rekOn: dress && !bez && !!state.p.rek && state.p.rek !== 'brak' && !(state.p.bok > 0), tren: ['su_dopasowana', 'su_trapez', 'su_zakl'].includes(s), odcTop: dress && !bez && (ODC.includes(s) || s === 'to_stanik'), odc: ODC.includes(s), zakl: s === 'su_zakl', rek34: dress && !bez && state.p.rek === '34', dolsel: s.indexOf('su_') === 0 && !kliny, kol: dress && !bez && (state.p.kol === 'stojka' || state.p.kol === 'bebe'), zpok: dress && !bez && !/princeska|kliny|tshirt/.test(s), corsetU: s === 'go_pod', bez, tee: s.indexOf('to_tshirt') === 0 && s !== 'to_tshirt_s', rozp: ['sk_prosta', 'sk_olowkowa', 'sk_trapez', 'su_dopasowana', 'su_trapez'].includes(s), ram: bez && (state.p.ram === 'cienkie' || state.p.ram === 'szyja'), rekLen: dress && !bez && !!state.p.rek && state.p.rek !== 'brak' && state.p.rek !== 'bufka' && !(state.p.bok > 0), corset, len: !corset && !top, waist: !corset && !(s.indexOf('to_tshirt') === 0 && state.p.fit !== 'slim'), facw: dress && !bez && state.p.fac === 'osobne', straps: dress && !bez, nostraps: bez || s === 'go_nad', dress, circ, flare: !circ && !kliny && !corset && !top && !dolC, hip: !circ && !corset && !top && !dolC, pasek: !dress && !corset, rybka: s === 'su_rybka' || kliny, kliny };
+    const kliny = s === 'su_rybka_kliny', bez = dress && state.p.gora === 'bez', dolC = (s === 'su_empire' || s === 'su_princeska') && ['polkole', 'kolo', 'kolo2'].includes(state.p.dol); return { rekOn: dress && !bez && !!state.p.rek && state.p.rek !== 'brak' && !(state.p.bok > 0), tren: ['su_dopasowana', 'su_trapez', 'su_zakl'].includes(s), odcTop: dress && !bez && (ODC.includes(s) || s === 'to_stanik'), odc: ODC.includes(s), zakl: s === 'su_zakl', rek34: dress && !bez && state.p.rek === '34', dolsel: s.indexOf('su_') === 0 && !kliny, kol: dress && !bez && (state.p.kol === 'stojka' || state.p.kol === 'bebe'), zpok: dress && !bez && !/princeska|kliny|tshirt/.test(s), corsetU: s === 'go_pod', luz: !corset, bez, tee: s.indexOf('to_tshirt') === 0 && s !== 'to_tshirt_s', rozp: ['sk_prosta', 'sk_olowkowa', 'sk_trapez', 'su_dopasowana', 'su_trapez'].includes(s), ram: bez && (state.p.ram === 'cienkie' || state.p.ram === 'szyja'), rekLen: dress && !bez && !!state.p.rek && state.p.rek !== 'brak' && state.p.rek !== 'bufka' && !(state.p.bok > 0), corset, len: !corset && !top, waist: !corset && !(s.indexOf('to_tshirt') === 0 && state.p.fit !== 'slim'), facw: dress && !bez && state.p.fac === 'osobne', straps: dress && !bez, nostraps: bez || s === 'go_nad', dress, circ, flare: !circ && !kliny && !corset && !top && !dolC, hip: !circ && !corset && !top && !dolC, pasek: !dress && !corset, rybka: s === 'su_rybka' || kliny, kliny };
   };
 
   // ---------- formularz ----------
@@ -139,17 +139,15 @@
     $('nkb').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { state.p.nkb = b.dataset.v2; if (b.dataset.v2 === 'v' && state.p.nb < 6) state.p.nb = 10; fillForm(); persist(); draw(); }));
     const SL = [['zakK', 'Obfitość zakładek', 1.6, 3.5, 'zakl'], ['gr', 'Redukcja talii', 0, 15, 'corset'], ['gh', 'Wysokość nad talią', 5, 14, 'corsetU'], ['gd', 'Długość pod talią z przodu', 5, 16, 'corset'], ['gg', 'Odstęp sznurowania', 0, 10, 'corset'], ['dl', 'Długość od talii', 25, 130, 'len'], ['kn', 'Wysokość kolan od talii', 35, 90, 'rybka'], ['gf', 'Rozkloszowanie klinów', 2, 30, 'kliny'], ['flare', 'Poszerzenie dołu', -6, 30, 'flare'], ['nd', 'Dekolt z przodu', -4, 24, 'straps'], ['nw', 'Szerokość dekoltu', 0, 9, 'straps'],
       ['nb', 'Dekolt z tyłu', 0, 30, 'straps'], ['bh', 'Góra nad linią biustu', 2, 12, 'nostraps'], ['luzG', 'Luz w biuście', -10, 16, 'dress'], ['luzT', 'Luz w talii', -8, 12, 'waist'], ['luzB', 'Luz w biodrach', -12, 16, 'hip']];
-    const TOPK = ['gr', 'gh', 'gd', 'gg', 'nd', 'nw', 'nb', 'bh', 'luzG', 'rekL', 'bok', 'ramW', 'kolW'], tg = {};
-    for (const [id, cap] of [['top', 'Góra'], ['bot', 'Dół']]) { const w = document.createElement('div'), b = document.createElement('b'), gd = document.createElement('div'); w.className = 'tgrp'; w.id = 'tg_' + id; b.textContent = cap; w.append(b, gd); $('tuneG').appendChild(w); tg[id] = gd; }
     SL.push(['rekL', 'Długość rękawa', 12, 75, 'rekLen'], ['bok', 'Zwężenie ramienia', 0, 12, 'straps'], ['ramW', 'Szerokość ramiączka', 0.5, 4, 'ram'], ['kolW', 'Szerokość kołnierza', 2, 12, 'kol']);
     for (const [k, name, mn, mx, cond] of /** @type {any[][]} */ (SL)) {
-      const l = mkEl('label'); l.className = 'sl'; if (cond) l.dataset.if = cond;
-      const top = mkEl('span'), o = mkEl('output'), i = mkEl('input');
-      top.append(name, o); o.id = 'o_' + k; i.type = 'range'; i.min = mn; i.max = mx; i.step = 0.5; i.id = 's_' + k;
+      // suwak siedzi w panelu Dopasowanie pod polem z liczbą; wartość bez własnego pola dostaje cały wiersz
+      const num = $('p_' + k), host = num ? num.closest('label') : null, o = mkEl('output'), i = mkEl('input');
+      o.id = 'o_' + k; i.type = 'range'; i.min = mn; i.max = mx; i.step = 0.5; i.id = 's_' + k; i.setAttribute('aria-label', name);
+      if (host) { i.className = 'rg'; o.hidden = true; host.append(i, o); } else { const l = mkEl('label'), top = mkEl('span'); l.className = 'sl'; top.append(name, o); l.append(top, i); $('zakSl').appendChild(l); }
       i.addEventListener('input', () => { state.p[k] = parseFloat(i.value); { const num = $('p_' + k); if (num) num.value = state.p[k]; } o.textContent = f1(state.p[k]) + ' cm';
         if (k === 'bok' && state.p.bok > 0 && state.p.rek && state.p.rek !== 'brak') { state.p.rek = 'brak'; state.p.falR = false; fillForm(); } // odsłonięte ramiona wykluczają rękawy
         persist(); drawSoon(); });
-      l.append(top, i); tg[TOPK.includes(k) ? 'top' : 'bot'].appendChild(l);
     }
     const box = $('adv');
     for (const k of W.ADV) {
@@ -178,8 +176,7 @@
     $('delP').disabled = state.profiles.length < 2; $('delP').textContent = 'Usuń';
     const fl = state.style === 'pusty' ? {} : flags();
     document.querySelectorAll('[data-if]').forEach((el) => (el.hidden = !fl[el.dataset.if]));
-    document.querySelectorAll('.tgrp').forEach((gq) => { gq.hidden = !Array.from(gq.querySelectorAll('.sl')).some((e) => !e.hidden); gq.querySelector('b').textContent = gq.id === 'tg_top' ? (fl.corset ? 'Gorset' : 'Góra') : fl.dress && !fl.corset ? (state.style.indexOf('to_') === 0 ? 'Długość i luz' : 'Dół') : 'Spódnica'; });
-    $('col').value = state.color; $('fab').value = FAB[state.fabric] ? state.fabric : 'bawelna';
+    $('dolSec').textContent = state.style.indexOf('to_') === 0 ? 'Długość' : 'Dół'; $('dopEmpty').hidden = state.style !== 'pusty'; $('szwyBox').hidden = state.style === 'pusty' || state.style === 'import';
     if (state.print === 'wlasny' && !customImg && !state.printImg) state.print = 'gladka';
     fillFabricPanel(); fillProj(); wishFill(); inspHist(); impFill();
     $('paper').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.pp === state.paper));
@@ -192,11 +189,11 @@
       const tb = ['gory', 'doly', 'suk'].includes(state.fTab) ? state.fTab : tabOf(state.style); state.fTab = tb;
       $('fTab').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.t === tb));
       document.querySelectorAll('[data-ft]').forEach((el) => (el.hidden = el.dataset.ft !== tb));
-      $('fOpts').hidden = tabOf(state.style) !== tb;
+      $('fOpts').hidden = state.style === 'pusty' || state.style === 'import';
       const s = state.style, ryb = s === 'su_rybka', emp = s === 'su_empire', pri = s === 'su_princeska', dk = state.p.dol;
       const cur = ryb ? String(state.p.ff === 0.5 || state.p.ff === 2 ? state.p.ff : 1) : emp || pri ? (dk === 'kolo2' ? '2' : dk === 'kolo' ? '1' : dk === 'polkole' ? '0.5' : emp ? 't' : 'p') : s === 'su_zakl' ? 'z' : s === 'su_2kola' ? '2' : s === 'su_kolo' ? '1' : s === 'su_polkole' ? '0.5' : s === 'su_trapez' ? 't' : 'p';
       $('dolK').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.f === cur));
-      $('dolZ').hidden = ryb || emp || pri; $('dolP').hidden = ryb || emp; $('dolT').hidden = ryb || pri; $('dolP').textContent = pri ? 'Z paneli' : 'Prosty'; $('dolH').textContent = ryb ? 'Falbana' : 'Dół';
+      $('dolZ').hidden = ryb || emp || pri; $('dolP').hidden = ryb || emp; $('dolT').hidden = ryb || pri; $('dolP').textContent = pri ? 'Z paneli' : 'Prosty'; $('dolH').textContent = ryb ? 'Krój falbany' : 'Krój dołu';
     }
     impFill(); // na końcu: wykrój z pliku chowa galerie fasonów, które blok wyżej właśnie pokazał
     document.querySelectorAll('[data-pb]').forEach((c) => (c.checked = !!state.p[c.dataset.pb]));
@@ -273,7 +270,6 @@
       box.appendChild(b);
     });
     if (document.activeElement !== $('prName')) $('prName').value = projCur().name;
-    $('prDel').disabled = state.projects.length < 2; $('prDel').textContent = 'Usuń projekt';
   }
   function loadSnap(sn) {
     const o = JSON.parse(JSON.stringify(sn)); o.p = Object.assign({}, DEF_P, o.p);
@@ -298,18 +294,15 @@
     if (!fr.getAttribute('src')) { const bz = busyOn('Otwieram Przymiarkę.'); fr.addEventListener('load', () => { busyOff(bz); setTimeout(fill, 300); }, { once: true }); fr.setAttribute('src', 'przymiarka.html'); } else fill();
   }
   $('przX').addEventListener('click', () => { $('przBox').hidden = true; });
-  $('prPdf').addEventListener('click', anOpen);
-  $('prPdfIn').addEventListener('change', () => { const f = $('prPdfIn').files[0]; $('prPdfIn').value = ''; impLoad(f); });
   $('impSize').addEventListener('change', () => { const data = impCache[state.proj]; if (!data) { impFill(); say('Wczytaj plik jeszcze raz, żeby zmienić rozmiar.'); return; } { const an = state.imp.an, z = $('impSize').value, rz = an && (an.rozm || []).find((x) => x.w === z); state.imp = Object.assign({}, state.imp, { size: z, pieces: anApply(window.PatImport.pick(data, z), an) }, an ? { an: Object.assign({}, an, { body: rz ? { n: rz.n, b: rz.b, t: rz.t, h: rz.h } : null }) } : {}); } state.sel = {}; persist(); draw(true); });
-  $('prNew').addEventListener('click', () => { const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {}; addProj('Nowy projekt', sn); });
+  function newProj() { const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {}; addProj('Nowy projekt', sn); }
+  for (const [id, k] of [['lb', 'b'], ['ls', 's']]) for (const e of [$('i_' + id), $('is_' + id)]) e.addEventListener('input', () => {
+    const v = parseFloat(String(e.value).replace(',', '.')); if (!isFinite(v) || !state.imp) return;
+    state.imp = Object.assign({}, state.imp, { adj: Object.assign({}, state.imp.adj, { [k]: Math.max(+e.min, Math.min(+e.max, v)) }) });
+    const o = e === $('i_' + id) ? $('is_' + id) : $('i_' + id); o.value = String(state.imp.adj[k]); persist(); drawSoon();
+  });
   $('prDup').addEventListener('click', () => addProj((projCur().name || 'Projekt') + ' (kopia)', snap()));
   $('prName').addEventListener('input', () => { projCur().name = $('prName').value; persist(true); fillProj(); draw(); });
-  $('prDel').addEventListener('click', () => {
-    const b = $('prDel');
-    if (b.textContent === 'Usuń projekt') { b.textContent = 'Na pewno usunąć?'; setTimeout(() => (b.textContent = 'Usuń projekt'), 3000); return; }
-    state.projects = state.projects.filter((x) => x.id !== state.proj); state.proj = state.projects[state.projects.length - 1].id; loadSnap(projCur().snap); histReset();
-    fillForm(); persist(true); draw(true);
-  });
   $('undo').addEventListener('click', () => histGo(-1)); $('redo').addEventListener('click', () => histGo(1));
   document.addEventListener('keydown', (e) => {
     if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'z') return;
@@ -395,7 +388,7 @@
   const P = window.WykrojPrints; let customImg = null, swT = 0;
   function fillFabricPanel() {
     $('fabC').textContent = '';
-    for (const k in FAB) { const b = document.createElement('button'); b.textContent = FAB[k].name; b.setAttribute('aria-pressed', k === state.fabric); b.addEventListener('click', () => { state.fabric = k; $('fab').value = k; persist(); fillFabricPanel(); draw(); }); $('fabC').appendChild(b); }
+    for (const k in FAB) { const b = document.createElement('button'); b.textContent = FAB[k].name; b.setAttribute('aria-pressed', k === state.fabric); b.addEventListener('click', () => { state.fabric = k; persist(); fillFabricPanel(); draw(); }); $('fabC').appendChild(b); }
     $('colA').value = state.color; $('colB').value = state.color2; $('pscale').value = state.pscale; $('o_pscale').textContent = state.pscale + '%';
     const plain = state.print === 'gladka'; $('colBrow').hidden = plain || state.print === 'wlasny'; $('pscaleRow').hidden = plain;
     const box = $('prints'); box.textContent = '';
@@ -411,7 +404,7 @@
     img.src = src;
   }
   const swatchesSoon = () => { clearTimeout(swT); swT = setTimeout(fillFabricPanel, 250); };
-  $('colA').addEventListener('input', () => { state.color = $('colA').value; $('col').value = state.color; persist(); draw(); swatchesSoon(); });
+  $('colA').addEventListener('input', () => { state.color = $('colA').value; persist(); draw(); swatchesSoon(); });
   $('colB').addEventListener('input', () => { state.color2 = $('colB').value; persist(); draw(); swatchesSoon(); });
   $('pscale').addEventListener('input', () => { state.pscale = +$('pscale').value; $('o_pscale').textContent = state.pscale + '%'; persist(); draw(); });
   $('upImg').addEventListener('change', () => {
@@ -419,27 +412,25 @@
     const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 512; const s = Math.min(img.width, img.height); c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 512, 512); c._id = Date.now(); customImg = c; state.print = 'wlasny'; try { const k = document.createElement('canvas'); k.width = k.height = 256; k.getContext('2d').drawImage(c, 0, 0, 256, 256); state.printImg = k.toDataURL('image/jpeg', 0.8); } catch (e) {} persist(); fillFabricPanel(); draw(); URL.revokeObjectURL(img.src); };
     img.onerror = () => say('Nie udało się wczytać tego pliku jako obrazu.'); img.src = URL.createObjectURL(f);
   });
-  for (const k in FAB) { const o = document.createElement('option'); o.value = k; o.textContent = FAB[k].name; $('fab').appendChild(o); }
-  $('fab').addEventListener('change', () => { state.fabric = $('fab').value; persist(); fillFabricPanel(); draw(); });
-  $('col').addEventListener('input', () => { state.color = $('col').value; persist(); draw(); swatchesSoon(); });
 
   // ---------- rysunek 2D ----------
   // wykrój wczytany z PDF: gotowe elementy jednego rozmiaru zamiast konstrukcji z wymiarów
   function impDraft(imp, m) {
-    const pcs = (imp && imp.pieces) || [], an = imp.an || null, sa = an && an.sa, bd = an && an.body;
+    const adjK = JSON.stringify((imp && imp.adj) || {}); if (!impAdjC || impAdjC.imp !== imp || impAdjC.k !== adjK) impAdjC = { imp, k: adjK, r: impAdj(imp) };
+    const pcs = impAdjC.r.pieces, an = imp.an || null, sa = an && an.sa, bd = an && an.body;
     // opisy cięcia, zapas i wymiary ciała dla rozmiaru pochodzą z analizy arkusza
     const fit = bd && bd.b ? ' Rozmiar ' + bd.n + ' jest szyty na biust ' + f1(bd.b) + (bd.t ? ', talię ' + f1(bd.t) : '') + (bd.h ? ', biodra ' + f1(bd.h) : '') + ' cm; modelka ma ' + [m.og, m.ot, m.ob].map((v) => f1(v)).join(' / ') + '.' : '';
     const saT = !sa ? 'Linie i zapasy na szwy są takie jak w oryginale, Wykrojnik ich nie przelicza.' : (sa.inc ? 'Zapas na szwy jest wliczony w linie' + (sa.cm !== null ? ': ' + f1(sa.cm) + ' cm' : ', ale arkusz nie podaje, ile wynosi') : 'Linie nie zawierają zapasu na szwy' + (sa.cm !== null ? ', dodaj ' + f1(sa.cm) + ' cm' : '')) + (sa.ex && sa.ex.length ? ' (' + sa.ex.map((w) => w.gdzie + ': ' + f1(w.cm) + ' cm').join(', ') + ')' : '') + '.' + (an.skos ? ' Wykrój jest cięty ze skosu.' : '');
     // zszyte elementy do podglądu 3D: liczone raz na wykrój i modelkę
-    const sk = (imp.size || '') + '|' + pcs.length + '|' + (pcs[0] ? pcs[0].name + pcs[0].w : '') + '|' + [m.og, m.ot, m.ob, m.wzrost].join(',');
-    if (!impSewC || impSewC.k !== sk || impSewC.imp !== imp) { let sw; try { sw = impSew(imp, m); } catch (e) { sw = { err: 'Nie umiem jeszcze zszyć tego fasonu.' }; } impSewC = { k: sk, imp, sw }; }
+    const sk = adjK + (imp.size || '') + '|' + pcs.length + '|' + (pcs[0] ? pcs[0].name + pcs[0].w : '') + '|' + [m.og, m.ot, m.ob, m.wzrost].join(',');
+    if (!impSewC || impSewC.k !== sk || impSewC.imp !== imp) { let sw; try { sw = impSew(Object.assign({}, imp, { pieces: pcs }), m); } catch (e) { sw = { err: 'Nie umiem jeszcze zszyć tego fasonu.' }; } impSewC = { k: sk, imp, sw }; }
     const sw = impSewC.sw, sew3 = !sw.err ? ' Podgląd 3D pokazuje przód, tył' + (sw.sleeve ? ' i rękawy' + (sw.gather ? ' zmarszczone do długości mankietu' : '') : '') + (sw.skip.length ? '; bez elementów: ' + sw.skip.join(', ').toLowerCase() : '') + '.' : '';
     return { pieces: pcs, sewn: sw.err ? null : { pieces: sw.pieces }, sewErr: sw.err || '', info: { rows: [], darts: [], cut: pcs.map((q) => [q.name, q.cut ? q.cut.replace(/^wytnij /, '') : 'według oryginału']), warn: 'Wykrój wczytany z pliku, rozmiar ' + (imp.size || 'jedyny') + '. ' + saT + fit + sew3 },
       sil: sw.err ? { top: 'import', lower: 'none', hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 } : { top: 'dress', lower: 'straight', imported: true, impDl: sw.dl, frac: 0, hemC: sw.hemC, a: W.full(m), neckGap: 99, lowerArm: 0, sleeve: sw.sleeve, gather: sw.gather, seams: { side: true } }, title: (imp.name || 'Wykrój z pliku') + (imp.size ? ' · ' + imp.size : ''), notions: an && an.pasm ? an.pasm.map((x) => [x, '']) : [], bases: {}, imported: true };
   }
   // nowy projekt zaczyna od pustego manekina: fason wybiera się dopiero w panelu
   function emptyDraft(m) { return { pieces: [], info: { rows: [], darts: [], cut: [], warn: '' }, sil: { top: 'waist', lower: 'none', empty: true, hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: 'bez fasonu', notions: [], bases: {}, empty: true }; }
-  let impSewC = null;
+  let impSewC = null, impAdjC = null;
   const impCache = {}; // pełne dane ostatnio wczytanych plików (wszystkie rozmiary), tylko na czas sesji
   async function impLoad(file) {
     if (!file) return; const bz = busyOn('Czytam wykrój z pliku.'); await paintTick();
@@ -454,9 +445,15 @@
     } catch (e) { say(e && e.message ? e.message : 'Nie udało się wczytać tego pliku.', true); } finally { busyOff(bz); }
   }
   function impFill() {
-    const on = state.style === 'import' && !!state.imp, box = $('impBox'); box.hidden = !on; $('fTab').hidden = on; document.querySelectorAll('[data-ft]').forEach((el) => { if (on) el.hidden = true; }); if (on) $('fOpts').hidden = true; if (!on) return;
+    const on = state.style === 'import' && !!state.imp, box = $('impBox'); box.hidden = !on; if (!on) $('dopImp').hidden = true; $('fTab').hidden = on; document.querySelectorAll('[data-ft]').forEach((el) => { if (on) el.hidden = true; }); if (on) $('fOpts').hidden = true; if (!on) return;
     const sel = $('impSize'); sel.textContent = ''; for (const z of state.imp.sizes || []) { const o = document.createElement('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.value = state.imp.size || ''; sel.disabled = !(state.imp.sizes || []).length; $('impSizeRow').hidden = sel.disabled;
     { const uw = (state.imp.an && state.imp.an.uw) || [], nb = $('impNotesB'); $('impNotes').hidden = !uw.length; nb.textContent = ''; for (const [k, title] of [['spr', 'Do sprawdzenia'], ['zapas', 'Zapasy na szwy'], ['druk', 'Druk'], ['material', 'Materiał']]) { const it = uw.filter((u) => u.k === k); if (!it.length) continue; const b = document.createElement('b'); b.textContent = title; nb.appendChild(b); it.forEach((u) => { const p = document.createElement('p'); p.textContent = u.t + (u.s ? ' (' + u.s + ')' : ''); nb.appendChild(p); }); } }
+    { // długość: suwaki działają, gdy wiem, który element jest przodem, tyłem i rękawem
+      const r = impAdj(state.imp), adj = state.imp.adj || {}, set = (id, o, v) => { for (const e of [$('i_' + id), $('is_' + id)]) { e.min = o ? o.min : 0; if (document.activeElement !== e) e.value = o ? o.d : 0; } };
+      $('dopImp').hidden = false; $('impLenBox').hidden = !r.body && !r.sleeve; $('i_lb').closest('label').hidden = !r.body; $('impLsRow').hidden = !r.sleeve; set('lb', r.body, adj.b); set('ls', r.sleeve, adj.s);
+      $('impLenN').textContent = !r.body && !r.sleeve ? (state.imp.an ? 'W tym wykroju nie umiem wskazać przodu, tyłu ani rękawa, więc długości tu nie zmienisz.' : 'Długość zmienisz po analizie wykroju, bo muszę wiedzieć, który element jest przodem, tyłem i rękawem.')
+        : (r.body && r.body.loose ? 'W tym fasonie nie ma pachy, więc wydłużam i skracam w dolnej połowie elementu. Sprawdź na rysunku, czy zmienił się właściwy koniec.' : 'Wydłużam i skracam pod pachą, więc dół i jego szerokość zostają jak w oryginale.') + (!r.body ? ' Przodu i tyłu nie rozpoznałam, zmienisz tylko rękaw.' : '') + ' Podszewkę i odszycia popraw ręcznie.';
+    }
     $('impNote').textContent = sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
   }
   let model = null, vb = null, rafD = 0;
@@ -480,7 +477,7 @@
   let fitScale = 1, fitDist = 230;
   function insets() {
     const wide = $('stage').getBoundingClientRect().width > 760;
-    return { l: state.panel && wide ? 348 : 12, r: state.card && wide ? 300 : 12 };
+    return { l: state.panel && wide ? 348 : 12, r: state.card && wide && state.style !== 'pusty' ? 300 : 12 };
   }
   function showZoom() {
     let z = 1;
@@ -491,8 +488,8 @@
   function draw(refit) {
     try { model = compute(); } catch (e) { say('Z tych wymiarów nie da się zbudować wykroju. Sprawdź wpisane wartości.'); return; }
     const { d, lay, tl } = model;
-    $('emptyN').hidden = !d.empty || !$('home').hidden;
-    $('tune').style.display = d.empty || d.imported ? 'none' : ''; { const mb = $('miniS').closest('.float') || $('miniS').parentElement; if (mb) mb.style.display = d.empty ? 'none' : ''; }
+    $('emptyN').hidden = !d.empty || !$('home').hidden; cardUi();
+    { const mb = $('miniS').closest('.float') || $('miniS').parentElement; if (mb) mb.style.display = d.empty ? 'none' : ''; }
     $('sub').textContent = (projCur().name || 'Bez nazwy') + ' · ' + d.title + ' · ' + (cur().name || 'Bez imienia');
     if (state.view === '3d') {
       $('miniS').innerHTML = `<svg viewBox="0 0 ${lay.w} ${lay.h}" aria-hidden="true">` + lay.prims.filter((q) => q.t === 'poly' && q.s === 'cut').map((q) => `<path d="M${q.pts.map((a) => a[0].toFixed(1) + ' ' + a[1].toFixed(1)).join('L')}Z"/>`).join('') + '</svg>';
@@ -531,7 +528,7 @@
     dl('cutlist', i.cut);
     renderLayers(d); renderPrint(model); renderExtras(d);
     const pg = tl.single ? 'Jedna strona ' + Math.ceil(tl.tw + 2) + ' × ' + Math.ceil(tl.th + 2) + ' cm' : (tl.pages.length + 1) + ' stron ' + tl.fmt.toUpperCase() + ', ' + (tl.landscape ? 'poziomo' : 'pionowo');
-    $('pages').textContent = pg; $('pagesN').textContent = pg + (tl.single ? '. Do plotera albo projektora.' : ', razem ze stroną tytułową.');
+    $('pagesN').textContent = pg + (tl.single ? '. Do plotera albo projektora.' : ', razem ze stroną tytułową.');
   }
 
   // ---------- druk: wybór elementów, papier, zużycie tkaniny, dodatki ----------
@@ -580,22 +577,24 @@
     vb = { x: cx - (vb.w * k) / 2, y: cy - (vb.h * k) / 2, w: nw, h: vb.h * k }; applyVb();
   });
   // panele i motyw
-  const FLOW = ['modelka', 'fason', 'wymiary', 'tkanina', 'warstwy', 'szwy', 'druk'];
-  const PT = { proj: 'Projekty', druk: 'Druk i materiały', warstwy: 'Warstwy', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Wymiary fasonu', modelka: 'Modelka', szwy: 'Zapasy na szwy' };
+  const FLOW = ['modelka', 'fason', 'wymiary', 'tkanina', 'druk'];
+  const PT = { proj: 'Projekty', druk: 'Krojenie i druk', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Dopasowanie', modelka: 'Modelka' };
+  function cardUi() { const none = state.style === 'pusty'; $('card').toggleAttribute('hidden', !state.card || none); $('cardBtn').toggleAttribute('hidden', state.card || none); }
   function layoutUi() {
     $('panel').toggleAttribute('hidden', !state.panel);
+    if (state.panel && !PT[state.panel]) state.panel = 'druk'; // starsze zapisy: Warstwy i Zapasy na szwy są teraz w jednym panelu
     if (state.panel) { $('panelT').textContent = PT[state.panel]; document.querySelectorAll('[data-sec]').forEach((el) => (el.hidden = el.dataset.sec !== state.panel)); }
     document.querySelectorAll('nav [data-panel]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.panel === state.panel));
-    { const k = FLOW.indexOf(state.panel), nx = k >= 0 && k < FLOW.length - 1 ? FLOW[k + 1] : null; $('panelF').hidden = !nx && state.panel !== 'druk'; $('next').textContent = state.panel === 'druk' ? 'Zapisz PDF' : nx ? 'Dalej: ' + PT[nx].toLowerCase() : ''; $('next').dataset.to = nx || ''; }
-    $('card').toggleAttribute('hidden', !state.card); $('cardBtn').toggleAttribute('hidden', state.card);
+    { const k = FLOW.indexOf(state.panel), nx = k >= 0 && k < FLOW.length - 1 ? FLOW[k + 1] : null; $('panelF').hidden = !nx; $('next').textContent = nx ? 'Dalej: ' + PT[nx].toLowerCase() : ''; $('next').dataset.to = nx || ''; }
+    cardUi();
     const ins = insets(), gl0 = ins.l > 12 ? ins.l - 12 : 0, gr0 = ins.r > 12 ? ins.r - 12 : 0; $('gl').style.left = gl0 + 'px'; $('gl').style.width = 'calc(100% - ' + (gl0 + gr0) + 'px)';
-    $('tune').style.left = ins.l + 'px'; $('tune').style.right = ins.r + 'px'; $('mini').style.left = ins.l + 'px';
+    $('mini').style.left = ins.l + 'px';
 
     document.documentElement.dataset.theme = state.theme === 'dark' ? 'dark' : 'light';
   }
   function goPanel(id) { if (id && !$('home').hidden) $('home').hidden = true; state.panel = id; if (id === 'tkanina' && state.view !== '3d') { layoutUi(); setView('3d'); return; } if (id === 'druk' && state.view !== '2d') { layoutUi(); setView('2d'); return; } layoutUi(); persist(true); draw(true); }
   document.querySelectorAll('nav [data-panel]').forEach((b) => b.addEventListener('click', () => goPanel(state.panel === b.dataset.panel && $('home').hidden ? null : b.dataset.panel)));
-  $('next').addEventListener('click', () => { if ($('next').dataset.to) { goPanel($('next').dataset.to); document.querySelector('#panel .body').scrollTop = 0; } else $('pdf').click(); });
+  $('next').addEventListener('click', () => { if ($('next').dataset.to) { goPanel($('next').dataset.to); document.querySelector('#panel .body').scrollTop = 0; } });
   $('views').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { cam.yaw = +b.dataset.yaw; cam.pitch = 0.06; paint3d(); }));
   $('panelX').addEventListener('click', () => { state.panel = null; layoutUi(); persist(); draw(true); });
   $('cardX').addEventListener('click', () => { state.card = false; layoutUi(); persist(); draw(true); });
@@ -1036,11 +1035,11 @@
       const base = new T3.Mesh(new T3.CylinderGeometry(22, 24, 2, 40), sm); base.position.y = floor + 1; grp.add(base);
     }
     { // gdzie wypada dół względem kolan i kostek
-      const el = $('hemGap'), dK = hemY - kneeY, dA = hemY - ankleY, dF = hemY - floor; el.textContent = ''; el.className = 'float';
+      const el = $('hemGap'), dK = hemY - kneeY, dA = hemY - ankleY, dF = hemY - floor; el.textContent = ''; el.className = 'fitn';
       const num = (v) => Object.assign(document.createElement('b'), { textContent: f1(Math.abs(v)) + ' cm' });
       if (sil.lower === 'none') { if (sil.crop > 0) el.append('Dół kończy się ', num(sil.crop), ' nad talią'); else el.append('Dół kończy się w talii'); }
       else if (sil.top === 'corset') el.append('Talia w gorsecie ', num(sil.c.waist), ', redukcja ', num(sil.c.gr));
-      else if (dF < -1) { el.className = 'float low'; el.append('Dół leży na podłodze, za długa o ', num(dF)); }
+      else if (dF < -1) { el.className = 'fitn low'; el.append('Dół leży na podłodze, za długa o ', num(dF)); }
       else if (dF < 1.5) el.append('Dół sięga do ziemi');
       else if (Math.abs(dK) < 1) el.append('Dół wypada na wysokości kolan');
       else if (dK > 0) el.append('Dół wypada ', num(dK), ' nad kolanem');
@@ -1390,7 +1389,7 @@
       }
     }
     // zarys biustu: linia biustu, punkty szczytu i warstwice na manekinie
-    $('gap').textContent = ''; $('gap').className = 'float';
+    $('gap').textContent = ''; $('gap').className = 'fitn';
     if (state.bust && (!useFig || sil.top === 'dress')) {
       const dress = sil.top === 'dress', ink = new T3.MeshBasicMaterial({ color: 0x17171c, side: T3.DoubleSide });
       const bodyPt = (y, phi, o) => { const s = body(y), x = (s.a + o) * Math.cos(phi), sn = Math.sin(phi); return [x, y, s.z + (s.b + o) * sn + body.bump(x, y, sn, false)]; };
@@ -1407,7 +1406,7 @@
         grp.add(new T3.Line(new T3.BufferGeometry().setFromPoints(pts), lm));
       }
       if (dress && !sil.imported) {
-        const gpv = sil.neckGap, el = $('gap'), bz = p.gora === 'bez'; el.className = 'float' + (gpv < (bz ? 2 : 3) ? ' low' : '');
+        const gpv = sil.neckGap, el = $('gap'), bz = p.gora === 'bez'; el.className = 'fitn' + (gpv < (bz ? 2 : 3) ? ' low' : '');
         el.append(bz ? 'Góra kończy się na środku ' : gpv >= 0 ? 'Dekolt kończy się ' : 'Dekolt schodzi ', Object.assign(document.createElement('b'), { textContent: f1(Math.abs(gpv)) + ' cm' }), gpv >= 0 ? ' nad linią biustu' : ' poniżej linii biustu');
       }
     }
@@ -1417,9 +1416,9 @@
       const r = g3.canvas.getBoundingClientRect(), hgt = Math.max(200, r.height), asp = Math.max(0.3, r.width / hgt);
       const top = useFig ? a.Dts + headLen + 2 : a.Dts + 6, bot = useFig ? floor - 2 : Math.max(floor, -p.dl - 14);
       let hw = useFig ? 4.97 * fs + 4 : 26; for (let i = 0; i < 16; i++) hw = Math.max(hw, Math.abs(sect(-p.dl, (i / 16) * TAU)[0]) + 3);
-      const padT = Math.min(0.2, 100 / hgt), padB = Math.min(0.4, ($('tune').offsetHeight + 24) / hgt), avail = 1 - padT - padB;
+      const padT = Math.min(0.2, 100 / hgt), padB = Math.min(0.4, 24 / hgt), avail = 1 - padT - padB;
       const V = Math.max(((top - bot) * 1.06) / avail, (2 * hw * 1.1) / asp), fd = V / (2 * Math.tan((16 * Math.PI) / 180));
-      const key = [state.style, p.dl, p.kn, state.figure, H, Math.round(hw), Math.round(hgt), Math.round(r.width), $('tune').offsetHeight].join('|');
+      const key = [state.style, p.dl, p.kn, state.figure, H, Math.round(hw), Math.round(hgt), Math.round(r.width)].join('|');
       if (refit || g3.frameKey !== key) {
         const z = refit || !g3.frameKey ? 1 : Math.max(0.2, Math.min(8, fitDist / cam.dist));
         g3.frameKey = key; fitDist = fd; cam.dist = fd / z; g3.mid = (top + bot) / 2 + (padT + avail / 2 - 0.5) * V;
@@ -1437,11 +1436,13 @@
       const row = el('div', null, 'ly'), hd = el('b', W.ROLES[L.role]);
       if (i) { const x = el('button', '✕', 'x'); x.setAttribute('aria-label', 'Usuń warstwę'); x.addEventListener('click', () => { state.layers.splice(i, 1); persist(); draw(true); }); hd.append(x); }
       row.append(hd);
-      const fs = document.createElement('select'); fs.setAttribute('aria-label', 'Tkanina warstwy');
-      for (const k in FAB) { const o = el('option', FAB[k].name); o.value = k; fs.append(o); }
-      fs.value = i ? L.fabric : state.fabric;
-      fs.addEventListener('change', () => { if (i) L.fabric = fs.value; else { state.fabric = fs.value; fillForm(); } persist(); draw(); });
-      row.append(fs);
+      if (!i) { // tkaninę wierzchu wybiera się tylko w panelu Tkanina
+        const ln = el('button', (FAB[state.fabric] || FAB.bawelna).name, 'lnk'); ln.title = 'Zmień w panelu Tkanina'; ln.addEventListener('click', () => goPanel('tkanina')); row.append(ln);
+      } else {
+        const fs = document.createElement('select'); fs.setAttribute('aria-label', 'Tkanina warstwy');
+        for (const k in FAB) { const o = el('option', FAB[k].name); o.value = k; fs.append(o); }
+        fs.value = L.fabric; fs.addEventListener('change', () => { L.fabric = fs.value; persist(); draw(); }); row.append(fs);
+      }
       if (i && dress && (L.role === 'podszewka' || L.role === 'narzutka')) {
         const zs = document.createElement('select'); zs.setAttribute('aria-label', 'Zakres warstwy');
         for (const [v, t] of [['calosc', 'Cała sukienka'], ['gora', 'Tylko góra'], ['dol', 'Tylko dół']]) { const o = el('option', t); o.value = v; zs.append(o); }
@@ -2038,11 +2039,12 @@
     const nextC = (from, step) => { let c = from; for (let s = 0; s < n; s++) { c = (c + step) % n; if (cset.includes(c)) return c; } return from; }, nxt = nextC(iB, 1), prv = nextC(iA, n - 1);
     // który koniec linii środka jest przy dekolcie: przy dole sąsiednia krawędź jest szeroka i biegnie w poprzek
     const wB = Math.abs(Q[nxt][0] - Q[iB][0]), wA = Math.abs(Q[prv][0] - Q[iA][0]);
-    let iTop = wA < wB ? iA : iB, iBot = wA < wB ? iB : iA; if (Q[iTop][1] > Q[iBot][1]) Q = Q.map((p) => [p[0], -p[1]]);
+    let iTop = wA < wB ? iA : iB, iBot = wA < wB ? iB : iA, ys = 1; if (Q[iTop][1] > Q[iBot][1]) { Q = Q.map((p) => [p[0], -p[1]]); ys = -1; }
+    const ax0 = { o: A, dir: [ys * sa, ys * ca] }; // oś długości w układzie arkusza: od dekoltu w stronę dołu
     // obejście od dekoltu do dołu z pominięciem linii środka (ta leży między narożnikami iA i iB w kierunku rosnących numerów)
     const order = []; { const step = iTop === iB ? 1 : n - 1; let c = iTop; for (let s = 0; s <= n; s++) { order.push(c); if (c === iBot) break; c = (c + step) % n; } }
     const W = order.map((i) => Q[i]), isC = new Set(cset), cor = []; order.forEach((i, t) => { if (isC.has(i) && t > 0 && t < order.length - 1) cor.push(t); });
-    if (cor.length < 4) return { err: 'nie umiem wskazać ramienia i pachy' };
+    if (cor.length < 4) return { err: 'nie umiem wskazać ramienia i pachy', ax0, top: W[0][1], bot: W[W.length - 1][1] };
     // narożnik dołu przy boku: najdalej od środka wśród narożników na wysokości dołu
     const yB = W[W.length - 1][1], hgt = yB - Math.min(...W.map((p) => p[1])); let hc = -1;
     for (const t of cor) if (W[t][1] > yB - 0.15 * hgt && (hc < 0 || W[t][0] > W[hc][0])) hc = t;
@@ -2053,7 +2055,7 @@
     const dy = -top - W[np][1], T = (a) => a.map((p) => [Math.max(0, p[0]), p[1] + dy]);
     const ed = [{ pts: T(W.slice(0, np + 1)), tag: 'neck' }, { pts: T(sh), tag: 'shoulder' }, { pts: T(W.slice(sp, ua + 1)), tag: 'arm' }, { pts: T(W.slice(ua, hc + 1)), tag: 'side' }, { pts: T(W.slice(hc)), tag: 'bottom' }];
     ed.push({ pts: [[0, ed[4].pts[ed[4].pts.length - 1][1]], [0, ed[0].pts[0][1]]], tag: 'center' }); ed[4].pts[ed[4].pts.length - 1][0] = 0; ed[0].pts[0][0] = 0;
-    return { ed, sh: shL, arm: swLen(ed[2].pts), side: swLen(ed[3].pts), hem: W[hc][0], bot: Math.max(...ed.map((e) => Math.max(...e.pts.map((p) => p[1])))), sa: R.sa };
+    return { ax: { o: ax0.o, dir: ax0.dir, ua: W[ua][1], hem: Math.min(...W.slice(hc).map((p) => p[1])) }, cb: W[W.length - 1][1] - W[0][1], ed, sh: shL, arm: swLen(ed[2].pts), side: swLen(ed[3].pts), hem: W[hc][0], bot: Math.max(...ed.map((e) => Math.max(...e.pts.map((p) => p[1])))), sa: R.sa };
   }
   // rękaw: główka u góry (środek na x = 0, szczyt na y = 0), szwy rękawa po bokach, dół na dole
   function swSleeve(pc) {
@@ -2065,7 +2067,7 @@
     if (best < 0 || bb < 4) return { err: 'nie znalazłam główki rękawa' };
     const i0 = C.idx[best], i1 = C.idx[(best + 1) % k], A = pts[i0], B = pts[i1], ang = -Math.atan2(B[1] - A[1], B[0] - A[0]), ca = Math.cos(ang), sa = Math.sin(ang);
     let Q = pts.map((p, i) => [(p[0] - A[0]) * ca - (p[1] - A[1]) * sa, (p[0] - A[0]) * sa + (p[1] - A[1]) * ca, C.idx.includes(i) ? 1 : 0]); // trzecia liczba: czy punkt jest narożnikiem
-    const cap0 = swSub(Q, i0, i1); if (cap0.reduce((s, p) => s + p[1], 0) > 0) Q = Q.map((p) => [p[0], -p[1], p[2]]); // główka ma być nad cięciwą
+    let ys = 1; const cap0 = swSub(Q, i0, i1); if (cap0.reduce((s, p) => s + p[1], 0) > 0) { Q = Q.map((p) => [p[0], -p[1], p[2]]); ys = -1; } // główka ma być nad cięciwą
     let cap = swSub(Q, i0, i1), rest = swSub(Q, i1, i0); if (cap[0][0] > cap[cap.length - 1][0]) { cap = cap.slice().reverse(); rest = rest.slice().reverse(); } // obejście: tył pachy, szczyt, przód pachy, szew, dół, szew
     let ti = 0; cap.forEach((p, t) => { if (p[1] < cap[ti][1]) ti = t; }); const ox = cap[ti][0], oy = cap[ti][1], T = (a) => a.map((p) => [p[0] - ox, p[1] - oy, p[2]]);
     cap = T(cap); rest = T(rest); // rest: od przodu pachy przez dół do tyłu pachy
@@ -2074,7 +2076,7 @@
     const Lb = Math.max(...rest.map((p) => p[1]));
     const cl = (arr) => arr.map((p) => [p[0], p[1]]);
     const ed = [{ pts: cap.slice(0, ti + 1), tag: 'capB' }, { pts: cap.slice(ti), tag: 'capF' }, { pts: rest.slice(0, h1 + 1), tag: 'underF' }, { pts: rest.slice(h1, h2 + 1), tag: 'bottom' }, { pts: rest.slice(h2), tag: 'underB' }].map((e) => ({ pts: cl(e.pts), tag: e.tag }));
-    return { ed, H, L: Lb, bic: cap[cap.length - 1][0] - cap[0][0], hem: Math.hypot(rest[h2][0] - rest[h1][0], rest[h2][1] - rest[h1][1]), cap: swLen(cap), sa: R.sa };
+    return { ax: { o: A, dir: [ys * sa, ys * ca], ua: 0, hem: Math.min(rest[h1][1], rest[h2][1]) + oy }, ed, H, L: Lb, bic: cap[cap.length - 1][0] - cap[0][0], hem: Math.hypot(rest[h2][0] - rest[h1][0], rest[h2][1] - rest[h1][1]), cap: swLen(cap), sa: R.sa };
   }
   const SW_ROLE = [{ r: 'F', re: /prz[oó]d|front/i }, { r: 'B', re: /ty[lł]|back/i }, { r: 'S', re: /r[eę]kaw|sleeve/i }], SW_NOT = /odszyci|facing|podszew|lining|mankiet|cuff|lam[oó]w|binding|d[oó][lł]|skirt|falban|ko[lł]nierz|collar|rami[aą]cz|strap|pas|band|klin|godet|tren|train|skrzyd/i;
   // zszyte elementy wczytanego wykroju albo powód, dla którego podglądu nie będzie
@@ -2094,16 +2096,58 @@
     const mk = (id, o) => ({ id, ed: o.ed, prims: [] }), pieces = [mk('przod', F), mk('tyl', B)]; if (slOk) pieces.push(mk('stanik-rekaw', S));
     return { pieces, dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: slOk ? { L: S.L, bic: S.bic, hem: S.hem, H: S.H, puff: false, ruf: 0 } : null, gather, skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: pick.S && !slOk ? S.err : '', sa: F.sa };
   }
-  window.__sw = { impSew, swBodice, swSleeve, swCorners, swRing }; // tylko do testów
+  // ---------- długość wczytanego wykroju ----------
+  // Element jest rozcinany w poprzek pod pachą i rozsuwany (albo zsuwany) wzdłuż własnej osi, tak jak na linii „tu wydłuż albo skróć”.
+  // Dół, szerokość dołu i wszystko nad pachą zostają bez zmian, szew boczny się prostuje.
+  function swAxis(pc, role) {
+    let r; try { r = role === 'S' ? swSleeve(pc) : swBodice(pc, 0); } catch (e) { return null; }
+    if (r && r.ax) { const cut = r.ax.ua + 0.15 * (r.ax.hem - r.ax.ua), room = r.ax.hem - cut; return room > 2 ? { o: r.ax.o, dir: r.ax.dir, cut, room } : null; }
+    // fason bez ramienia i pachy (np. na ramiączkach): wystarczy linia środka; tnę w dolnej połowie
+    if (r && r.ax0 && r.bot - r.top > 12) { const len = r.bot - r.top, cut = r.top + 0.6 * len; return { o: r.ax0.o, dir: r.ax0.dir, cut, room: 0.35 * len, loose: true }; }
+    // ostatnia deska: wydłużony element bez rozpoznanej linii środka. Oś biegnie wzdłuż dłuższego boku, a dół jest tam, gdzie element jest szerszy
+    if (role !== 'S') {
+      const pts = []; for (const q of pc.prims) if (q.pts && q.s === 'cut') for (const p of q.pts) pts.push(p); if (pts.length < 6) return null;
+      const b = pc.box, w = b.x1 - b.x0, h = b.y1 - b.y0, vert = h >= w, len = vert ? h : w; if (len < 1.3 * Math.min(w, h) || len < 20) return null;
+      const tOf = (p) => (vert ? p[1] - b.y0 : p[0] - b.x0), sOf = (p) => (vert ? p[0] : p[1]), span = (lo, hi) => { let a = 1e9, c = -1e9; for (const p of pts) { const t = tOf(p); if (t >= lo && t <= hi) { a = Math.min(a, sOf(p)); c = Math.max(c, sOf(p)); } } return c > a ? c - a : 0; };
+      const wA = span(0, 0.2 * len), wB = span(0.8 * len, len), down = wB >= wA, dir = vert ? [0, down ? 1 : -1] : [down ? 1 : -1, 0], o = down ? [b.x0, b.y0] : [b.x1, b.y1];
+      return { o, dir, cut: 0.6 * len, room: 0.35 * len, loose: true };
+    }
+    return null;
+  }
+  function swStretch(pc, ax, d) {
+    const mv = (x, y) => { const t = (x - ax.o[0]) * ax.dir[0] + (y - ax.o[1]) * ax.dir[1]; if (t <= ax.cut) return [x, y]; const s = d >= 0 ? d : Math.max(ax.cut - t, d); return [x + ax.dir[0] * s, y + ax.dir[1] * s]; };
+    // przy skracaniu punkty z wyciętego pasa znikają, a linia łączy się prosto nad nim i pod nim (zsunięte na linię cięcia robiłyby schodek na skośnym szwie)
+    const gone = (p) => { if (d >= 0) return false; const t = (p[0] - ax.o[0]) * ax.dir[0] + (p[1] - ax.o[1]) * ax.dir[1]; return t > ax.cut && t < ax.cut - d; };
+    const line = (pts) => { const n = pts.length, closed = n > 3 && Math.hypot(pts[0][0] - pts[n - 1][0], pts[0][1] - pts[n - 1][1]) < 0.3, keep = pts.filter((p) => !gone(p)).map((p) => mv(p[0], p[1])); if (keep.length < 2 || (closed && keep.length < 4)) return pts.map((p) => mv(p[0], p[1])); if (closed && Math.hypot(keep[0][0] - keep[keep.length - 1][0], keep[0][1] - keep[keep.length - 1][1]) > 0.3) keep.push([keep[0][0], keep[0][1]]); return keep; };
+    const prims = pc.prims.map((q) => (q.pts ? Object.assign({}, q, { pts: line(q.pts) }) : typeof q.x === 'number' ? (() => { const m = mv(q.x, q.y); return Object.assign({}, q, { x: m[0], y: m[1] }); })() : q));
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const q of prims) if (q.pts && q.s === 'cut') for (const p of q.pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+    if (x1 < x0) return pc;
+    return Object.assign({}, pc, { prims, box: { x0, y0, x1, y1 }, w: x1 - x0, h: y1 - y0 });
+  }
+  const swRoleOf = (pc) => { const nm = String(pc.name || ''); return pc.role ? pc.role : SW_NOT.test(nm) ? '' : (SW_ROLE.find((x) => x.re.test(nm)) || { r: '' }).r; };
+  // elementy po zmianie długości oraz to, co panel ma pokazać: czy korpus i rękaw dają się zmieniać i w jakich granicach
+  function impAdj(imp) {
+    const pcs = (imp && imp.pieces) || [], adj = (imp && imp.adj) || {}, out = { pieces: pcs, body: null, sleeve: null };
+    const grp = (roles) => { const g = pcs.map((pc, i) => ({ i, pc, r: swRoleOf(pc) })).filter((x) => roles.includes(x.r)).map((x) => Object.assign(x, { ax: swAxis(x.pc, x.r) })); return g.length && g.every((x) => x.ax) ? g : null; };
+    const res = pcs.slice();
+    for (const [key, roles, val] of /** @type {any[][]} */ ([['body', ['F', 'B'], +adj.b || 0], ['sleeve', ['S'], +adj.s || 0]])) {
+      const g = grp(roles); if (!g || (key === 'body' && !(g.some((x) => x.r === 'F') && g.some((x) => x.r === 'B')))) continue;
+      const min = -Math.floor(Math.min(...g.map((x) => x.ax.room)) * 0.85 * 2) / 2, d = Math.max(min, val);
+      out[key] = { min, d, loose: g.some((x) => x.ax.loose), n: g.length };
+      if (d) for (const x of g) res[x.i] = swStretch(x.pc, x.ax, d);
+    }
+    out.pieces = res; return out;
+  }
+  window.__sw = { impAdj, swAxis, impSew, swBodice, swSleeve, swCorners, swRing }; // tylko do testów
   // ---------- paleta poleceń (⌘K) ----------
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
   let cmdSel = 0, cmdItems = [];
   function cmdAll() {
     const L = [], add = (t, g, run) => L.push({ t, g, run });
-    for (const k of ['proj', 'modelka', 'fason', 'wymiary', 'tkanina', 'warstwy', 'szwy', 'druk', 'insp']) add(PT[k], 'Panel', () => goPanel(k));
+    for (const k of ['proj', 'modelka', 'fason', 'wymiary', 'tkanina', 'druk']) add(PT[k], 'Panel', () => goPanel(k));
     add('Pulpit', 'Widok', () => homeShow(true)); add('Nowy projekt z inspiracji', 'Akcja', () => newFromInsp(null));
     add('Zapisz PDF', 'Akcja', () => $('pdf').click()); add('Cofnij', 'Akcja', () => histGo(-1)); add('Ponów', 'Akcja', () => histGo(1));
-    add('Nowy projekt', 'Akcja', () => { goPanel('proj'); $('prNew').click(); }); add('Duplikuj projekt', 'Akcja', () => { goPanel('proj'); $('prDup').click(); });
+    add('Nowy projekt', 'Akcja', () => homeShow(true)); add('Warstwy', 'Panel', () => goPanel('druk')); add('Zapasy na szwy', 'Panel', () => { goPanel('druk'); $('szwyBox').scrollIntoView({ block: 'start' }); }); add('Duplikuj projekt', 'Akcja', () => { goPanel('proj'); $('prDup').click(); });
     add('Pokaż wykrój', 'Widok', () => setView('2d')); add('Pokaż podgląd 3D', 'Widok', () => setView('3d'));
     add(state.theme === 'dark' ? 'Jasny motyw' : 'Ciemny motyw', 'Widok', () => $('theme').click());
     add(state.figure ? 'Schowaj sylwetkę' : 'Pokaż sylwetkę', 'Widok', () => { if (state.view !== '3d') setView('3d'); $('tFig').click(); });
@@ -2211,9 +2255,8 @@
     const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {};
     homeShow(false); addProj('Projekt z inspiracji', sn); goPanel('insp'); if (e) inspOpen(e); else { $('inRes').textContent = ''; $('inMoreBox').hidden = true; }
   }
-  $('hNew').addEventListener('click', () => { homeShow(false); $('prNew').click(); if (state.view !== '3d') setView('3d'); goPanel('fason'); draw(true); });
+  $('hNew').addEventListener('click', () => { homeShow(false); newProj(); if (state.view !== '3d') setView('3d'); goPanel('fason'); draw(true); });
   $('hInsp').addEventListener('click', () => newFromInsp(null));
-  $('prInsp').addEventListener('click', () => newFromInsp(null));
   $('prHome').addEventListener('click', () => homeShow(true));
   $('logoB').addEventListener('click', () => homeShow($('home').hidden));
   // ekran startowy: znika po niecałych trzech sekundach albo po kliknięciu
@@ -2258,7 +2301,7 @@
     } else if (desktop.install) {
       try {
         const stI = await desktop.install.state(); instState = stI;
-        if (stI === 'available') { const go = () => desktop.install.request().catch(() => say('Instalacja się nie rozpoczęła. Spróbuj jeszcze raz z aplikacji Claude na komputerze.')); $('install').hidden = false; $('install').addEventListener('click', go); $('hInst').addEventListener('click', go); }
+        if (stI === 'available') { const go = () => desktop.install.request().catch(() => say('Instalacja się nie rozpoczęła. Spróbuj jeszcze raz z aplikacji Claude na komputerze.')); $('hInst').addEventListener('click', go); }
         instFill();
       } catch (e) {}
     }

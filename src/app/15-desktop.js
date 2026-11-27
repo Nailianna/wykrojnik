@@ -32,7 +32,7 @@
     } else if (desktop.install) {
       try {
         const stI = await desktop.install.state(); instState = stI;
-        if (stI === 'available') { const go = () => desktop.install.request().catch(() => say('Instalacja się nie rozpoczęła. Spróbuj jeszcze raz z aplikacji Claude na komputerze.')); $('install').hidden = false; $('install').addEventListener('click', go); $('hInst').addEventListener('click', go); }
+        if (stI === 'available') { const go = () => desktop.install.request().catch(() => say('Instalacja się nie rozpoczęła. Spróbuj jeszcze raz z aplikacji Claude na komputerze.')); $('hInst').addEventListener('click', go); }
         instFill();
       } catch (e) {}
     }

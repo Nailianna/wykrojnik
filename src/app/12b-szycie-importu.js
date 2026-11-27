@@ -57,11 +57,12 @@
     const nextC = (from, step) => { let c = from; for (let s = 0; s < n; s++) { c = (c + step) % n; if (cset.includes(c)) return c; } return from; }, nxt = nextC(iB, 1), prv = nextC(iA, n - 1);
     // który koniec linii środka jest przy dekolcie: przy dole sąsiednia krawędź jest szeroka i biegnie w poprzek
     const wB = Math.abs(Q[nxt][0] - Q[iB][0]), wA = Math.abs(Q[prv][0] - Q[iA][0]);
-    let iTop = wA < wB ? iA : iB, iBot = wA < wB ? iB : iA; if (Q[iTop][1] > Q[iBot][1]) Q = Q.map((p) => [p[0], -p[1]]);
+    let iTop = wA < wB ? iA : iB, iBot = wA < wB ? iB : iA, ys = 1; if (Q[iTop][1] > Q[iBot][1]) { Q = Q.map((p) => [p[0], -p[1]]); ys = -1; }
+    const ax0 = { o: A, dir: [ys * sa, ys * ca] }; // oś długości w układzie arkusza: od dekoltu w stronę dołu
     // obejście od dekoltu do dołu z pominięciem linii środka (ta leży między narożnikami iA i iB w kierunku rosnących numerów)
     const order = []; { const step = iTop === iB ? 1 : n - 1; let c = iTop; for (let s = 0; s <= n; s++) { order.push(c); if (c === iBot) break; c = (c + step) % n; } }
     const W = order.map((i) => Q[i]), isC = new Set(cset), cor = []; order.forEach((i, t) => { if (isC.has(i) && t > 0 && t < order.length - 1) cor.push(t); });
-    if (cor.length < 4) return { err: 'nie umiem wskazać ramienia i pachy' };
+    if (cor.length < 4) return { err: 'nie umiem wskazać ramienia i pachy', ax0, top: W[0][1], bot: W[W.length - 1][1] };
     // narożnik dołu przy boku: najdalej od środka wśród narożników na wysokości dołu
     const yB = W[W.length - 1][1], hgt = yB - Math.min(...W.map((p) => p[1])); let hc = -1;
     for (const t of cor) if (W[t][1] > yB - 0.15 * hgt && (hc < 0 || W[t][0] > W[hc][0])) hc = t;
@@ -72,7 +73,7 @@
     const dy = -top - W[np][1], T = (a) => a.map((p) => [Math.max(0, p[0]), p[1] + dy]);
     const ed = [{ pts: T(W.slice(0, np + 1)), tag: 'neck' }, { pts: T(sh), tag: 'shoulder' }, { pts: T(W.slice(sp, ua + 1)), tag: 'arm' }, { pts: T(W.slice(ua, hc + 1)), tag: 'side' }, { pts: T(W.slice(hc)), tag: 'bottom' }];
     ed.push({ pts: [[0, ed[4].pts[ed[4].pts.length - 1][1]], [0, ed[0].pts[0][1]]], tag: 'center' }); ed[4].pts[ed[4].pts.length - 1][0] = 0; ed[0].pts[0][0] = 0;
-    return { ed, sh: shL, arm: swLen(ed[2].pts), side: swLen(ed[3].pts), hem: W[hc][0], bot: Math.max(...ed.map((e) => Math.max(...e.pts.map((p) => p[1])))), sa: R.sa };
+    return { ax: { o: ax0.o, dir: ax0.dir, ua: W[ua][1], hem: Math.min(...W.slice(hc).map((p) => p[1])) }, cb: W[W.length - 1][1] - W[0][1], ed, sh: shL, arm: swLen(ed[2].pts), side: swLen(ed[3].pts), hem: W[hc][0], bot: Math.max(...ed.map((e) => Math.max(...e.pts.map((p) => p[1])))), sa: R.sa };
   }
   // rękaw: główka u góry (środek na x = 0, szczyt na y = 0), szwy rękawa po bokach, dół na dole
   function swSleeve(pc) {
@@ -84,7 +85,7 @@
     if (best < 0 || bb < 4) return { err: 'nie znalazłam główki rękawa' };
     const i0 = C.idx[best], i1 = C.idx[(best + 1) % k], A = pts[i0], B = pts[i1], ang = -Math.atan2(B[1] - A[1], B[0] - A[0]), ca = Math.cos(ang), sa = Math.sin(ang);
     let Q = pts.map((p, i) => [(p[0] - A[0]) * ca - (p[1] - A[1]) * sa, (p[0] - A[0]) * sa + (p[1] - A[1]) * ca, C.idx.includes(i) ? 1 : 0]); // trzecia liczba: czy punkt jest narożnikiem
-    const cap0 = swSub(Q, i0, i1); if (cap0.reduce((s, p) => s + p[1], 0) > 0) Q = Q.map((p) => [p[0], -p[1], p[2]]); // główka ma być nad cięciwą
+    let ys = 1; const cap0 = swSub(Q, i0, i1); if (cap0.reduce((s, p) => s + p[1], 0) > 0) { Q = Q.map((p) => [p[0], -p[1], p[2]]); ys = -1; } // główka ma być nad cięciwą
     let cap = swSub(Q, i0, i1), rest = swSub(Q, i1, i0); if (cap[0][0] > cap[cap.length - 1][0]) { cap = cap.slice().reverse(); rest = rest.slice().reverse(); } // obejście: tył pachy, szczyt, przód pachy, szew, dół, szew
     let ti = 0; cap.forEach((p, t) => { if (p[1] < cap[ti][1]) ti = t; }); const ox = cap[ti][0], oy = cap[ti][1], T = (a) => a.map((p) => [p[0] - ox, p[1] - oy, p[2]]);
     cap = T(cap); rest = T(rest); // rest: od przodu pachy przez dół do tyłu pachy
@@ -93,7 +94,7 @@
     const Lb = Math.max(...rest.map((p) => p[1]));
     const cl = (arr) => arr.map((p) => [p[0], p[1]]);
     const ed = [{ pts: cap.slice(0, ti + 1), tag: 'capB' }, { pts: cap.slice(ti), tag: 'capF' }, { pts: rest.slice(0, h1 + 1), tag: 'underF' }, { pts: rest.slice(h1, h2 + 1), tag: 'bottom' }, { pts: rest.slice(h2), tag: 'underB' }].map((e) => ({ pts: cl(e.pts), tag: e.tag }));
-    return { ed, H, L: Lb, bic: cap[cap.length - 1][0] - cap[0][0], hem: Math.hypot(rest[h2][0] - rest[h1][0], rest[h2][1] - rest[h1][1]), cap: swLen(cap), sa: R.sa };
+    return { ax: { o: A, dir: [ys * sa, ys * ca], ua: 0, hem: Math.min(rest[h1][1], rest[h2][1]) + oy }, ed, H, L: Lb, bic: cap[cap.length - 1][0] - cap[0][0], hem: Math.hypot(rest[h2][0] - rest[h1][0], rest[h2][1] - rest[h1][1]), cap: swLen(cap), sa: R.sa };
   }
   const SW_ROLE = [{ r: 'F', re: /prz[oó]d|front/i }, { r: 'B', re: /ty[lł]|back/i }, { r: 'S', re: /r[eę]kaw|sleeve/i }], SW_NOT = /odszyci|facing|podszew|lining|mankiet|cuff|lam[oó]w|binding|d[oó][lł]|skirt|falban|ko[lł]nierz|collar|rami[aą]cz|strap|pas|band|klin|godet|tren|train|skrzyd/i;
   // zszyte elementy wczytanego wykroju albo powód, dla którego podglądu nie będzie
@@ -113,4 +114,46 @@
     const mk = (id, o) => ({ id, ed: o.ed, prims: [] }), pieces = [mk('przod', F), mk('tyl', B)]; if (slOk) pieces.push(mk('stanik-rekaw', S));
     return { pieces, dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: slOk ? { L: S.L, bic: S.bic, hem: S.hem, H: S.H, puff: false, ruf: 0 } : null, gather, skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: pick.S && !slOk ? S.err : '', sa: F.sa };
   }
-  window.__sw = { impSew, swBodice, swSleeve, swCorners, swRing }; // tylko do testów
+  // ---------- długość wczytanego wykroju ----------
+  // Element jest rozcinany w poprzek pod pachą i rozsuwany (albo zsuwany) wzdłuż własnej osi, tak jak na linii „tu wydłuż albo skróć”.
+  // Dół, szerokość dołu i wszystko nad pachą zostają bez zmian, szew boczny się prostuje.
+  function swAxis(pc, role) {
+    let r; try { r = role === 'S' ? swSleeve(pc) : swBodice(pc, 0); } catch (e) { return null; }
+    if (r && r.ax) { const cut = r.ax.ua + 0.15 * (r.ax.hem - r.ax.ua), room = r.ax.hem - cut; return room > 2 ? { o: r.ax.o, dir: r.ax.dir, cut, room } : null; }
+    // fason bez ramienia i pachy (np. na ramiączkach): wystarczy linia środka; tnę w dolnej połowie
+    if (r && r.ax0 && r.bot - r.top > 12) { const len = r.bot - r.top, cut = r.top + 0.6 * len; return { o: r.ax0.o, dir: r.ax0.dir, cut, room: 0.35 * len, loose: true }; }
+    // ostatnia deska: wydłużony element bez rozpoznanej linii środka. Oś biegnie wzdłuż dłuższego boku, a dół jest tam, gdzie element jest szerszy
+    if (role !== 'S') {
+      const pts = []; for (const q of pc.prims) if (q.pts && q.s === 'cut') for (const p of q.pts) pts.push(p); if (pts.length < 6) return null;
+      const b = pc.box, w = b.x1 - b.x0, h = b.y1 - b.y0, vert = h >= w, len = vert ? h : w; if (len < 1.3 * Math.min(w, h) || len < 20) return null;
+      const tOf = (p) => (vert ? p[1] - b.y0 : p[0] - b.x0), sOf = (p) => (vert ? p[0] : p[1]), span = (lo, hi) => { let a = 1e9, c = -1e9; for (const p of pts) { const t = tOf(p); if (t >= lo && t <= hi) { a = Math.min(a, sOf(p)); c = Math.max(c, sOf(p)); } } return c > a ? c - a : 0; };
+      const wA = span(0, 0.2 * len), wB = span(0.8 * len, len), down = wB >= wA, dir = vert ? [0, down ? 1 : -1] : [down ? 1 : -1, 0], o = down ? [b.x0, b.y0] : [b.x1, b.y1];
+      return { o, dir, cut: 0.6 * len, room: 0.35 * len, loose: true };
+    }
+    return null;
+  }
+  function swStretch(pc, ax, d) {
+    const mv = (x, y) => { const t = (x - ax.o[0]) * ax.dir[0] + (y - ax.o[1]) * ax.dir[1]; if (t <= ax.cut) return [x, y]; const s = d >= 0 ? d : Math.max(ax.cut - t, d); return [x + ax.dir[0] * s, y + ax.dir[1] * s]; };
+    // przy skracaniu punkty z wyciętego pasa znikają, a linia łączy się prosto nad nim i pod nim (zsunięte na linię cięcia robiłyby schodek na skośnym szwie)
+    const gone = (p) => { if (d >= 0) return false; const t = (p[0] - ax.o[0]) * ax.dir[0] + (p[1] - ax.o[1]) * ax.dir[1]; return t > ax.cut && t < ax.cut - d; };
+    const line = (pts) => { const n = pts.length, closed = n > 3 && Math.hypot(pts[0][0] - pts[n - 1][0], pts[0][1] - pts[n - 1][1]) < 0.3, keep = pts.filter((p) => !gone(p)).map((p) => mv(p[0], p[1])); if (keep.length < 2 || (closed && keep.length < 4)) return pts.map((p) => mv(p[0], p[1])); if (closed && Math.hypot(keep[0][0] - keep[keep.length - 1][0], keep[0][1] - keep[keep.length - 1][1]) > 0.3) keep.push([keep[0][0], keep[0][1]]); return keep; };
+    const prims = pc.prims.map((q) => (q.pts ? Object.assign({}, q, { pts: line(q.pts) }) : typeof q.x === 'number' ? (() => { const m = mv(q.x, q.y); return Object.assign({}, q, { x: m[0], y: m[1] }); })() : q));
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const q of prims) if (q.pts && q.s === 'cut') for (const p of q.pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+    if (x1 < x0) return pc;
+    return Object.assign({}, pc, { prims, box: { x0, y0, x1, y1 }, w: x1 - x0, h: y1 - y0 });
+  }
+  const swRoleOf = (pc) => { const nm = String(pc.name || ''); return pc.role ? pc.role : SW_NOT.test(nm) ? '' : (SW_ROLE.find((x) => x.re.test(nm)) || { r: '' }).r; };
+  // elementy po zmianie długości oraz to, co panel ma pokazać: czy korpus i rękaw dają się zmieniać i w jakich granicach
+  function impAdj(imp) {
+    const pcs = (imp && imp.pieces) || [], adj = (imp && imp.adj) || {}, out = { pieces: pcs, body: null, sleeve: null };
+    const grp = (roles) => { const g = pcs.map((pc, i) => ({ i, pc, r: swRoleOf(pc) })).filter((x) => roles.includes(x.r)).map((x) => Object.assign(x, { ax: swAxis(x.pc, x.r) })); return g.length && g.every((x) => x.ax) ? g : null; };
+    const res = pcs.slice();
+    for (const [key, roles, val] of /** @type {any[][]} */ ([['body', ['F', 'B'], +adj.b || 0], ['sleeve', ['S'], +adj.s || 0]])) {
+      const g = grp(roles); if (!g || (key === 'body' && !(g.some((x) => x.r === 'F') && g.some((x) => x.r === 'B')))) continue;
+      const min = -Math.floor(Math.min(...g.map((x) => x.ax.room)) * 0.85 * 2) / 2, d = Math.max(min, val);
+      out[key] = { min, d, loose: g.some((x) => x.ax.loose), n: g.length };
+      if (d) for (const x of g) res[x.i] = swStretch(x.pc, x.ax, d);
+    }
+    out.pieces = res; return out;
+  }
+  window.__sw = { impAdj, swAxis, impSew, swBodice, swSleeve, swCorners, swRing }; // tylko do testów

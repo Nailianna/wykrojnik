@@ -44,17 +44,15 @@
     $('nkb').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { state.p.nkb = b.dataset.v2; if (b.dataset.v2 === 'v' && state.p.nb < 6) state.p.nb = 10; fillForm(); persist(); draw(); }));
     const SL = [['zakK', 'Obfitość zakładek', 1.6, 3.5, 'zakl'], ['gr', 'Redukcja talii', 0, 15, 'corset'], ['gh', 'Wysokość nad talią', 5, 14, 'corsetU'], ['gd', 'Długość pod talią z przodu', 5, 16, 'corset'], ['gg', 'Odstęp sznurowania', 0, 10, 'corset'], ['dl', 'Długość od talii', 25, 130, 'len'], ['kn', 'Wysokość kolan od talii', 35, 90, 'rybka'], ['gf', 'Rozkloszowanie klinów', 2, 30, 'kliny'], ['flare', 'Poszerzenie dołu', -6, 30, 'flare'], ['nd', 'Dekolt z przodu', -4, 24, 'straps'], ['nw', 'Szerokość dekoltu', 0, 9, 'straps'],
       ['nb', 'Dekolt z tyłu', 0, 30, 'straps'], ['bh', 'Góra nad linią biustu', 2, 12, 'nostraps'], ['luzG', 'Luz w biuście', -10, 16, 'dress'], ['luzT', 'Luz w talii', -8, 12, 'waist'], ['luzB', 'Luz w biodrach', -12, 16, 'hip']];
-    const TOPK = ['gr', 'gh', 'gd', 'gg', 'nd', 'nw', 'nb', 'bh', 'luzG', 'rekL', 'bok', 'ramW', 'kolW'], tg = {};
-    for (const [id, cap] of [['top', 'Góra'], ['bot', 'Dół']]) { const w = document.createElement('div'), b = document.createElement('b'), gd = document.createElement('div'); w.className = 'tgrp'; w.id = 'tg_' + id; b.textContent = cap; w.append(b, gd); $('tuneG').appendChild(w); tg[id] = gd; }
     SL.push(['rekL', 'Długość rękawa', 12, 75, 'rekLen'], ['bok', 'Zwężenie ramienia', 0, 12, 'straps'], ['ramW', 'Szerokość ramiączka', 0.5, 4, 'ram'], ['kolW', 'Szerokość kołnierza', 2, 12, 'kol']);
     for (const [k, name, mn, mx, cond] of /** @type {any[][]} */ (SL)) {
-      const l = mkEl('label'); l.className = 'sl'; if (cond) l.dataset.if = cond;
-      const top = mkEl('span'), o = mkEl('output'), i = mkEl('input');
-      top.append(name, o); o.id = 'o_' + k; i.type = 'range'; i.min = mn; i.max = mx; i.step = 0.5; i.id = 's_' + k;
+      // suwak siedzi w panelu Dopasowanie pod polem z liczbą; wartość bez własnego pola dostaje cały wiersz
+      const num = $('p_' + k), host = num ? num.closest('label') : null, o = mkEl('output'), i = mkEl('input');
+      o.id = 'o_' + k; i.type = 'range'; i.min = mn; i.max = mx; i.step = 0.5; i.id = 's_' + k; i.setAttribute('aria-label', name);
+      if (host) { i.className = 'rg'; o.hidden = true; host.append(i, o); } else { const l = mkEl('label'), top = mkEl('span'); l.className = 'sl'; top.append(name, o); l.append(top, i); $('zakSl').appendChild(l); }
       i.addEventListener('input', () => { state.p[k] = parseFloat(i.value); { const num = $('p_' + k); if (num) num.value = state.p[k]; } o.textContent = f1(state.p[k]) + ' cm';
         if (k === 'bok' && state.p.bok > 0 && state.p.rek && state.p.rek !== 'brak') { state.p.rek = 'brak'; state.p.falR = false; fillForm(); } // odsłonięte ramiona wykluczają rękawy
         persist(); drawSoon(); });
-      l.append(top, i); tg[TOPK.includes(k) ? 'top' : 'bot'].appendChild(l);
     }
     const box = $('adv');
     for (const k of W.ADV) {
@@ -83,8 +81,7 @@
     $('delP').disabled = state.profiles.length < 2; $('delP').textContent = 'Usuń';
     const fl = state.style === 'pusty' ? {} : flags();
     document.querySelectorAll('[data-if]').forEach((el) => (el.hidden = !fl[el.dataset.if]));
-    document.querySelectorAll('.tgrp').forEach((gq) => { gq.hidden = !Array.from(gq.querySelectorAll('.sl')).some((e) => !e.hidden); gq.querySelector('b').textContent = gq.id === 'tg_top' ? (fl.corset ? 'Gorset' : 'Góra') : fl.dress && !fl.corset ? (state.style.indexOf('to_') === 0 ? 'Długość i luz' : 'Dół') : 'Spódnica'; });
-    $('col').value = state.color; $('fab').value = FAB[state.fabric] ? state.fabric : 'bawelna';
+    $('dolSec').textContent = state.style.indexOf('to_') === 0 ? 'Długość' : 'Dół'; $('dopEmpty').hidden = state.style !== 'pusty'; $('szwyBox').hidden = state.style === 'pusty' || state.style === 'import';
     if (state.print === 'wlasny' && !customImg && !state.printImg) state.print = 'gladka';
     fillFabricPanel(); fillProj(); wishFill(); inspHist(); impFill();
     $('paper').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.pp === state.paper));
@@ -97,11 +94,11 @@
       const tb = ['gory', 'doly', 'suk'].includes(state.fTab) ? state.fTab : tabOf(state.style); state.fTab = tb;
       $('fTab').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.t === tb));
       document.querySelectorAll('[data-ft]').forEach((el) => (el.hidden = el.dataset.ft !== tb));
-      $('fOpts').hidden = tabOf(state.style) !== tb;
+      $('fOpts').hidden = state.style === 'pusty' || state.style === 'import';
       const s = state.style, ryb = s === 'su_rybka', emp = s === 'su_empire', pri = s === 'su_princeska', dk = state.p.dol;
       const cur = ryb ? String(state.p.ff === 0.5 || state.p.ff === 2 ? state.p.ff : 1) : emp || pri ? (dk === 'kolo2' ? '2' : dk === 'kolo' ? '1' : dk === 'polkole' ? '0.5' : emp ? 't' : 'p') : s === 'su_zakl' ? 'z' : s === 'su_2kola' ? '2' : s === 'su_kolo' ? '1' : s === 'su_polkole' ? '0.5' : s === 'su_trapez' ? 't' : 'p';
       $('dolK').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.f === cur));
-      $('dolZ').hidden = ryb || emp || pri; $('dolP').hidden = ryb || emp; $('dolT').hidden = ryb || pri; $('dolP').textContent = pri ? 'Z paneli' : 'Prosty'; $('dolH').textContent = ryb ? 'Falbana' : 'Dół';
+      $('dolZ').hidden = ryb || emp || pri; $('dolP').hidden = ryb || emp; $('dolT').hidden = ryb || pri; $('dolP').textContent = pri ? 'Z paneli' : 'Prosty'; $('dolH').textContent = ryb ? 'Krój falbany' : 'Krój dołu';
     }
     impFill(); // na końcu: wykrój z pliku chowa galerie fasonów, które blok wyżej właśnie pokazał
     document.querySelectorAll('[data-pb]').forEach((c) => (c.checked = !!state.p[c.dataset.pb]));

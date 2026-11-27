@@ -223,11 +223,11 @@
       const base = new T3.Mesh(new T3.CylinderGeometry(22, 24, 2, 40), sm); base.position.y = floor + 1; grp.add(base);
     }
     { // gdzie wypada dół względem kolan i kostek
-      const el = $('hemGap'), dK = hemY - kneeY, dA = hemY - ankleY, dF = hemY - floor; el.textContent = ''; el.className = 'float';
+      const el = $('hemGap'), dK = hemY - kneeY, dA = hemY - ankleY, dF = hemY - floor; el.textContent = ''; el.className = 'fitn';
       const num = (v) => Object.assign(document.createElement('b'), { textContent: f1(Math.abs(v)) + ' cm' });
       if (sil.lower === 'none') { if (sil.crop > 0) el.append('Dół kończy się ', num(sil.crop), ' nad talią'); else el.append('Dół kończy się w talii'); }
       else if (sil.top === 'corset') el.append('Talia w gorsecie ', num(sil.c.waist), ', redukcja ', num(sil.c.gr));
-      else if (dF < -1) { el.className = 'float low'; el.append('Dół leży na podłodze, za długa o ', num(dF)); }
+      else if (dF < -1) { el.className = 'fitn low'; el.append('Dół leży na podłodze, za długa o ', num(dF)); }
       else if (dF < 1.5) el.append('Dół sięga do ziemi');
       else if (Math.abs(dK) < 1) el.append('Dół wypada na wysokości kolan');
       else if (dK > 0) el.append('Dół wypada ', num(dK), ' nad kolanem');
@@ -577,7 +577,7 @@
       }
     }
     // zarys biustu: linia biustu, punkty szczytu i warstwice na manekinie
-    $('gap').textContent = ''; $('gap').className = 'float';
+    $('gap').textContent = ''; $('gap').className = 'fitn';
     if (state.bust && (!useFig || sil.top === 'dress')) {
       const dress = sil.top === 'dress', ink = new T3.MeshBasicMaterial({ color: 0x17171c, side: T3.DoubleSide });
       const bodyPt = (y, phi, o) => { const s = body(y), x = (s.a + o) * Math.cos(phi), sn = Math.sin(phi); return [x, y, s.z + (s.b + o) * sn + body.bump(x, y, sn, false)]; };
@@ -594,7 +594,7 @@
         grp.add(new T3.Line(new T3.BufferGeometry().setFromPoints(pts), lm));
       }
       if (dress && !sil.imported) {
-        const gpv = sil.neckGap, el = $('gap'), bz = p.gora === 'bez'; el.className = 'float' + (gpv < (bz ? 2 : 3) ? ' low' : '');
+        const gpv = sil.neckGap, el = $('gap'), bz = p.gora === 'bez'; el.className = 'fitn' + (gpv < (bz ? 2 : 3) ? ' low' : '');
         el.append(bz ? 'Góra kończy się na środku ' : gpv >= 0 ? 'Dekolt kończy się ' : 'Dekolt schodzi ', Object.assign(document.createElement('b'), { textContent: f1(Math.abs(gpv)) + ' cm' }), gpv >= 0 ? ' nad linią biustu' : ' poniżej linii biustu');
       }
     }
@@ -604,9 +604,9 @@
       const r = g3.canvas.getBoundingClientRect(), hgt = Math.max(200, r.height), asp = Math.max(0.3, r.width / hgt);
       const top = useFig ? a.Dts + headLen + 2 : a.Dts + 6, bot = useFig ? floor - 2 : Math.max(floor, -p.dl - 14);
       let hw = useFig ? 4.97 * fs + 4 : 26; for (let i = 0; i < 16; i++) hw = Math.max(hw, Math.abs(sect(-p.dl, (i / 16) * TAU)[0]) + 3);
-      const padT = Math.min(0.2, 100 / hgt), padB = Math.min(0.4, ($('tune').offsetHeight + 24) / hgt), avail = 1 - padT - padB;
+      const padT = Math.min(0.2, 100 / hgt), padB = Math.min(0.4, 24 / hgt), avail = 1 - padT - padB;
       const V = Math.max(((top - bot) * 1.06) / avail, (2 * hw * 1.1) / asp), fd = V / (2 * Math.tan((16 * Math.PI) / 180));
-      const key = [state.style, p.dl, p.kn, state.figure, H, Math.round(hw), Math.round(hgt), Math.round(r.width), $('tune').offsetHeight].join('|');
+      const key = [state.style, p.dl, p.kn, state.figure, H, Math.round(hw), Math.round(hgt), Math.round(r.width)].join('|');
       if (refit || g3.frameKey !== key) {
         const z = refit || !g3.frameKey ? 1 : Math.max(0.2, Math.min(8, fitDist / cam.dist));
         g3.frameKey = key; fitDist = fd; cam.dist = fd / z; g3.mid = (top + bot) / 2 + (padT + avail / 2 - 0.5) * V;
