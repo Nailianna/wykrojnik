@@ -46,10 +46,12 @@
     return sim;
   }
   function topRun(tp) {
-    if (!g3 || g3.top !== tp || state.view !== '3d') { tp.run = false; return; }
+    const quiet = () => { clearTimeout(tp.bzT); tp.bzT = 0; if (tp.bz) { busyOff(tp.bz); tp.bz = null; } }; // wskaźnik pracy pojawia się dopiero, gdy układanie trwa dłużej niż pół sekundy
+    if (!g3 || g3.top !== tp || state.view !== '3d') { tp.run = false; quiet(); return; }
+    if (!tp.run && !tp.bzT && !tp.bz) tp.bzT = setTimeout(() => { tp.bzT = 0; if (tp.run) tp.bz = busyOn('Układam tkaninę na sylwetce.'); }, 500);
     tp.run = true; tp.S.step(3); tp.done = tp.S.done;
     if (tp.done || tp.S.steps % 24 === 0) { tp.ready = true; render3d(); }
-    if (!tp.done) requestAnimationFrame(() => topRun(tp)); else tp.run = false;
+    if (!tp.done) requestAnimationFrame(() => topRun(tp)); else { tp.run = false; quiet(); }
   }
   function simRun(sim) {
     if (!g3 || g3.sim !== sim || state.view !== '3d') return;

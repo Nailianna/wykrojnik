@@ -42,9 +42,9 @@
     try { const el = document.createElement('a'); el.href = URL.createObjectURL(new Blob([bytes], { type: mime })); el.download = name; el.click(); return true; }
     catch (e) { say('W tym widoku nie mogę zapisać pliku. Zainstaluj Wykrojnik jako aplikację.'); }
   }
-  $('pdf').addEventListener('click', () => {
-    let out;
-    try { out = buildPdf(); } catch (e) { say('Nie udało się zbudować PDF: ' + e.message); return; }
+  $('pdf').addEventListener('click', async () => {
+    let out; const bz = busyOn('Składam PDF z wykrojem.'); await paintTick();
+    try { out = buildPdf(); } catch (e) { say('Nie udało się zbudować PDF: ' + e.message); return; } finally { busyOff(bz); }
     saveFile(out.name, new Uint8Array(out.buf), 'application/pdf', true, 'Zapisałam wykrój w Dokumenty/Wykrojnik/' + out.name + '. Drukuj w skali 100%.', 'Wykrój pobrany. Drukuj w skali 100%.')
       .then((ok) => { const pr = projCur(); if (ok && pr) { persist(true); pr.exported = Date.now(); pr.expV = 2; pr.expKey = snapKey(pr.snap); persist(true); } });
   });

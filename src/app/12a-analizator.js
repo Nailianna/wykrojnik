@@ -91,25 +91,26 @@
   function anClose() { if (anCtl) anCtl.abort(); $('anBox').hidden = true; anSt = null; }
   async function anRun() {
     const st = anSt; if (!st || !st.sheet) return;
-    const stat = (t) => { if (anSt === st) $('anStat').textContent = t; };
+    const stat = (t) => { if (anSt === st) $('anStat').textContent = t; }, bz = busyOn('Sprawdzam połączenie z Claude.');
     anCtl = new AbortController(); $('anGo').disabled = true; $('anRaw').disabled = true; $('anStop').hidden = false; $('anRes').hidden = true;
     try {
       const max = await anLimit(); if (!max) throw { code: 'no_channel' };
-      stat('Czytam linie i napisy z arkusza. Przy dużych plikach trwa to kilkanaście sekund.');
+      stat(''); busySet(bz, 'Czytam linie i napisy z arkusza (krok 1 z 3).'); await paintTick();
       await anLoadLib(); if (!window.PatImport) throw new Error('Nie udało się wczytać modułu importu.');
       if (!st.data) { st.data = await window.PatImport.load(st.sheet); st.size = st.data.sizes[Math.floor(st.data.sizes.length / 2)] || ''; st.pieces = window.PatImport.pick(st.data, st.size); }
       if (!st.pieces.length) throw new Error('Nie znalazłam w tym pliku elementów wykroju.');
       st.instrText = st.instr ? await window.PatImport.text(st.instr, 14000).catch(() => '') : '';
+      busySet(bz, 'Przygotowuję obrazy stron (krok 2 z 3).'); await paintTick();
       const np = st.data.pages.length, tiles = np * 2 <= max ? 2 : 1, marks = st.pieces.reduce((a, pc, i) => a.concat(pc.marks.map((m) => ({ id: 'k' + (i + 1), pn: m.pn, x: m.x, y: m.y }))), []);
       let shots = await window.PatImport.shots(st.sheet, marks, tiles); st.cut = shots.length > max; shots = shots.slice(0, max);
       if (anCtl.signal.aborted) throw { code: 'cancelled' };
-      stat('Claude ogląda arkusz i opisuje elementy. To zwykle trwa od pół minuty do dwóch minut.');
+      busySet(bz, 'Claude ogląda arkusz i opisuje elementy (krok 3 z 3). To zwykle trwa od pół minuty do dwóch minut.');
       const raw = await anAsk(anPrompt(st, shots), shots.map((s) => s.blob), anCtl.signal);
       if (anSt !== st) return;
       st.res = anClean(raw, st.pieces.length, st.data.sizes); stat(''); anShow();
     } catch (e) {
       stat(e && e.code === 'cancelled' ? '' : (e && AN_ERR[e.code]) || (e && !e.code && e.message) || 'Nie udało się połączyć z Claude. Spróbuj jeszcze raz.');
-    } finally { if (anSt === st) { $('anGo').disabled = false; $('anRaw').disabled = false; $('anStop').hidden = true; } }
+    } finally { busyOff(bz); if (anSt === st) { $('anGo').disabled = false; $('anRaw').disabled = false; $('anStop').hidden = true; } }
   }
   function anShow() {
     const st = anSt, r = st.res, m = cur(), box = $('anRes'); box.hidden = false;
@@ -120,7 +121,8 @@
     const sel = $('anSize'); sel.textContent = ''; const rec = anSize(r.rozmiary, m), recL = anLayer(rec, st.data.sizes);
     for (const z of st.data.sizes) { const o = mkEl('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.disabled = !st.data.sizes.length; sel.value = recL || st.size || '';
     const dif = rec ? /** @type {any[][]} */ ([['biust modelki jest', rec.biust, m.og, 'większy', 'mniejszy'], ['talia jest', rec.talia, m.ot, 'większa', 'mniejsza'], ['biodra są', rec.biodra, m.ob, 'większe', 'mniejsze']]).filter((x) => x[1] && x[2] && Math.abs(x[1] - x[2]) >= 3).map((x) => x[0] + ' o ' + f1(Math.abs(x[1] - x[2])) + ' cm ' + (x[2] > x[1] ? x[3] : x[4])) : [];
-    $('anSizeN').textContent = rec ? 'Dla modelki „' + m.name + '” najbliżej jest rozmiar ' + rec.nazwa + (dif.length ? ', ale ' + dif.join(', ') + '.' : '.') + (recL ? '' : ' Nie umiem wskazać jego warstwy w pliku, wybierz ją z listy.') : r.rozmiary.length ? '' : 'Na arkuszu nie znalazłam tabeli rozmiarów.';
+    const one = !st.data.sizes.length; $('anSizeRow').hidden = one;
+    $('anSizeN').textContent = (one ? 'Ten plik zawiera jeden rozmiar. ' : '') + (rec ? (one ? 'Według tabeli dla modelki „' : 'Dla modelki „') + m.name + '” najbliżej jest rozmiar ' + rec.nazwa + (dif.length ? ', ale ' + dif.join(', ') + '.' : '.') + (recL || one ? '' : ' Nie umiem wskazać jego warstwy w pliku, wybierz ją z listy.') : r.rozmiary.length ? '' : 'Nie znalazłam tabeli rozmiarów.');
     // zapas
     $('anSa').value = r.zapas.cm === null ? '' : String(r.zapas.cm).replace('.', ','); $('anSaIn').checked = r.zapas.wliczony !== false;
     $('anSaN').textContent = r.zapas.wyjatki.map((w) => w.gdzie + ': ' + f1(w.cm) + ' cm').join(', ');
@@ -141,7 +143,7 @@
   function anSave() {
     const st = anSt; if (!st || !st.res) return; const r = st.res, d = st.data, size = $('anSize').value || st.size;
     const cmv = parseFloat(String($('anSa').value).replace(',', '.')), at = (k) => { const pc = st.pieces[k - 1]; return [[(pc.box.x0 + pc.box.x1) / 2, (pc.box.y0 + pc.box.y1) / 2]]; };
-    const rs = r.rozmiary.find((x) => anLayer(x, d.sizes) === size) || null;
+    const rs = r.rozmiary.find((x) => anLayer(x, d.sizes) === size) || (d.sizes.length ? null : anSize(r.rozmiary, cur()));
     const an = {
       el: r.elementy.map((e) => ({ pl: e.pl, cut: anCut(e), at: e.k.reduce((a, k) => a.concat(at(k)), []) })),
       skip: r.skip.map((k) => at(k)[0]),

@@ -79,17 +79,21 @@
     const mine = [], common = [];
     for (const p of data.paths) { if (p.l && data.sizes.includes(p.l)) { if (p.l === size || !data.sizes.length) mine.push(p); } else common.push(p); }
     const src = data.sizes.length ? mine : common.splice(0), B = src.map((p) => bb(p.pts)), diag = (b) => Math.hypot(b[2] - b[0], b[3] - b[1]);
-    const seeds = []; src.forEach((p, i) => { if (diag(B[i]) > 12) seeds.push(i); });
+    // ramka arkusza (linia obejmująca prawie całą stronę) nie jest elementem i nie może wciągnąć do siebie wszystkiego, co leży w środku
+    const pgOf = (pn) => (data.pages || []).find((q) => q.pn === pn), frame = (p, b) => { const pg = pgOf(p.pn); return !!pg && b[2] - b[0] > pg.w * 0.8 && b[3] - b[1] > pg.h * 0.8; };
+    const seeds = []; src.forEach((p, i) => { if (diag(B[i]) > 12 && !frame(p, B[i])) seeds.push(i); });
     const par = seeds.map((_, i) => i), find = (i) => { while (par[i] !== i) i = par[i] = par[par[i]]; return i; }, ov = (a, b) => a[0] <= b[2] + 0.4 && b[0] <= a[2] + 0.4 && a[1] <= b[3] + 0.4 && b[1] <= a[3] + 0.4;
     // elementy leżą na arkuszu ciasno, więc same prostokąty otaczające nie wystarczą: linie należą do jednego elementu, gdy stykają się końcami albo jedna leży w całości w drugiej
     const ends = (p) => [p.pts[0], p.pts[p.pts.length - 1]], near = (p, q) => ends(p).some((a) => q.pts.some((b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) < 0.35)), within = (a, b) => a[0] >= b[0] - 0.3 && a[1] >= b[1] - 0.3 && a[2] <= b[2] + 0.3 && a[3] <= b[3] + 0.3;
+    // linia w środku zamkniętego obrysu należy do niego, gdy jest prawie tej samej wielkości (linia szycia wewnątrz linii cięcia) albo mała (znak, zaszewka); w pozostałych przypadkach to osobny element
+    const area = (b) => (b[2] - b[0]) * (b[3] - b[1]), nest = (inn, out) => area(inn) > 0.6 * area(out) || diag(inn) < 0.45 * diag(out);
     const closed = (p) => Math.hypot(p.pts[0][0] - p.pts[p.pts.length - 1][0], p.pts[0][1] - p.pts[p.pts.length - 1][1]) < 0.3;
-    for (let i = 0; i < seeds.length; i++) for (let j = i + 1; j < seeds.length; j++) { const p = src[seeds[i]], q = src[seeds[j]], bi = B[seeds[i]], bj = B[seeds[j]]; if (p.pn !== q.pn || !ov(bi, bj)) continue; if (near(p, q) || near(q, p) || (within(bi, bj) && closed(q)) || (within(bj, bi) && closed(p))) par[find(i)] = find(j); }
+    for (let i = 0; i < seeds.length; i++) for (let j = i + 1; j < seeds.length; j++) { const p = src[seeds[i]], q = src[seeds[j]], bi = B[seeds[i]], bj = B[seeds[j]]; if (p.pn !== q.pn || !ov(bi, bj)) continue; if (near(p, q) || near(q, p) || (within(bi, bj) && closed(q) && nest(bi, bj)) || (within(bj, bi) && closed(p) && nest(bj, bi))) par[find(i)] = find(j); }
     const cl = new Map(); seeds.forEach((s, i) => { const r = find(i); if (!cl.has(r)) cl.set(r, { box: [1e9, 1e9, -1e9, -1e9], cut: [], aux: [], pn: src[s].pn }); const c = cl.get(r); c.cut.push(src[s]); bb(src[s].pts, c.box); });
     let list = Array.from(cl.values()); const inside0 = (b, c) => { const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2; return cx >= c.box[0] - 1 && cx <= c.box[2] + 1 && cy >= c.box[1] - 1 && cy <= c.box[3] + 1; };
     { const thin = list.filter((c) => Math.min(c.box[2] - c.box[0], c.box[3] - c.box[1]) < 1.5), fat = list.filter((c) => !thin.includes(c)); for (const t of thin) { const host = fat.filter((c) => c.pn === t.pn && inside0(t.box, c)).sort((x, y) => diag(x.box) - diag(y.box))[0]; if (host) host.cut = host.cut.concat(t.cut); } list = fat; } // pojedyncze proste linie (zakładki, linie pomocnicze) dołączają do elementu, w którym leżą
     const inside = (b, c) => { const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2; return cx >= c.box[0] - 1 && cx <= c.box[2] + 1 && cy >= c.box[1] - 1 && cy <= c.box[3] + 1; };
-    src.forEach((p, i) => { if (seeds.includes(i)) return; const c = list.find((q) => q.pn === p.pn && inside(B[i], q)); if (c) c.cut.push(p); });
+    src.forEach((p, i) => { if (seeds.includes(i) || frame(p, B[i])) return; const c = list.filter((q) => q.pn === p.pn && inside(B[i], q)).sort((x, y) => diag(x.box) - diag(y.box))[0]; if (c) c.cut.push(p); });
     for (const p of common) { const b = bb(p.pts), c = list.filter((q) => q.pn === p.pn && inside(b, q) && diag(b) < diag(q.box) * 0.9).sort((x, y) => diag(x.box) - diag(y.box))[0]; if (c) c.aux.push(p); }
     list.sort((a, b) => a.box[0] - b.box[0] || a.box[1] - b.box[1]);
     // punkt na etykietę: najwyższy wierzchołek konturu, który leży na jego stronie (rysunek bywa większy niż strona i jest przez nią przycięty)

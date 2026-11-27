@@ -142,7 +142,7 @@
   const INERR = { not_granted: 'Bez zgody na użycie Claude nie mogę przeanalizować zdjęcia.', rate_limited: 'Limit zapytań do Claude jest chwilowo wyczerpany. Spróbuj za jakiś czas.', image_rejected: 'Tego pliku nie da się wysłać. Wybierz zdjęcie JPG, PNG albo WebP.', images_unavailable: 'W tym widoku nie można wysyłać zdjęć do Claude.', refused: 'Claude odmówił analizy tego zdjęcia. Spróbuj z innym.', session_expired: 'Sesja wygasła. Zaloguj się ponownie w Claude.', invalid_json: 'Odpowiedź przyszła w złym formacie. Spróbuj jeszcze raz.' };
   async function inspRun(more) {
     if (!sampleFn || !inBlob) return;
-    inCtl = new AbortController(); $('inGo').disabled = true; $('inMoreGo').disabled = true; $('inStop').hidden = false; $('inStat').textContent = 'Analizuję zdjęcie. To zwykle trwa od kilkunastu sekund do minuty.';
+    inCtl = new AbortController(); $('inGo').disabled = true; $('inMoreGo').disabled = true; $('inStop').hidden = false; $('inStat').textContent = ''; const bz = busyOn('Claude analizuje zdjęcie. To zwykle trwa od kilkunastu sekund do minuty.');
     const note = $('inNote').value.trim(), first = inspPrompt() + (note ? '\n\nUwaga użytkowniczki: ' + note : '');
     const input = more && inLast ? [{ role: 'user', content: first }, { role: 'assistant', content: JSON.stringify(inLast) }, { role: 'user', content: 'Popraw propozycje według tej uwagi i odpowiedz znowu samym obiektem JSON w tym samym kształcie: ' + more }] : first;
     try {
@@ -150,7 +150,7 @@
       inLast = res && typeof res === 'object' ? res : {}; inspRender(inLast, true); $('inStat').textContent = ''; inspSave();
     } catch (e) {
       $('inStat').textContent = e && e.code === 'cancelled' ? '' : (e && INERR[e.code]) || 'Nie udało się połączyć z Claude. Spróbuj jeszcze raz.';
-    } finally { $('inGo').disabled = false; $('inMoreGo').disabled = false; $('inStop').hidden = true; }
+    } finally { busyOff(bz); $('inGo').disabled = false; $('inMoreGo').disabled = false; $('inStop').hidden = true; }
   }
   // historia inspiracji: pomniejszone zdjęcie, uwaga i ostatnia propozycja; wspólna dla wszystkich projektów
   let inCur = null;

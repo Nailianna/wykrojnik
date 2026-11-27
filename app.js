@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.76.0', n: 79, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.77.0', n: 80, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -65,6 +65,13 @@
     if (!state.profiles.some((x) => x.id === state.active)) state.active = state.profiles[0].id;
     persist(true); fillForm(); layoutUi(); draw(true); histUi();
   }
+  // wskaźnik pracy: co aplikacja właśnie robi i od jak dawna; kilka zadań naraz pokazuje ostatnie
+  const busyQ = []; let busyT = 0;
+  function busyDraw() { const top = busyQ[busyQ.length - 1]; $('busy').hidden = !top; if (!top) { clearInterval(busyT); busyT = 0; return; } const s = Math.floor((Date.now() - top.t0) / 1000); $('busyTx').textContent = top.text; $('busyTm').textContent = s >= 4 ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : ''; if (!busyT) busyT = setInterval(busyDraw, 1000); }
+  function busyOn(text) { const o = { text, t0: Date.now() }; busyQ.push(o); busyDraw(); return o; }
+  function busySet(o, text) { o.text = text; busyDraw(); }
+  function busyOff(o) { const i = busyQ.indexOf(o); if (i >= 0) busyQ.splice(i, 1); busyDraw(); }
+  const paintTick = () => new Promise((r) => setTimeout(r, 40)); // chwila na narysowanie wskaźnika przed ciężką pracą
   // gdzie byłaś ostatnio: po przeładowaniu (aktualizacja, zgoda na pliki) aplikacja wraca do projektu zamiast na pulpit
   const UIK = 'wykrojnik.ui';
   let uiReady = false; // przed startem nie zapisujemy, żeby nie nadpisać tego, co zostało po poprzedniej sesji
@@ -288,7 +295,7 @@
   function przOpen() {
     const box = $('przBox'), fr = $('przF'); box.hidden = false;
     const fill = () => { try { const d = fr.contentDocument, m = cur(); const st = d.getElementById('pdfStudio'); if (st) { st.open = true; st.scrollIntoView(); } for (const [k, v] of /** @type {any[][]} */ ([['height', m.wzrost], ['bust', m.og], ['waist', m.ot], ['hips', m.ob]])) { const e = d.getElementById('dst_' + k); if (e && isFinite(v)) { e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } } } catch (e) { /* inna domena albo strona jeszcze się ładuje */ } };
-    if (!fr.getAttribute('src')) { fr.addEventListener('load', () => setTimeout(fill, 300)); fr.setAttribute('src', 'przymiarka.html'); } else fill();
+    if (!fr.getAttribute('src')) { const bz = busyOn('Otwieram Przymiarkę.'); fr.addEventListener('load', () => { busyOff(bz); setTimeout(fill, 300); }, { once: true }); fr.setAttribute('src', 'przymiarka.html'); } else fill();
   }
   $('przX').addEventListener('click', () => { $('przBox').hidden = true; });
   $('prPdf').addEventListener('click', anOpen);
@@ -371,7 +378,7 @@
   function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(k === 'tiles'); }); $(id).setAttribute('aria-pressed', state[k]); }
   toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); $('tFig').addEventListener('click', () => { state.figure = !state.figure; $('tFig').setAttribute('aria-pressed', state.figure); persist(); draw(true); }); $('tFig').setAttribute('aria-pressed', state.figure);
   function setView(v) {
-    if (v === '3d' && state.style === 'import') { say('Podgląd 3D dla wczytanych wykrojów jeszcze nie działa. Najpierw trzeba wskazać, które krawędzie się zszywa.'); v = '2d'; }
+    if (v === '3d' && state.style === 'import') { say('Wczytane wykroje nie mają jeszcze podglądu 3D. Pracuję nad tym, żeby szwy brały się z analizy arkusza i instrukcji.'); v = '2d'; }
     state.view = v;
     $('v2d').setAttribute('aria-pressed', v === '2d'); $('v3d').setAttribute('aria-pressed', v === '3d');
     $('cv').toggleAttribute('hidden', v !== '2d'); $('gl').toggleAttribute('hidden', v !== '3d');
@@ -426,7 +433,7 @@
   function emptyDraft(m) { return { pieces: [], info: { rows: [], darts: [], cut: [], warn: '' }, sil: { top: 'waist', lower: 'none', empty: true, hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: 'bez fasonu', notions: [], bases: {}, empty: true }; }
   const impCache = {}; // pełne dane ostatnio wczytanych plików (wszystkie rozmiary), tylko na czas sesji
   async function impLoad(file) {
-    if (!file) return; say('Czytam wykrój z pliku. Przy dużych arkuszach trwa to kilkanaście sekund.');
+    if (!file) return; const bz = busyOn('Czytam wykrój z pliku.'); await paintTick();
     try {
       await new Promise((r) => { if (window.PatImport) r(undefined); else { const sc = document.createElement('script'); sc.src = 'importer.js'; sc.onload = r; sc.onerror = r; document.head.appendChild(sc); } });
       if (!window.PatImport) throw new Error('Nie udało się wczytać modułu importu.');
@@ -435,12 +442,12 @@
       const sn = snap(); sn.style = 'import'; sn.imp = { name: data.name, sizes: data.sizes, size, pieces }; sn.sel = {}; sn.layers = [{ role: 'wierzch' }];
       addProj(data.name, sn); impCache[state.proj] = data; impFill(); if (state.view !== '2d') setView('2d'); goPanel('fason');
       say('Wczytałam ' + pieces.length + ' elementów' + (data.sizes.length ? ' w rozmiarze ' + size + '. Rozmiar zmienisz w panelu Fason.' : '.'));
-    } catch (e) { say(e && e.message ? e.message : 'Nie udało się wczytać tego pliku.', true); }
+    } catch (e) { say(e && e.message ? e.message : 'Nie udało się wczytać tego pliku.', true); } finally { busyOff(bz); }
   }
   function impFill() {
     const on = state.style === 'import' && !!state.imp, box = $('impBox'); box.hidden = !on; $('fTab').hidden = on; document.querySelectorAll('[data-ft]').forEach((el) => { if (on) el.hidden = true; }); if (on) $('fOpts').hidden = true; if (!on) return;
-    const sel = $('impSize'); sel.textContent = ''; for (const z of state.imp.sizes || []) { const o = document.createElement('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.value = state.imp.size || ''; sel.disabled = !(state.imp.sizes || []).length;
-    $('impNote').textContent = impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
+    const sel = $('impSize'); sel.textContent = ''; for (const z of state.imp.sizes || []) { const o = document.createElement('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.value = state.imp.size || ''; sel.disabled = !(state.imp.sizes || []).length; $('impSizeRow').hidden = sel.disabled;
+    $('impNote').textContent = sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
   }
   let model = null, vb = null, rafD = 0;
   function drawSoon() { if (rafD) return; rafD = requestAnimationFrame(() => { rafD = 0; draw(); }); }
@@ -685,10 +692,12 @@
     return sim;
   }
   function topRun(tp) {
-    if (!g3 || g3.top !== tp || state.view !== '3d') { tp.run = false; return; }
+    const quiet = () => { clearTimeout(tp.bzT); tp.bzT = 0; if (tp.bz) { busyOff(tp.bz); tp.bz = null; } }; // wskaźnik pracy pojawia się dopiero, gdy układanie trwa dłużej niż pół sekundy
+    if (!g3 || g3.top !== tp || state.view !== '3d') { tp.run = false; quiet(); return; }
+    if (!tp.run && !tp.bzT && !tp.bz) tp.bzT = setTimeout(() => { tp.bzT = 0; if (tp.run) tp.bz = busyOn('Układam tkaninę na sylwetce.'); }, 500);
     tp.run = true; tp.S.step(3); tp.done = tp.S.done;
     if (tp.done || tp.S.steps % 24 === 0) { tp.ready = true; render3d(); }
-    if (!tp.done) requestAnimationFrame(() => topRun(tp)); else tp.run = false;
+    if (!tp.done) requestAnimationFrame(() => topRun(tp)); else { tp.run = false; quiet(); }
   }
   function simRun(sim) {
     if (!g3 || g3.sim !== sim || state.view !== '3d') return;
@@ -1590,7 +1599,7 @@
   const INERR = { not_granted: 'Bez zgody na użycie Claude nie mogę przeanalizować zdjęcia.', rate_limited: 'Limit zapytań do Claude jest chwilowo wyczerpany. Spróbuj za jakiś czas.', image_rejected: 'Tego pliku nie da się wysłać. Wybierz zdjęcie JPG, PNG albo WebP.', images_unavailable: 'W tym widoku nie można wysyłać zdjęć do Claude.', refused: 'Claude odmówił analizy tego zdjęcia. Spróbuj z innym.', session_expired: 'Sesja wygasła. Zaloguj się ponownie w Claude.', invalid_json: 'Odpowiedź przyszła w złym formacie. Spróbuj jeszcze raz.' };
   async function inspRun(more) {
     if (!sampleFn || !inBlob) return;
-    inCtl = new AbortController(); $('inGo').disabled = true; $('inMoreGo').disabled = true; $('inStop').hidden = false; $('inStat').textContent = 'Analizuję zdjęcie. To zwykle trwa od kilkunastu sekund do minuty.';
+    inCtl = new AbortController(); $('inGo').disabled = true; $('inMoreGo').disabled = true; $('inStop').hidden = false; $('inStat').textContent = ''; const bz = busyOn('Claude analizuje zdjęcie. To zwykle trwa od kilkunastu sekund do minuty.');
     const note = $('inNote').value.trim(), first = inspPrompt() + (note ? '\n\nUwaga użytkowniczki: ' + note : '');
     const input = more && inLast ? [{ role: 'user', content: first }, { role: 'assistant', content: JSON.stringify(inLast) }, { role: 'user', content: 'Popraw propozycje według tej uwagi i odpowiedz znowu samym obiektem JSON w tym samym kształcie: ' + more }] : first;
     try {
@@ -1598,7 +1607,7 @@
       inLast = res && typeof res === 'object' ? res : {}; inspRender(inLast, true); $('inStat').textContent = ''; inspSave();
     } catch (e) {
       $('inStat').textContent = e && e.code === 'cancelled' ? '' : (e && INERR[e.code]) || 'Nie udało się połączyć z Claude. Spróbuj jeszcze raz.';
-    } finally { $('inGo').disabled = false; $('inMoreGo').disabled = false; $('inStop').hidden = true; }
+    } finally { busyOff(bz); $('inGo').disabled = false; $('inMoreGo').disabled = false; $('inStop').hidden = true; }
   }
   // historia inspiracji: pomniejszone zdjęcie, uwaga i ostatnia propozycja; wspólna dla wszystkich projektów
   let inCur = null;
@@ -1689,9 +1698,9 @@
     try { const el = document.createElement('a'); el.href = URL.createObjectURL(new Blob([bytes], { type: mime })); el.download = name; el.click(); return true; }
     catch (e) { say('W tym widoku nie mogę zapisać pliku. Zainstaluj Wykrojnik jako aplikację.'); }
   }
-  $('pdf').addEventListener('click', () => {
-    let out;
-    try { out = buildPdf(); } catch (e) { say('Nie udało się zbudować PDF: ' + e.message); return; }
+  $('pdf').addEventListener('click', async () => {
+    let out; const bz = busyOn('Składam PDF z wykrojem.'); await paintTick();
+    try { out = buildPdf(); } catch (e) { say('Nie udało się zbudować PDF: ' + e.message); return; } finally { busyOff(bz); }
     saveFile(out.name, new Uint8Array(out.buf), 'application/pdf', true, 'Zapisałam wykrój w Dokumenty/Wykrojnik/' + out.name + '. Drukuj w skali 100%.', 'Wykrój pobrany. Drukuj w skali 100%.')
       .then((ok) => { const pr = projCur(); if (ok && pr) { persist(true); pr.exported = Date.now(); pr.expV = 2; pr.expKey = snapKey(pr.snap); persist(true); } });
   });
@@ -1799,25 +1808,26 @@
   function anClose() { if (anCtl) anCtl.abort(); $('anBox').hidden = true; anSt = null; }
   async function anRun() {
     const st = anSt; if (!st || !st.sheet) return;
-    const stat = (t) => { if (anSt === st) $('anStat').textContent = t; };
+    const stat = (t) => { if (anSt === st) $('anStat').textContent = t; }, bz = busyOn('Sprawdzam połączenie z Claude.');
     anCtl = new AbortController(); $('anGo').disabled = true; $('anRaw').disabled = true; $('anStop').hidden = false; $('anRes').hidden = true;
     try {
       const max = await anLimit(); if (!max) throw { code: 'no_channel' };
-      stat('Czytam linie i napisy z arkusza. Przy dużych plikach trwa to kilkanaście sekund.');
+      stat(''); busySet(bz, 'Czytam linie i napisy z arkusza (krok 1 z 3).'); await paintTick();
       await anLoadLib(); if (!window.PatImport) throw new Error('Nie udało się wczytać modułu importu.');
       if (!st.data) { st.data = await window.PatImport.load(st.sheet); st.size = st.data.sizes[Math.floor(st.data.sizes.length / 2)] || ''; st.pieces = window.PatImport.pick(st.data, st.size); }
       if (!st.pieces.length) throw new Error('Nie znalazłam w tym pliku elementów wykroju.');
       st.instrText = st.instr ? await window.PatImport.text(st.instr, 14000).catch(() => '') : '';
+      busySet(bz, 'Przygotowuję obrazy stron (krok 2 z 3).'); await paintTick();
       const np = st.data.pages.length, tiles = np * 2 <= max ? 2 : 1, marks = st.pieces.reduce((a, pc, i) => a.concat(pc.marks.map((m) => ({ id: 'k' + (i + 1), pn: m.pn, x: m.x, y: m.y }))), []);
       let shots = await window.PatImport.shots(st.sheet, marks, tiles); st.cut = shots.length > max; shots = shots.slice(0, max);
       if (anCtl.signal.aborted) throw { code: 'cancelled' };
-      stat('Claude ogląda arkusz i opisuje elementy. To zwykle trwa od pół minuty do dwóch minut.');
+      busySet(bz, 'Claude ogląda arkusz i opisuje elementy (krok 3 z 3). To zwykle trwa od pół minuty do dwóch minut.');
       const raw = await anAsk(anPrompt(st, shots), shots.map((s) => s.blob), anCtl.signal);
       if (anSt !== st) return;
       st.res = anClean(raw, st.pieces.length, st.data.sizes); stat(''); anShow();
     } catch (e) {
       stat(e && e.code === 'cancelled' ? '' : (e && AN_ERR[e.code]) || (e && !e.code && e.message) || 'Nie udało się połączyć z Claude. Spróbuj jeszcze raz.');
-    } finally { if (anSt === st) { $('anGo').disabled = false; $('anRaw').disabled = false; $('anStop').hidden = true; } }
+    } finally { busyOff(bz); if (anSt === st) { $('anGo').disabled = false; $('anRaw').disabled = false; $('anStop').hidden = true; } }
   }
   function anShow() {
     const st = anSt, r = st.res, m = cur(), box = $('anRes'); box.hidden = false;
@@ -1828,7 +1838,8 @@
     const sel = $('anSize'); sel.textContent = ''; const rec = anSize(r.rozmiary, m), recL = anLayer(rec, st.data.sizes);
     for (const z of st.data.sizes) { const o = mkEl('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.disabled = !st.data.sizes.length; sel.value = recL || st.size || '';
     const dif = rec ? /** @type {any[][]} */ ([['biust modelki jest', rec.biust, m.og, 'większy', 'mniejszy'], ['talia jest', rec.talia, m.ot, 'większa', 'mniejsza'], ['biodra są', rec.biodra, m.ob, 'większe', 'mniejsze']]).filter((x) => x[1] && x[2] && Math.abs(x[1] - x[2]) >= 3).map((x) => x[0] + ' o ' + f1(Math.abs(x[1] - x[2])) + ' cm ' + (x[2] > x[1] ? x[3] : x[4])) : [];
-    $('anSizeN').textContent = rec ? 'Dla modelki „' + m.name + '” najbliżej jest rozmiar ' + rec.nazwa + (dif.length ? ', ale ' + dif.join(', ') + '.' : '.') + (recL ? '' : ' Nie umiem wskazać jego warstwy w pliku, wybierz ją z listy.') : r.rozmiary.length ? '' : 'Na arkuszu nie znalazłam tabeli rozmiarów.';
+    const one = !st.data.sizes.length; $('anSizeRow').hidden = one;
+    $('anSizeN').textContent = (one ? 'Ten plik zawiera jeden rozmiar. ' : '') + (rec ? (one ? 'Według tabeli dla modelki „' : 'Dla modelki „') + m.name + '” najbliżej jest rozmiar ' + rec.nazwa + (dif.length ? ', ale ' + dif.join(', ') + '.' : '.') + (recL || one ? '' : ' Nie umiem wskazać jego warstwy w pliku, wybierz ją z listy.') : r.rozmiary.length ? '' : 'Nie znalazłam tabeli rozmiarów.');
     // zapas
     $('anSa').value = r.zapas.cm === null ? '' : String(r.zapas.cm).replace('.', ','); $('anSaIn').checked = r.zapas.wliczony !== false;
     $('anSaN').textContent = r.zapas.wyjatki.map((w) => w.gdzie + ': ' + f1(w.cm) + ' cm').join(', ');
@@ -1849,7 +1860,7 @@
   function anSave() {
     const st = anSt; if (!st || !st.res) return; const r = st.res, d = st.data, size = $('anSize').value || st.size;
     const cmv = parseFloat(String($('anSa').value).replace(',', '.')), at = (k) => { const pc = st.pieces[k - 1]; return [[(pc.box.x0 + pc.box.x1) / 2, (pc.box.y0 + pc.box.y1) / 2]]; };
-    const rs = r.rozmiary.find((x) => anLayer(x, d.sizes) === size) || null;
+    const rs = r.rozmiary.find((x) => anLayer(x, d.sizes) === size) || (d.sizes.length ? null : anSize(r.rozmiary, cur()));
     const an = {
       el: r.elementy.map((e) => ({ pl: e.pl, cut: anCut(e), at: e.k.reduce((a, k) => a.concat(at(k)), []) })),
       skip: r.skip.map((k) => at(k)[0]),

@@ -32,7 +32,7 @@
   function przOpen() {
     const box = $('przBox'), fr = $('przF'); box.hidden = false;
     const fill = () => { try { const d = fr.contentDocument, m = cur(); const st = d.getElementById('pdfStudio'); if (st) { st.open = true; st.scrollIntoView(); } for (const [k, v] of /** @type {any[][]} */ ([['height', m.wzrost], ['bust', m.og], ['waist', m.ot], ['hips', m.ob]])) { const e = d.getElementById('dst_' + k); if (e && isFinite(v)) { e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } } } catch (e) { /* inna domena albo strona jeszcze się ładuje */ } };
-    if (!fr.getAttribute('src')) { fr.addEventListener('load', () => setTimeout(fill, 300)); fr.setAttribute('src', 'przymiarka.html'); } else fill();
+    if (!fr.getAttribute('src')) { const bz = busyOn('Otwieram Przymiarkę.'); fr.addEventListener('load', () => { busyOff(bz); setTimeout(fill, 300); }, { once: true }); fr.setAttribute('src', 'przymiarka.html'); } else fill();
   }
   $('przX').addEventListener('click', () => { $('przBox').hidden = true; });
   $('prPdf').addEventListener('click', anOpen);
@@ -115,7 +115,7 @@
   function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(k === 'tiles'); }); $(id).setAttribute('aria-pressed', state[k]); }
   toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); $('tFig').addEventListener('click', () => { state.figure = !state.figure; $('tFig').setAttribute('aria-pressed', state.figure); persist(); draw(true); }); $('tFig').setAttribute('aria-pressed', state.figure);
   function setView(v) {
-    if (v === '3d' && state.style === 'import') { say('Podgląd 3D dla wczytanych wykrojów jeszcze nie działa. Najpierw trzeba wskazać, które krawędzie się zszywa.'); v = '2d'; }
+    if (v === '3d' && state.style === 'import') { say('Wczytane wykroje nie mają jeszcze podglądu 3D. Pracuję nad tym, żeby szwy brały się z analizy arkusza i instrukcji.'); v = '2d'; }
     state.view = v;
     $('v2d').setAttribute('aria-pressed', v === '2d'); $('v3d').setAttribute('aria-pressed', v === '3d');
     $('cv').toggleAttribute('hidden', v !== '2d'); $('gl').toggleAttribute('hidden', v !== '3d');

@@ -12,7 +12,7 @@
   function emptyDraft(m) { return { pieces: [], info: { rows: [], darts: [], cut: [], warn: '' }, sil: { top: 'waist', lower: 'none', empty: true, hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: 'bez fasonu', notions: [], bases: {}, empty: true }; }
   const impCache = {}; // pełne dane ostatnio wczytanych plików (wszystkie rozmiary), tylko na czas sesji
   async function impLoad(file) {
-    if (!file) return; say('Czytam wykrój z pliku. Przy dużych arkuszach trwa to kilkanaście sekund.');
+    if (!file) return; const bz = busyOn('Czytam wykrój z pliku.'); await paintTick();
     try {
       await new Promise((r) => { if (window.PatImport) r(undefined); else { const sc = document.createElement('script'); sc.src = 'importer.js'; sc.onload = r; sc.onerror = r; document.head.appendChild(sc); } });
       if (!window.PatImport) throw new Error('Nie udało się wczytać modułu importu.');
@@ -21,12 +21,12 @@
       const sn = snap(); sn.style = 'import'; sn.imp = { name: data.name, sizes: data.sizes, size, pieces }; sn.sel = {}; sn.layers = [{ role: 'wierzch' }];
       addProj(data.name, sn); impCache[state.proj] = data; impFill(); if (state.view !== '2d') setView('2d'); goPanel('fason');
       say('Wczytałam ' + pieces.length + ' elementów' + (data.sizes.length ? ' w rozmiarze ' + size + '. Rozmiar zmienisz w panelu Fason.' : '.'));
-    } catch (e) { say(e && e.message ? e.message : 'Nie udało się wczytać tego pliku.', true); }
+    } catch (e) { say(e && e.message ? e.message : 'Nie udało się wczytać tego pliku.', true); } finally { busyOff(bz); }
   }
   function impFill() {
     const on = state.style === 'import' && !!state.imp, box = $('impBox'); box.hidden = !on; $('fTab').hidden = on; document.querySelectorAll('[data-ft]').forEach((el) => { if (on) el.hidden = true; }); if (on) $('fOpts').hidden = true; if (!on) return;
-    const sel = $('impSize'); sel.textContent = ''; for (const z of state.imp.sizes || []) { const o = document.createElement('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.value = state.imp.size || ''; sel.disabled = !(state.imp.sizes || []).length;
-    $('impNote').textContent = impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
+    const sel = $('impSize'); sel.textContent = ''; for (const z of state.imp.sizes || []) { const o = document.createElement('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.value = state.imp.size || ''; sel.disabled = !(state.imp.sizes || []).length; $('impSizeRow').hidden = sel.disabled;
+    $('impNote').textContent = sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
   }
   let model = null, vb = null, rafD = 0;
   function drawSoon() { if (rafD) return; rafD = requestAnimationFrame(() => { rafD = 0; draw(); }); }

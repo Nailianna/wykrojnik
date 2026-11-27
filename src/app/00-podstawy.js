@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.76.0', n: 79, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.77.0', n: 80, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -65,6 +65,13 @@
     if (!state.profiles.some((x) => x.id === state.active)) state.active = state.profiles[0].id;
     persist(true); fillForm(); layoutUi(); draw(true); histUi();
   }
+  // wskaźnik pracy: co aplikacja właśnie robi i od jak dawna; kilka zadań naraz pokazuje ostatnie
+  const busyQ = []; let busyT = 0;
+  function busyDraw() { const top = busyQ[busyQ.length - 1]; $('busy').hidden = !top; if (!top) { clearInterval(busyT); busyT = 0; return; } const s = Math.floor((Date.now() - top.t0) / 1000); $('busyTx').textContent = top.text; $('busyTm').textContent = s >= 4 ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : ''; if (!busyT) busyT = setInterval(busyDraw, 1000); }
+  function busyOn(text) { const o = { text, t0: Date.now() }; busyQ.push(o); busyDraw(); return o; }
+  function busySet(o, text) { o.text = text; busyDraw(); }
+  function busyOff(o) { const i = busyQ.indexOf(o); if (i >= 0) busyQ.splice(i, 1); busyDraw(); }
+  const paintTick = () => new Promise((r) => setTimeout(r, 40)); // chwila na narysowanie wskaźnika przed ciężką pracą
   // gdzie byłaś ostatnio: po przeładowaniu (aktualizacja, zgoda na pliki) aplikacja wraca do projektu zamiast na pulpit
   const UIK = 'wykrojnik.ui';
   let uiReady = false; // przed startem nie zapisujemy, żeby nie nadpisać tego, co zostało po poprzedniej sesji

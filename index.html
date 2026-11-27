@@ -318,6 +318,11 @@ footer select{border-radius:8px}
 .hfoot #hFoot{font-family:var(--mono,ui-monospace,monospace)}
 .hfoot button{font-size:12.5px;padding:6px 13px}
 .hact{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:34px}
+#busy{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:11px;max-width:min(680px,84vw);padding:11px 18px 11px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);font-size:13.5px}
+#busy i{flex:none;width:17px;height:17px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:busySpin .8s linear infinite}
+#busy b{flex:none;font:500 12px var(--mono,ui-monospace,monospace);color:var(--mute)}
+@keyframes busySpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#busy i{animation-duration:2.4s}}
 #anBox{position:fixed;left:68px;top:0;right:0;bottom:0;z-index:8;display:flex;flex-direction:column;background:var(--bg)}
 #anBox .anBar{display:flex;align-items:center;gap:14px;padding:9px 16px;border-bottom:1px solid var(--line)}
 #anBox .anBar b{font:650 15px 'Bricolage Grotesque',sans-serif}
@@ -377,7 +382,7 @@ footer select{border-radius:8px}
   <div id="anRes" hidden>
     <p class="warn" id="anNeed"></p>
     <div class="f2"><span>Nazwa</span><input id="anName" maxlength="60"></div><p class="note" id="anDesc" style="margin-top:0"></p>
-    <div class="f2"><span>Rozmiar</span><select id="anSize" aria-label="Rozmiar wykroju"></select></div><p class="note" id="anSizeN" style="margin-top:0"></p>
+    <div class="f2" id="anSizeRow"><span>Rozmiar</span><select id="anSize" aria-label="Rozmiar wykroju"></select></div><p class="note" id="anSizeN" style="margin-top:0"></p>
     <div class="f2"><span>Zapas na szwy w cm</span><input id="anSa" inputmode="decimal" placeholder="nie podano"></div>
     <label class="f2"><span>Zapas jest wliczony w linie</span><input id="anSaIn" type="checkbox" style="width:18px;height:18px;padding:0"></label><p class="note" id="anSaN" style="margin-top:0"></p>
     <h3>Elementy</h3><div class="anRow h"><span>Kontur</span><span>Nazwa</span><span>Ile</span><span title="Ze złożenia">Zł.</span><span>Nitka</span><span>Z arkusza</span></div><div id="anEl"></div><p class="note" id="anElN"></p>
@@ -385,6 +390,7 @@ footer select{border-radius:8px}
     <div class="row" style="margin-top:20px"><button class="primary" id="anSaveB">Zapisz jako projekt</button></div>
   </div>
 </div></div></div>
+<div id="busy" role="status" aria-live="polite" hidden><i></i><span id="busyTx"></span><b id="busyTm"></b></div>
 <div id="emptyN" hidden style="position:fixed;left:50%;bottom:86px;transform:translateX(-50%);z-index:4;padding:10px 16px;border-radius:12px;background:var(--glass);border:1px solid var(--line);font-size:13.5px;pointer-events:none">Wybierz fason w panelu, a ubiorę w niego manekin.</div>
 <div id="home" hidden><div class="hwrap">
   <h1>Co dziś szyjemy?</h1>
@@ -465,7 +471,7 @@ footer select{border-radius:8px}
       </div>
       <div data-sec="fason">
         <div class="seg" id="fTab"><button data-t="gory">Góry</button><button data-t="doly">Doły</button><button data-t="suk">Sukienki</button></div>
-        <div id="impBox" hidden><h3>Wykrój z pliku</h3><div class="f2"><span>Rozmiar</span><select id="impSize" style="width:150px" aria-label="Rozmiar wykroju"></select></div><p class="note" id="impNote"></p></div>
+        <div id="impBox" hidden><h3>Wykrój z pliku</h3><div class="f2" id="impSizeRow"><span>Rozmiar</span><select id="impSize" style="width:150px" aria-label="Rozmiar wykroju"></select></div><p class="note" id="impNote"></p></div>
         <div data-ft="gory"><div class="gal" id="galGo"></div></div>
         <div data-ft="doly"><div class="gal" id="galSk"></div></div>
         <div data-ft="suk"><h3>Sylwetka</h3><div class="gal" id="galSu"></div></div>
