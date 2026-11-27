@@ -156,10 +156,21 @@
   }
   const SW_ROLE = [{ r: 'F', re: /prz[oó]d|front/i }, { r: 'B', re: /ty[lł]|back/i }, { r: 'S', re: /r[eę]kaw|sleeve/i }], SW_NOT = /odszyci|facing|podszew|lining|mankiet|cuff|lam[oó]w|binding|d[oó][lł]|skirt|falban|ko[lł]nierz|collar|rami[aą]cz|strap|pas|band|klin|godet|tren|train|skrzyd/i;
   // zszyte elementy wczytanego wykroju albo powód, dla którego podglądu nie będzie
+  // kontrola wyniku: zszyte ubranie musi pasować do sylwetki i do tego, co analiza mówi o wykroju; inaczej lepiej nic nie pokazać
+  function swSane(circ, dl, m, an) {
+    if (circ > 0 && (circ < 0.7 * m.og || circ > 1.75 * m.og)) return 'Zszyte elementy nie pasują do sylwetki: w biuście wychodzi ' + Math.round(circ) + ' cm przy ' + Math.round(m.og) + ' cm modelki. Sprawdź na liście elementów, który jest przodem, a który tyłem, albo wybierz inny rozmiar.';
+    if (an && an.typ === 'sukienka' && dl < 22) return 'Według analizy to sukienka, a zszyte elementy kończą się na biodrach. Sprawdź na liście elementów, który jest przodem, a który tyłem.';
+    return '';
+  }
   function impSew(imp, m) {
+    const r = /** @type {any} */ (impSew0(imp, m)); if (r.err) return r;
+    const top = (id) => { const pc = r.pieces.find((q) => q.id === id), e = pc && pc.ed.find((q) => q.tag === 'side'); return e ? e.pts[0][0] : 0; }, xf = top('przod'), xb = top('tyl');
+    const bad = swSane(xf && xb ? 2 * (xf + xb) : 0, r.dl, m, imp && imp.an); return bad ? { err: bad } : r;
+  }
+  function impSew0(imp, m) {
     const a = W.full(m), pcs = (imp && imp.pieces) || [], pick = {}, skip = [];
     // rola z analizy ma pierwszeństwo przed nazwą elementu
-    for (const pc of pcs) { const nm = String(pc.name || ''), r0 = pc.role ? (/^[FBS]$/.test(pc.role) ? pc.role : null) : (SW_NOT.test(nm) ? null : (SW_ROLE.find((x) => x.re.test(nm)) || { r: null }).r), r = r0; if (r && !pick[r]) pick[r] = pc; else skip.push(nm.replace(/ \(część.*$/, '')); }
+    for (const pc of pcs) { const nm = String(pc.name || ''), r0 = pc.role ? (/^[FBS]$/.test(pc.role) ? pc.role : null) : (SW_NOT.test(nm) ? null : (SW_ROLE.find((x) => x.re.test(nm)) || { r: null }).r), r = r0; if (r && (!pick[r] || pc.w * pc.h > pick[r].w * pick[r].h)) { if (pick[r]) skip.push(String(pick[r].name || '').replace(/ \(część.*$/, '')); pick[r] = pc; } else skip.push(nm.replace(/ \(część.*$/, '')); } // gdy rolę ma kilka elementów, liczy się największy (odszycia i lamówki są małe)
     if (!pick.F || !pick.B) return { err: 'Podgląd 3D potrzebuje przodu i tyłu, a na liście elementów ich nie rozpoznałam.' };
     const pit = a.Dts - a.Gp - 1; let F = /** @type {any} */ (swBodice(pick.F, a.Dts, pit)), B = /** @type {any} */ (swBodice(pick.B, a.Dts, pit));
     if (F.strap && B.strap && Math.abs(F.side - B.side) > Math.max(2.5, 0.05 * F.side)) { // boki nie pasują: szukam pary szczytów boku, przy której szwy boczne mają tę samą długość
@@ -174,21 +185,21 @@
       if (Math.abs(F.side - B.side) > Math.max(2.5, 0.1 * F.side)) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (szwy boczne przodu i tyłu nie pasują do siebie).' };
       for (const r of ['S']) if (pick[r]) skip.push(String(pick[r].name));
       const mk1 = (id, o) => ({ id, ed: o.ed, prims: [] });
-      return { pieces: [mk1('przod', F), mk1('tyl', B)], dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: null, strap: { F: F.strap.pk, B: B.strap.pk, yMax: pit + 8 }, gather: null, skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: '', sa: F.sa };
+      return { pieces: [mk1('przod', F), mk1('tyl', B)], dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: null, strap: { F: F.strap.pk, B: B.strap.pk, yMax: pit + 8 }, gather: null, used: [String(pick.F.name || ''), String(pick.B.name || '')], skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: '', sa: F.sa };
     }
     if (!!F.kim !== !!B.kim) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (przód i tył mają różny układ rękawa).' };
     if (F.kim) { // rękaw skrojony razem z przodem i tyłem: osobnego rękawa nie ma, zszywa się spód rękawa i bok
       if (Math.abs(F.under - B.under) > Math.max(2, 0.1 * F.under)) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (szwy spodu rękawa z przodu i z tyłu nie pasują do siebie).' };
       if (pick.S) skip.push(String(pick.S.name));
       const mk0 = (id, o) => ({ id, ed: o.ed, prims: [] }), wid = Math.max(...F.kim.tab);
-      return { pieces: [mk0('przod', F), mk0('tyl', B)], dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: { L: F.kim.L, bic: 2 * (F.kim.tab[1] || 12), hem: 2 * wid, H: 0, puff: false, ruf: 0, kim: true }, kim: { F: F.kim, B: B.kim }, gather: null, skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: '', sa: F.sa };
+      return { pieces: [mk0('przod', F), mk0('tyl', B)], dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: { L: F.kim.L, bic: 2 * (F.kim.tab[1] || 12), hem: 2 * wid, H: 0, puff: false, ruf: 0, kim: true }, kim: { F: F.kim, B: B.kim }, gather: null, used: [String(pick.F.name || ''), String(pick.B.name || '')], skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: '', sa: F.sa };
     }
     const S = pick.S ? swSleeve(pick.S) : null, slOk = S && !S.err;
     if (pick.S && !slOk) skip.push(String(pick.S.name));
     // mankiet: dół rękawa jest do niego zmarszczony; długość mankietu to dłuższy bok prostokąta bez zapasów
     const cuff = pcs.find((pc) => pc.role === 'C' || /mankiet|cuff/i.test(String(pc.name || ''))), cuffL = cuff ? Math.max(cuff.w, cuff.h) - 2 : 0, gather = slOk && cuffL > 8 && cuffL < S.hem * 0.87 ? { S: Math.max(0.2, cuffL / S.hem) } : null;
     const mk = (id, o) => ({ id, ed: o.ed, prims: [] }), pieces = [mk('przod', F), mk('tyl', B)]; if (slOk) pieces.push(mk('stanik-rekaw', S));
-    return { pieces, dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: slOk ? { L: S.L, bic: S.bic, hem: S.hem, H: S.H, puff: false, ruf: 0 } : null, gather, skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: pick.S && !slOk ? S.err : '', sa: F.sa };
+    return { pieces, dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: slOk ? { L: S.L, bic: S.bic, hem: S.hem, H: S.H, puff: false, ruf: 0 } : null, gather, used: [String(pick.F.name || ''), String(pick.B.name || '')], skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: pick.S && !slOk ? S.err : '', sa: F.sa };
   }
   // ---------- długość wczytanego wykroju ----------
   // Element jest rozcinany w poprzek pod pachą i rozsuwany (albo zsuwany) wzdłuż własnej osi, tak jak na linii „tu wydłuż albo skróć”.

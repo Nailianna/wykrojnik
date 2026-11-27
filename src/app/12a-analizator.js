@@ -249,6 +249,7 @@
       el: r.elementy.map((e) => ({ pl: e.pl, role: e.role, cut: anCut(e), at: e.k.reduce((a, k) => a.concat(at(k)), []) })),
       skip: r.skip.map((k) => at(k)[0]),
       sa: { inc: $('anSaIn').checked, cm: isFinite(cmv) && cmv >= 0 && cmv < 10 ? cmv : null, ex: r.zapas.wyjatki }, skos: r.ze_skosu, pasm: r.pasmanteria, marka: r.marka, uw: r.uwagi.map((u) => ({ k: u.k, t: u.t, s: anSrc(u.src) })),
+      typ: r.typ || '',
       szwy: (r.szwy || []).map((x) => { const ea = eAt(x[0]), eb = eAt(x[1]); return ea && eb ? [ea[0], ea[1], eb[0], eb[1]].map((v) => Math.round(v * 10) / 10) : null; }).filter(Boolean), srodek: { p: eAt(r.cf), t: eAt(r.cb) }, dol: (r.dol || []).map(eAt).filter(Boolean), trzym: r.trzym || '',
       rozm: r.rozmiary.map((x) => ({ w: anLayer(x, d.sizes), n: x.nazwa, b: x.biust, t: x.talia, h: x.biodra })).filter((x) => x.w), body: rs ? { n: rs.nazwa, b: rs.biust, t: rs.talia, h: rs.biodra } : null,
     };

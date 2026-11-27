@@ -27,6 +27,7 @@
     const an = imp && imp.an, pcs = (imp && imp.pieces) || []; if (!an || !an.szwy || !an.szwy.length || !an.srodek || !an.srodek.p) return null;
     const a = W.full(m), all = plAll(pcs), cf = plNear(all, an.srodek.p), cb = plNear(all, an.srodek.t); if (!cf) return { err: 'Nie znalazłam krawędzi środka przodu wskazanej przez analizę.' };
     const seams = []; for (const s of an.szwy) { const ea = plNear(all, [s[0], s[1]]), eb = plNear(all, [s[2], s[3]]); if (ea && eb && ea !== eb && ea.pi !== eb.pi && !seams.some((q) => q.a === ea || q.b === ea || q.a === eb || q.b === eb)) seams.push({ a: ea, b: eb }); }
+    for (let i = seams.length - 1; i >= 0; i--) { const q = seams[i].a.len / seams[i].b.len; if (q < 0.75 || q > 1.33) seams.splice(i, 1); } // krawędzie o wyraźnie różnej długości nie są jednym szwem
     if (!seams.length) return { err: 'Analiza nie wskazała szwów, które umiem odnaleźć na elementach.' };
     const ring = (pi) => { const o = []; for (const e of all) if (e.pi === pi) for (const p of e.pts) o.push(p); return o; };
     // układ elementu ze środkiem przodu: środek pionowo na U = 0, element po stronie U > 0, dół tam, gdzie leżą krawędzie dołu albo gdzie element jest szerszy
@@ -76,9 +77,10 @@
       const hf = topOf(cf.pi, false), bp = cb && T[cb.pi] !== undefined ? cb.pi : keys.filter((k) => k !== cf.pi).sort((x, y) => Math.min(...ring(x).map((p) => plAp(T[x], p)[1])) - Math.min(...ring(y).map((p) => plAp(T[y], p)[1])))[0], hb = bp !== undefined ? topOf(bp, !!Ucb) : null;
       if (hf && hb) hold.push({ key: 'p' + cf.pi, at: hf }, { key: 'p' + bp, at: hb }); }
     let dl = 0, wid = 0; for (const p of parts) for (const e of p.ed) for (const q of e.pts) { dl = Math.max(dl, q[1]); wid = Math.max(wid, q[0]); }
+    { const bad = swSane(Ucb ? 2 * cbU(-pit) : 0, dl, m, an); if (bad) return { err: bad }; }
     const skip = pcs.filter((_, i) => T[i] === undefined).map((pc) => String(pc.name || '').replace(/ \(część.*$/, ''));
     const cbLine = Ucb ? (() => { const q = E(cb), p0 = q[0], p1 = q[q.length - 1]; return p0[1] < p1[1] ? [p0, p1] : [p1, p0]; })() : null; // środek tyłu po złożeniu na płasko bywa skośny (rozkloszowanie), więc szerokość połowy ubrania liczę osobno na każdej wysokości
-    return { plan: { parts, seams: outSeams, hold, Ucb, cbLine, yMax: an.trzym === 'ramiona' ? null : pit + 8 }, dl, hemC: 4 * (Ucb || wid), skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), strap: hold.length === 2 };
+    return { plan: { parts, seams: outSeams, hold, Ucb, cbLine, yMax: an.trzym === 'ramiona' ? null : pit + 8 }, dl, hemC: 4 * (Ucb || wid), used: keys.map((k) => String(pcs[k].name || '')), skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), strap: hold.length === 2 };
   }
   // punkt na łamanej w ułamku jej długości
   function ptOn(pts, f) { const L = swLen(pts); let acc = 0; for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (acc + d >= f * L - 1e-9) { const t = (f * L - acc) / (d || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; } acc += d; } return pts[pts.length - 1]; }
