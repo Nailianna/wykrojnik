@@ -25,6 +25,7 @@ Wykroje wczytane z własnych plików PDF też zostają tylko u Ciebie. Kupionych
 |---|---|
 | `index.html`, `app.js` | interfejs, projekty, podgląd 3D; `app.js` powstaje z części w `src/app` |
 | `src/app/*.js` | źródła interfejsu podzielone tematycznie (formularz, projekty, rysunek, druk, 3D, inspiracja, pulpit) |
+| `importer.js` | czyta linie, warstwy i napisy z wykroju w PDF, przygotowuje obrazy stron dla analizatora |
 | `engine.js` | konstrukcja wykrojów z wymiarów, układ na kartkach, PDF |
 | `cloth.js` | zszywanie elementów i układanie tkaniny na sylwetce |
 | `figure.js` | siatka sylwetki |
@@ -46,3 +47,9 @@ Zmiany w interfejsie rób w `src/app`, nie w `app.js`, a potem uruchom `sh tools
 Baza „Podręcznik” liczy głębokość pachy, szerokości tyłu i przodu oraz rękaw według wzorów z książki: E. Stark, B. Tymolewska, „Modelowanie form odzieży damskiej”. Baza „Wykrojnik” to własna konstrukcja autorki aplikacji.
 
 Biblioteki i zasoby innych autorów są opisane w pliku `NOTICE.md`.
+
+## Wykroje z PDF
+
+Na pulpicie jest „Nowy z pliku PDF”. Aplikacja czyta z pliku linie, warstwy rozmiarów i napisy, a Claude opisuje ich znaczenie: nazwy elementów, ile wyciąć, nitkę, zapas na szwy i tabelę rozmiarów. Opis formatu jest w `docs/analizator.md`.
+
+Analiza działa na razie tylko w Wykrojniku otwartym w Claude. W kopii z tego repozytorium wykrój można wczytać bez analizy; połączenie własnym kluczem API jest w przygotowaniu. Repozytorium nie zawiera żadnych wykrojów w PDF, wgrywasz własne.

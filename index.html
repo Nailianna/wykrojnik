@@ -317,7 +317,25 @@ footer select{border-radius:8px}
 .hfoot{margin-top:8px;padding:14px 0 6px;border-top:1px solid var(--line);font-size:12px;color:var(--mute);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .hfoot #hFoot{font-family:var(--mono,ui-monospace,monospace)}
 .hfoot button{font-size:12.5px;padding:6px 13px}
-.hact{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:34px}
+.hact{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:34px}
+#anBox{position:fixed;left:68px;top:0;right:0;bottom:0;z-index:8;display:flex;flex-direction:column;background:var(--bg)}
+#anBox .anBar{display:flex;align-items:center;gap:14px;padding:9px 16px;border-bottom:1px solid var(--line)}
+#anBox .anBar b{font:650 15px 'Bricolage Grotesque',sans-serif}
+#anBox .anBody{flex:1;overflow:auto;padding:26px 28px 60px}
+#anBox .anCol{max-width:860px;margin:0 auto}
+.anFiles{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.anFile{display:flex;flex-direction:column;gap:6px;padding:18px 20px;border-radius:16px;background:var(--glass);border:1px dashed var(--line);cursor:pointer}
+.anFile:hover{border-color:var(--accent)}
+.anFile b{font-weight:650}.anFile span{color:var(--mute);font-size:13px}.anFile i{font-style:normal;font-size:13px;color:var(--accent);min-height:18px;overflow-wrap:anywhere}
+#anBox .row{max-width:520px}
+#anRes{margin-top:26px;border-top:1px solid var(--line);padding-top:8px}
+#anRes .f2{max-width:520px}
+#anRes .f2 input:not([type=checkbox]),#anRes .f2 select{width:260px}
+.anRow{display:grid;grid-template-columns:64px minmax(140px,1.3fr) 62px 30px 124px minmax(120px,1.6fr);gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)}
+.anRow.h{color:var(--mute);font-size:12px;border-bottom:0;padding-bottom:0}
+.anRow input[type=checkbox]{width:18px;height:18px;padding:0}
+.anK{font-family:var(--mono,ui-monospace,monospace);font-size:12px;color:var(--mute)}.anM{font-size:13px;color:var(--mute)}
+#anUn{margin:0;padding-left:18px;font-size:13.5px}#anUn li{margin:4px 0}
 .hact button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:22px 24px;border-radius:18px;background:var(--glass);border:1px solid var(--line);position:relative;overflow:hidden}
 .hact button b{font-size:17px;font-weight:650}.hact button span{color:var(--mute);font-weight:400}
 .hact button:first-child{background:var(--accent);border-color:transparent;color:var(--onacc);box-shadow:none}.hact button:first-child span{color:var(--onacc);opacity:.8}
@@ -352,10 +370,25 @@ footer select{border-radius:8px}
   <div class="spC"><svg class="spLogo" viewBox="0 0 64 64"><defs><linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffa48c"/><stop offset="1" stop-color="#ffa48c"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#lg2)"/><path class="w" d="M14 22l8.500 22L32 26l9.500 18L50 22" fill="none" stroke="#12302a" stroke-width="5.500" stroke-linecap="round" stroke-linejoin="round"/><path class="st" d="M14 52h36" stroke="#12302a" stroke-width="2.600" stroke-linecap="round" stroke-dasharray="4.500 5"/><circle class="dot" cx="50" cy="14" r="3.200" fill="#fff"/></svg>
   <div class="spName">Wykrojnik</div><div class="spTag">Wykroje szyte na miarę</div><div class="spBar"><i></i></div></div></div>
 <div id="przBox" hidden style="position:fixed;left:68px;top:0;right:0;bottom:0;z-index:8;display:flex;flex-direction:column;background:var(--bg)"><div style="display:flex;align-items:center;gap:14px;padding:9px 16px;border-bottom:1px solid var(--line)"><b style="font:650 15px 'Bricolage Grotesque',sans-serif">Import wykroju z PDF</b><span style="color:var(--mute);font-size:13px">Wymiary modelki są już wpisane w tabeli dopasowania.</span><span style="flex:1"></span><button id="przX">Wróć do Wykrojnika</button></div><iframe id="przF" title="Przymiarka: import wykroju" style="flex:1;border:0;width:100%;background:#f7f5f0"></iframe></div>
+<div id="anBox" hidden><div class="anBar"><b>Wykrój z pliku PDF</b><span style="flex:1"></span><button id="anPrz">Otwórz w Przymiarce</button><button id="anX">Wróć do Wykrojnika</button></div><div class="anBody"><div class="anCol">
+  <div class="anFiles"><label class="anFile"><b>Arkusz wykroju</b><span>Wybierz wersję na duży arkusz (A0), nie pociętą na A4.</span><i id="anSheetN"></i><input id="anSheet" type="file" accept="application/pdf,.pdf" hidden></label><label class="anFile"><b>Instrukcja szycia</b><span>Nieobowiązkowa. Przydaje się, gdy arkusz nie podaje zapasu na szwy albo opisów.</span><i id="anInstrN"></i><input id="anInstr" type="file" accept="application/pdf,.pdf" hidden></label></div>
+  <div class="row" style="margin-top:16px"><button class="primary" id="anGo" disabled>Analizuj wykrój</button><button id="anRaw" disabled>Wczytaj bez analizy</button><button id="anStop" hidden style="flex:0 0 auto">Przerwij</button></div>
+  <p class="note" id="anStat"></p>
+  <div id="anRes" hidden>
+    <p class="warn" id="anNeed"></p>
+    <div class="f2"><span>Nazwa</span><input id="anName" maxlength="60"></div><p class="note" id="anDesc" style="margin-top:0"></p>
+    <div class="f2"><span>Rozmiar</span><select id="anSize" aria-label="Rozmiar wykroju"></select></div><p class="note" id="anSizeN" style="margin-top:0"></p>
+    <div class="f2"><span>Zapas na szwy w cm</span><input id="anSa" inputmode="decimal" placeholder="nie podano"></div>
+    <label class="f2"><span>Zapas jest wliczony w linie</span><input id="anSaIn" type="checkbox" style="width:18px;height:18px;padding:0"></label><p class="note" id="anSaN" style="margin-top:0"></p>
+    <h3>Elementy</h3><div class="anRow h"><span>Kontur</span><span>Nazwa</span><span>Ile</span><span title="Ze złożenia">Zł.</span><span>Nitka</span><span>Z arkusza</span></div><div id="anEl"></div><p class="note" id="anElN"></p>
+    <h3 id="anUnH">Do sprawdzenia</h3><ul id="anUn"></ul>
+    <div class="row" style="margin-top:20px"><button class="primary" id="anSaveB">Zapisz jako projekt</button></div>
+  </div>
+</div></div></div>
 <div id="emptyN" hidden style="position:fixed;left:50%;bottom:86px;transform:translateX(-50%);z-index:4;padding:10px 16px;border-radius:12px;background:var(--glass);border:1px solid var(--line);font-size:13.5px;pointer-events:none">Wybierz fason w panelu, a ubiorę w niego manekin.</div>
 <div id="home" hidden><div class="hwrap">
   <h1>Co dziś szyjemy?</h1>
-  <div class="hact"><button id="hNew"><b>Nowy projekt</b><span>Zacznij od fasonu i wymiarów modelki.</span></button><button id="hInsp"><b>Nowy z inspiracji</b><span>Wgraj zdjęcie, a dobiorę do niego wykrój.</span></button></div>
+  <div class="hact"><button id="hNew"><b>Nowy projekt</b><span>Zacznij od fasonu i wymiarów modelki.</span></button><button id="hInsp"><b>Nowy z inspiracji</b><span>Wgraj zdjęcie, a dobiorę do niego wykrój.</span></button><button id="hPdf"><b>Nowy z pliku PDF</b><span>Wgraj kupiony wykrój, a opiszę jego elementy.</span></button></div>
   <section id="hOpenS"><h3>W toku</h3><div class="hgrid" id="hOpen"></div></section>
   <section id="hDoneS"><h3>Gotowe wykroje</h3><div class="hgrid" id="hDone"></div></section>
   <div class="hcols"><section><h3>Modelki</h3><div id="hMod"></div></section><section><h3>Ostatnie inspiracje</h3><div id="hIn"></div></section></div>

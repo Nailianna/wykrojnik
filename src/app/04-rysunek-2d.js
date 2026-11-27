@@ -1,9 +1,12 @@
   // ---------- rysunek 2D ----------
   // wykrój wczytany z PDF: gotowe elementy jednego rozmiaru zamiast konstrukcji z wymiarów
   function impDraft(imp, m) {
-    const pcs = (imp && imp.pieces) || [];
-    return { pieces: pcs, info: { rows: [], darts: [], cut: pcs.map((q) => [q.name, 'według oryginału']), warn: 'Wykrój wczytany z pliku, rozmiar ' + (imp.size || 'jedyny') + '. Linie i zapasy na szwy są takie jak w oryginale, Wykrojnik ich nie przelicza.' },
-      sil: { top: 'import', lower: 'none', hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: (imp.name || 'Wykrój z pliku') + (imp.size ? ' · ' + imp.size : ''), notions: [], bases: {}, imported: true };
+    const pcs = (imp && imp.pieces) || [], an = imp.an || null, sa = an && an.sa, bd = an && an.body;
+    // opisy cięcia, zapas i wymiary ciała dla rozmiaru pochodzą z analizy arkusza
+    const fit = bd && bd.b ? ' Rozmiar ' + bd.n + ' jest szyty na biust ' + f1(bd.b) + (bd.t ? ', talię ' + f1(bd.t) : '') + (bd.h ? ', biodra ' + f1(bd.h) : '') + ' cm; modelka ma ' + [m.og, m.ot, m.ob].map((v) => f1(v)).join(' / ') + '.' : '';
+    const saT = !sa ? 'Linie i zapasy na szwy są takie jak w oryginale, Wykrojnik ich nie przelicza.' : (sa.inc ? 'Zapas na szwy jest wliczony w linie' + (sa.cm !== null ? ': ' + f1(sa.cm) + ' cm' : ', ale arkusz nie podaje, ile wynosi') : 'Linie nie zawierają zapasu na szwy' + (sa.cm !== null ? ', dodaj ' + f1(sa.cm) + ' cm' : '')) + (sa.ex && sa.ex.length ? ' (' + sa.ex.map((w) => w.gdzie + ': ' + f1(w.cm) + ' cm').join(', ') + ')' : '') + '.' + (an.skos ? ' Wykrój jest cięty ze skosu.' : '');
+    return { pieces: pcs, info: { rows: [], darts: [], cut: pcs.map((q) => [q.name, q.cut ? q.cut.replace(/^wytnij /, '') : 'według oryginału']), warn: 'Wykrój wczytany z pliku, rozmiar ' + (imp.size || 'jedyny') + '. ' + saT + fit },
+      sil: { top: 'import', lower: 'none', hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: (imp.name || 'Wykrój z pliku') + (imp.size ? ' · ' + imp.size : ''), notions: an && an.pasm ? an.pasm.map((x) => [x, '']) : [], bases: {}, imported: true };
   }
   // nowy projekt zaczyna od pustego manekina: fason wybiera się dopiero w panelu
   function emptyDraft(m) { return { pieces: [], info: { rows: [], darts: [], cut: [], warn: '' }, sil: { top: 'waist', lower: 'none', empty: true, hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: 'bez fasonu', notions: [], bases: {}, empty: true }; }
@@ -16,7 +19,7 @@
       const data = await window.PatImport.load(file), size = data.sizes[Math.floor(data.sizes.length / 2)] || '', pieces = window.PatImport.pick(data, size);
       if (!pieces.length) throw new Error('Nie znalazłam w tym pliku elementów wykroju.');
       const sn = snap(); sn.style = 'import'; sn.imp = { name: data.name, sizes: data.sizes, size, pieces }; sn.sel = {}; sn.layers = [{ role: 'wierzch' }];
-      addProj(data.name, sn); impCache[state.proj] = data; if (state.view !== '2d') setView('2d'); goPanel('fason');
+      addProj(data.name, sn); impCache[state.proj] = data; impFill(); if (state.view !== '2d') setView('2d'); goPanel('fason');
       say('Wczytałam ' + pieces.length + ' elementów' + (data.sizes.length ? ' w rozmiarze ' + size + '. Rozmiar zmienisz w panelu Fason.' : '.'));
     } catch (e) { say(e && e.message ? e.message : 'Nie udało się wczytać tego pliku.', true); }
   }

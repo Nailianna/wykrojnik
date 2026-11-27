@@ -35,9 +35,9 @@
     if (!fr.getAttribute('src')) { fr.addEventListener('load', () => setTimeout(fill, 300)); fr.setAttribute('src', 'przymiarka.html'); } else fill();
   }
   $('przX').addEventListener('click', () => { $('przBox').hidden = true; });
-  $('prPdf').addEventListener('click', przOpen);
+  $('prPdf').addEventListener('click', anOpen);
   $('prPdfIn').addEventListener('change', () => { const f = $('prPdfIn').files[0]; $('prPdfIn').value = ''; impLoad(f); });
-  $('impSize').addEventListener('change', () => { const data = impCache[state.proj]; if (!data) { impFill(); say('Wczytaj plik jeszcze raz, żeby zmienić rozmiar.'); return; } state.imp = Object.assign({}, state.imp, { size: $('impSize').value, pieces: window.PatImport.pick(data, $('impSize').value) }); state.sel = {}; persist(); draw(true); });
+  $('impSize').addEventListener('change', () => { const data = impCache[state.proj]; if (!data) { impFill(); say('Wczytaj plik jeszcze raz, żeby zmienić rozmiar.'); return; } { const an = state.imp.an, z = $('impSize').value, rz = an && (an.rozm || []).find((x) => x.w === z); state.imp = Object.assign({}, state.imp, { size: z, pieces: anApply(window.PatImport.pick(data, z), an) }, an ? { an: Object.assign({}, an, { body: rz ? { n: rz.n, b: rz.b, t: rz.t, h: rz.h } : null }) } : {}); } state.sel = {}; persist(); draw(true); });
   $('prNew').addEventListener('click', () => { const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {}; addProj('Nowy projekt', sn); });
   $('prDup').addEventListener('click', () => addProj((projCur().name || 'Projekt') + ' (kopia)', snap()));
   $('prName').addEventListener('input', () => { projCur().name = $('prName').value; persist(true); fillProj(); draw(); });

@@ -43,6 +43,8 @@ type WPrim = { t: string; [k: string]: any };
 interface Window {
   Wykroj: any; WykrojPrints: any; WYKROJ_FIG: any; WYKROJ_FONT: any; Cloth: any; PatImport: any; THREE: any; jspdf: any;
   claude: any; __noSelf?: boolean;
+  /** podstawiona odpowiedź analizatora, tylko do testów */
+  __anFake?: (prompt: string, images: Blob[]) => any;
 }
 declare const claude: any;
 
