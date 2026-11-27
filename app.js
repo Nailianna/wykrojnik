@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.88.0', n: 95, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.89.0', n: 96, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -834,9 +834,9 @@
     const p = sil.imported ? Object.assign({}, state.p, { gora: sil.strap ? 'bez' : 'ramiona', dl: sil.impDl, kn: 0, gf: 0, ff: 1, flare: 0, tren: 0, rozp: 0, pasek: 0, pasT: 0, zakK: 0, crop: 0, bok: 0, ram: 'brak', ramW: 0, rek: sil.sleeve ? 'dlugi' : 'brak', mank: false, kol: 'brak', kolW: 0, kop: false, falN: false, falR: false, marsz: false, sciag: false, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, bk: 'prosta', luzG: 4, luzT: 4, luzB: 4, fac: 'brak', extras: [] }) : state.p;
     if (g3.group) { g3.scene.remove(g3.group); g3.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
     const FG = figData(), fs = FG ? m.wzrost / FG.H : 0, headLen = FG ? (FG.H - FG.lv.neck) * fs : m.wzrost * 0.165;
-    const grp = new T3.Group(), floor = -(m.wzrost - a.Dts - headLen);
+    const grp = new T3.Group(), floor = -(m.wzrost - a.Dts - headLen); g3.floorY = floor;
     // manekin
-    const bm = new T3.MeshStandardMaterial({ color: state.figure ? 0xd2c8b6 : 0xcdc3ae, roughness: state.figure ? 0.85 : 0.95, metalness: 0, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+    const bm = new T3.MeshStandardMaterial({ color: state.figure ? 0xd2c8b6 : 0xcdc3ae, roughness: state.figure ? 0.85 : 0.95, metalness: 0, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 }); bm.userData.body = true;
     const NB = 64;
     const useFig = state.figure && !!FG;
     if (!useFig) grp.add(surface(72, NB, (u, v) => {
@@ -1213,7 +1213,7 @@
                 const nx = uy * vz - uz * vy, ny2 = uz * vx - ux * vz, nz = ux * vy - uy * vx, mx = (X[i0] + X[i1] + X[i2]) / 3 - c0[0], my = gr.pk === 'S' ? (X[i0 + 1] + X[i1 + 1] + X[i2 + 1]) / 3 - c0[1] : 0, mz = (X[i0 + 2] + X[i1 + 2] + X[i2 + 2]) / 3 - c0[2]; sum += nx * mx + ny2 * my + nz * mz; }
               if (sum < 0) for (let t = gr.t0; t < gr.t1; t++) { const k = g.tri[t * 3 + 1]; g.tri[t * 3 + 1] = g.tri[t * 3 + 2]; g.tri[t * 3 + 2] = k; }
             }
-            g3.top = { key, g, S, yPinW, pinned, hasSl, ready: false, done: false, prev: g3.top && !g3.top.fail ? (g3.top.ready ? g3.top : g3.top.prev) : null };
+            g3.top = { key, g, S, yPinW, pinned, hasSl, holdOn: stl, fab: { st: F.st, knit }, ready: false, done: false, prev: g3.top && !g3.top.fail ? (g3.top.ready ? g3.top : g3.top.prev) : null };
             clearTimeout(g3.topT); const tp = g3.top; g3.topT = setTimeout(() => topRun(tp), 260);
           }
         }
@@ -2617,7 +2617,7 @@
   // ---------- render w Blenderze: gotowy obraz w miejscu podglądu 3D ----------
   // Działa w Wykrojniku zainstalowanym jako aplikacja. Blender chodzi w tle jako jeden proces: dostaje scenę z podglądu (plik GLB) i kamerę,
   // odsyła obraz z przezroczystym tłem, który przykrywa podgląd, dopóki nie ruszysz widoku. Bez Blendera zostaje zwykły podgląd.
-  const BL = /** @type {any} */ ({ on: false, path: '', dir: '', proc: null, ready: false, buf: '', job: 0, busy: false, busyId: 0, pend: null, outFile: '', outKey: '', sent: '', t: 0, shown: '', want: '', why: '', starting: false });
+  const BL = /** @type {any} */ ({ on: false, path: '', dir: '', proc: null, ready: false, buf: '', job: 0, busy: false, cur: null, clothQ: null, killing: null, last: '', why2: '', whyC: '', pend: null, sent: '', t: 0, shown: '', want: '', why: '', starting: false });
   const BL_PY = [
     'import bpy, sys, json, math, os',
     'from mathutils import Vector',
@@ -2665,6 +2665,52 @@
     '    for name, off, power in (("wk_key", right * -0.7 + up * 0.8 - fwd * 0.6, 3.0), ("wk_fill", right * 0.9 + up * 0.25 - fwd * 0.5, 1.0), ("wk_rim", right * 0.3 + up * 0.7 + fwd * 0.9, 1.4)):',
     '        L = named(name, lambda: bpy.data.objects.new(name, bpy.data.lights.new(name, "SUN")))',
     '        L.data.energy = power; L.data.angle = 0.35; aim(L, tgt + off.normalized() * d, tgt)',
+    'def mk(name, verts, edges, faces):',
+    '    old = bpy.data.objects.get(name)',
+    '    if old: bpy.data.objects.remove(old, do_unlink=True)',
+    '    me = bpy.data.meshes.new(name); me.from_pydata(verts, edges, faces); me.update()',
+    '    o = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(o); return o',
+    'def cloth(job):',
+    '    import array',
+    '    c = json.load(open(job["cloth"])); S = 0.01; sc = bpy.context.scene',
+    '    for o in [o for o in bpy.data.objects if o.type == "MESH" or o.type == "EMPTY"]: bpy.data.objects.remove(o, do_unlink=True)',
+    '    st["geo"] = None',
+    '    cv = lambda a, i: (a[i] * S, -a[i + 2] * S, a[i + 1] * S)',
+    '    bp = c["body"]["pos"]; bi = c["body"]["idx"]',
+    '    body = mk("wk_body", [cv(bp, i) for i in range(0, len(bp), 3)], [], [tuple(bi[i:i + 3]) for i in range(0, len(bi), 3)])',
+    '    body.modifiers.new("col", "COLLISION"); body.collision.thickness_outer = 0.004; body.collision.thickness_inner = 0.03; body.collision.cloth_friction = 12',
+    '    fz = c["floor"] * S; fl = mk("wk_floor", [(-3, -3, fz), (3, -3, fz), (3, 3, fz), (-3, 3, fz)], [], [(0, 1, 2, 3)])',
+    '    fl.modifiers.new("col", "COLLISION"); fl.collision.thickness_outer = 0.003; fl.collision.cloth_friction = 20',
+    '    X = c["X"]; rmap = c["rmap"]; uv = c["uv"]; tri = c["tri"]; ns = c["ns"]; nr = len(rmap)',
+    '    by = {}',
+    '    for r, s in enumerate(rmap): by.setdefault(s, []).append(r)',
+    '    sew = [(g[k], g[k + 1]) for g in by.values() for k in range(len(g) - 1)]',
+    '    lift = lambda p: (p[0], p[1], max(p[2], fz + 0.006))',
+    '    ob = mk("wk_cloth", [lift(cv(X, s * 3)) for s in rmap], sew, [tuple(tri[i:i + 3]) for i in range(0, len(tri), 3)])',
+    '    ob.shape_key_add(name="Basis"); flat = ob.shape_key_add(name="flat"); flat.value = 0.0; ob.active_shape_key_index = 0',
+    '    for i in range(nr): flat.data[i].co = (uv[i * 2] * S, uv[i * 2 + 1] * S, 0.0)',
+    '    m = ob.modifiers.new("cloth", "CLOTH"); s = m.settings; k = float(c.get("st", 0.3)); knit = bool(c.get("knit"))',
+    '    s.quality = 10; s.mass = 0.25; s.air_damping = 2.0; s.tension_stiffness = 6 if knit else 30; s.compression_stiffness = 6 if knit else 20; s.shear_stiffness = 3 if knit else 8',
+    '    s.bending_stiffness = 0.03 * (200 ** k); s.tension_damping = 8; s.compression_damping = 8; s.shear_damping = 8; s.bending_damping = 0.6',
+    '    s.use_sewing_springs = True; s.sewing_force_max = 0; s.rest_shape_key = flat',
+    '    pins = set(c.get("pin", []))',
+    '    if pins:',
+    '        vg = ob.vertex_groups.new(name="pin"); vg.add([r for r in range(nr) if rmap[r] in pins], 1.0, "REPLACE"); s.vertex_group_mass = "pin"',
+    '    cs = m.collision_settings; cs.use_collision = True; cs.distance_min = 0.004; cs.collision_quality = 3; cs.use_self_collision = True; cs.self_distance_min = 0.002; cs.self_friction = 5',
+    '    n = int(c.get("frames", 45)); m.point_cache.frame_start = 1; m.point_cache.frame_end = n; sc.frame_start = 1; sc.frame_end = n',
+    '    for f in range(1, n + 1): sc.frame_set(f)',
+    '    ev = ob.evaluated_get(bpy.context.evaluated_depsgraph_get()); vs = ev.data.vertices',
+    '    gaps = sorted((vs[a].co - vs[b].co).length / S for a, b in sew) or [0.0]',
+    '    if gaps[-1] > 8.0 or gaps[int(len(gaps) * 0.85)] > 1.5: raise Exception("szwy rozeszly sie o %.1f cm" % gaps[-1])',
+    '    out = array.array("f", [0.0]) * (ns * 3); cnt = [0] * ns',
+    '    for r in range(nr):',
+    '        co = vs[r].co; s3 = rmap[r] * 3; out[s3] += co.x / S; out[s3 + 1] += co.z / S; out[s3 + 2] += -co.y / S; cnt[rmap[r]] += 1',
+    '    for i in range(ns):',
+    '        if cnt[i] > 1:',
+    '            for q in range(3): out[i * 3 + q] /= cnt[i]',
+    '    with open(job["out"], "wb") as fh: out.tofile(fh)',
+    '    sc.frame_set(1)',
+    '    for o in [o for o in bpy.data.objects if o.type == "MESH"]: bpy.data.objects.remove(o, do_unlink=True)',
     'base(); print("WK READY", flush=True)',
     'for line in sys.stdin:',
     '    line = line.strip()',
@@ -2673,7 +2719,9 @@
     '    try:',
     '        job = json.loads(line); jid = job["id"]',
     '        if job.get("quit"): break',
-    '        load(job); frame(job); bpy.context.scene.render.filepath = job["out"]; bpy.ops.render.render(write_still=True)',
+    '        if job.get("cloth"): cloth(job)',
+    '        else:',
+    '            load(job); frame(job); bpy.context.scene.render.filepath = job["out"]; bpy.ops.render.render(write_still=True)',
     '        print("WK DONE %s" % jid, flush=True)',
     '    except Exception as e:',
     '        print("WK FAIL %s %s" % (jid, str(e).replace("\\n", " ")[:300]), flush=True)',
@@ -2717,7 +2765,7 @@
   const blStat = (t) => { const e = $('blS'); if (e) e.textContent = t || ''; };
   function blNote() {
     const e = $('blStat'); if (!e) return; const inApp = !!(desktop && desktop.childProcess);
-    e.textContent = !inApp ? 'Render w Blenderze działa w Wykrojniku zainstalowanym jako aplikacja na komputerze.' : BL.on ? 'Blender jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' : BL.why || 'Szukam Blendera…';
+    e.textContent = !inApp ? 'Render w Blenderze działa w Wykrojniku zainstalowanym jako aplikacja na komputerze.' : BL.on ? 'Blender jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' + (BL.whyC ? ' ' + BL.whyC : '') + (BL.why2 ? ' ' + BL.why2 : BL.last ? ' Ostatnio przeliczone: ' + BL.last + '.' : '') : BL.why || 'Szukam Blendera…';
     $('blPathRow').hidden = !inApp || BL.on || !BL.why;
   }
   async function blInit(custom) {
@@ -2738,17 +2786,52 @@
     if (BL.proc || BL.starting) return; BL.starting = true; BL.ready = false; BL.buf = '';
     const pr = desktop.childProcess.spawn(BL.path, ['-b', '--factory-startup', '-P', BL.dir + '/wykrojnik_render.py']); BL.proc = pr;
     pr.stdout.on('data', (ch) => { BL.buf += ch; let k; while ((k = BL.buf.indexOf('\n')) >= 0) { const ln = BL.buf.slice(0, k).trim(); BL.buf = BL.buf.slice(k + 1); if (ln.indexOf('WK ') === 0) blLine(ln); } });
-    const gone = (why) => { if (BL.proc !== pr) return; BL.proc = null; BL.ready = false; BL.starting = false; BL.sent = ''; if (BL.busy) { BL.busy = false; blStat(''); } if (why) { BL.on = false; BL.why = why; blNote(); } };
+    const gone = (why) => { if (BL.killing === pr) { why = ''; BL.killing = null; } if (BL.proc !== pr) return; BL.cur = null; BL.proc = null; BL.ready = false; BL.starting = false; BL.sent = ''; BL.busy = false; blStat(''); if (why) { BL.on = false; BL.why = why; blNote(); } };
     pr.on('error', (e) => gone('Blender się nie uruchomił: ' + String((e && e.message) || e).slice(0, 140)));
     pr.on('exit', (code) => gone(code ? 'Blender zakończył pracę z błędem (kod ' + code + '). Podgląd zostaje bez gotowego renderu.' : ''));
   }
   function blLine(ln) {
     const p = ln.split(' ');
-    if (p[1] === 'READY') { BL.ready = true; BL.starting = false; if (BL.want) blGo(); return; }
-    const id = +p[2]; if (id !== BL.job) { if (BL.busy && id === BL.busyId) { BL.busy = false; if (BL.want) blGo(); } return; } // spóźniony wynik starszego zadania nie zastępuje widoku
-    BL.busy = false;
-    if (p[1] === 'DONE') blShow(BL.outFile, BL.outKey); else { blStat(''); BL.why = 'Blender nie wyrenderował tego widoku: ' + p.slice(3).join(' ').slice(0, 160); blNote(); }
-    if (BL.want && BL.want !== BL.outKey) blGo();
+    if (p[1] === 'READY') { BL.ready = true; BL.starting = false; blPump(); return; }
+    const c = BL.cur; if (!c || c.id !== +p[2]) return; BL.cur = null; BL.busy = false;
+    Promise.resolve(c.cb(p[1] === 'DONE', p.slice(3).join(' ').slice(0, 160))).then(blPump, blPump);
+  }
+  function blPump() { if (BL.clothQ) blClothGo(); else if (BL.want) blGo(); }
+  async function blSend(job, cb, tp) { const id = ++BL.job; BL.cur = { id, cb, tp }; job.id = id; await BL.proc.stdin.write(JSON.stringify(job) + '\n'); }
+  function blKill() { const pr = BL.proc; if (!pr) return; BL.killing = pr; BL.cur = null; BL.busy = false; pr.kill('SIGKILL').catch(() => {}); }
+  // ---------- układanie tkaniny w Blenderze: płaskie elementy w skali 1:1, szwy jako sprężyny zszywające, kolizje z sylwetką i podłogą ----------
+  function blBody() {
+    const pos = [], idx = []; g3.scene.updateMatrixWorld(true); const v = new T3.Vector3();
+    g3.scene.traverse((o) => { if (!o.isMesh || !o.material || !o.material.userData || !o.material.userData.body || !o.geometry.attributes.position) return; const P = o.geometry.attributes.position, off = pos.length / 3;
+      for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); pos.push(+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)); }
+      if (o.geometry.index) { const a = o.geometry.index.array; for (let i = 0; i < a.length; i++) idx.push(a[i] + off); } else for (let i = 0; i < P.count; i++) idx.push(i + off); });
+    return { pos, idx };
+  }
+  function blClothApply(tp, u8) {
+    const g = tp.g; if (!u8 || u8.byteLength !== g.ns * 12) return false; const f = new Float32Array(u8.slice().buffer), lo = (g3.floorY == null ? -200 : g3.floorY) - 6;
+    for (let i = 0; i < f.length; i += 3) if (!isFinite(f[i]) || !isFinite(f[i + 1]) || !isFinite(f[i + 2]) || Math.abs(f[i]) > 300 || Math.abs(f[i + 2]) > 300 || f[i + 1] < lo) return false;
+    tp.S.X.set(f); tp.bl = 'done'; return true;
+  }
+  async function blCloth(tp) {
+    tp.bl = 'run'; const file = BL.dir + '/tk-' + blHash(tp.key + '|c1|' + tp.g.ns) + '.bin';
+    if (await desktop.fs.exists(file).catch(() => false)) { const u8 = await desktop.fs.readFile(file).catch(() => null); if (blClothApply(tp, u8)) { BL.last = 'tkanina z zapisu'; if (g3 && g3.top === tp) render3d(); return; } }
+    BL.clothQ = { tp, file }; blStat('Układanie tkaniny…'); blPump();
+  }
+  async function blClothGo() {
+    const q = BL.clothQ; if (!q) return; if (!BL.proc) { blStart(); return; } if (!BL.ready || BL.busy) return;
+    BL.clothQ = null; const tp = q.tp; if (!g3 || g3.top !== tp) { blPump(); return; }
+    BL.busy = true;
+    try {
+      const g = tp.g, body = blBody(); if (!body.idx.length) { tp.bl = 'fail'; BL.busy = false; blStat(''); blPump(); return; }
+      const pin = []; if (tp.holdOn && g.hold) for (const i of g.hold) pin.push(i); if (tp.pinned) for (let i = 0; i < g.ns; i++) if (g.pin[i] >= 0 && g.meta[i].pk !== 'S') pin.push(i);
+      const r2 = (a) => Array.from(a, (x) => +x.toFixed(3)), jf = BL.dir + '/tkanina.json';
+      await desktop.fs.writeFile(jf, JSON.stringify({ ns: g.ns, rmap: Array.from(g.rmap), uv: r2(g.ruv), tri: Array.from(g.tri), X: r2(tp.S.X), pin, body, floor: g3.floorY == null ? -110 : g3.floorY, st: tp.fab ? tp.fab.st : 0.3, knit: !!(tp.fab && tp.fab.knit), frames: 45 }), 'utf8');
+      await blSend({ cloth: jf, out: q.file }, async (ok, msg) => {
+        blStat('');
+        if (ok) { const u8 = await desktop.fs.readFile(q.file).catch(() => null); if (blClothApply(tp, u8)) { BL.last = 'tkanina ułożona w Blenderze'; BL.whyC = ''; if (g3 && g3.top === tp && state.view === '3d') render3d(); return; } msg = 'wynik nie przeszedł kontroli'; desktop.fs.rm(q.file).catch(() => {}); }
+        tp.bl = 'fail'; BL.whyC = 'Blender nie ułożył tkaniny (' + msg + '). Widzisz ułożenie z podglądu.'; blNote();
+      }, tp);
+    } catch (e) { BL.busy = false; BL.cur = null; tp.bl = 'fail'; blStat(''); }
   }
   async function blShow(file, key) {
     try { const b64 = await desktop.fs.readFile(file, 'base64'); if (key !== BL.want) return; const im = $('blImg'); im.onload = () => { if (key !== BL.want) return; const cs = g3.canvas.style; im.style.left = cs.left || '0'; im.style.top = '0'; im.style.width = cs.width || '100%'; im.style.height = '100%'; im.hidden = false; g3.canvas.style.opacity = '0'; BL.shown = key; blStat(''); }; im.src = 'data:image/png;base64,' + b64; }
@@ -2757,6 +2840,7 @@
   function blHide() { const im = $('blImg'); if (im && !im.hidden) { im.hidden = true; } if (g3 && g3.canvas) g3.canvas.style.opacity = ''; BL.shown = ''; }
   // wywoływane po każdym odświeżeniu podglądu: chowa gotowy obraz, gdy widok się zmienił, i zamawia nowy po sekundzie spokoju
   function blTouch() {
+    if (BL.cur && BL.cur.tp && (!g3 || g3.top !== BL.cur.tp)) { blKill(); blStat(''); } // inny projekt albo inne wymiary: stare układanie nie jest już potrzebne
     if (!BL.on || !g3 || state.view !== '3d' || !$('home').hidden) { blHide(); clearTimeout(BL.t); return; }
     const r = g3.canvas.getBoundingClientRect(), ck = [cam.yaw.toFixed(3), cam.pitch.toFixed(3), cam.dist.toFixed(1), Math.round(r.width), Math.round(r.height), g3.mid.toFixed(1)].join('|');
     if (BL.shown && BL.shown.indexOf(ck + '#') !== 0) blHide(); else if (BL.shown) return;
@@ -2765,24 +2849,30 @@
   async function blAsk(ck) {
     if (!BL.on || state.view !== '3d' || !g3) return;
     if ((g3.top && !g3.top.fail && !g3.top.done) || (g3.sim && !g3.sim.done) || !$('busy').hidden) { clearTimeout(BL.t); BL.t = setTimeout(() => blAsk(ck), 600); return; } // tkanina jeszcze się układa
+    const tp = g3.top; if (tp && !tp.fail && tp.done && tp.g && !tp.bl) blCloth(tp);
+    if (tp && tp.bl === 'run') { clearTimeout(BL.t); BL.t = setTimeout(() => blAsk(ck), 500); return; }
     let glb; try { glb = blGlb(); } catch (e) { glb = null; } if (!glb) return;
     const r = g3.canvas.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1), sc = Math.min(1, 2000 / (Math.max(r.width, r.height) * dpr)), w = Math.round(r.width * dpr * sc), h = Math.round(r.height * dpr * sc);
     const key = ck + '#' + glb.sig, file = BL.dir + '/' + blHash(key + '|' + w + 'x' + h) + '.png'; BL.want = key; BL.pend = { glb, key, file, w, h };
-    if (await desktop.fs.exists(file).catch(() => false)) { blShow(file, key); return; } // ten sam projekt i kadr: zapisany wynik
-    blStat('Dopracowywanie podglądu…'); blGo();
+    if (await desktop.fs.exists(file).catch(() => false)) { BL.last = 'nic, obraz z zapisu'; blNote(); blShow(file, key); return; } // ten sam projekt i kadr: zapisany wynik
+    BL.why2 = ''; blStat('Dopracowywanie podglądu…'); blGo();
   }
   async function blGo() {
     const q = BL.pend; if (!q || q.key !== BL.want) return; if (!BL.proc) { blStart(); return; } if (!BL.ready || BL.busy) return;
-    BL.busy = true; BL.job++; BL.busyId = BL.job; const id = BL.job, geoFile = BL.dir + '/scena.glb';
+    BL.busy = true; const geoFile = BL.dir + '/scena.glb';
     try {
-      if (BL.sent !== q.glb.sig) { await desktop.fs.writeFile(geoFile, q.glb.bytes); BL.sent = q.glb.sig; }
-      if (q.key !== BL.want) { BL.busy = false; blGo(); return; }
-      const p = g3.camera.position; BL.outFile = q.file; BL.outKey = q.key;
-      await BL.proc.stdin.write(JSON.stringify({ id, glb: geoFile, geo: q.glb.sig, out: q.file, w: q.w, h: q.h, cam: { pos: [p.x, p.y, p.z], target: [0, g3.mid, 0], fov: g3.camera.fov } }) + '\n');
-    } catch (e) { BL.busy = false; blStat(''); BL.why = 'Nie udało się przekazać sceny do Blendera: ' + String((e && e.message) || e).slice(0, 140); blNote(); }
+      const fresh = BL.sent !== q.glb.sig; if (fresh) { await desktop.fs.writeFile(geoFile, q.glb.bytes); BL.sent = q.glb.sig; }
+      if (q.key !== BL.want) { BL.busy = false; blPump(); return; }
+      const p = g3.camera.position;
+      await blSend({ glb: geoFile, geo: q.glb.sig, out: q.file, w: q.w, h: q.h, cam: { pos: [p.x, p.y, p.z], target: [0, g3.mid, 0], fov: g3.camera.fov } }, (ok, msg) => {
+        if (BL.pend === q) BL.pend = null;
+        if (q.key !== BL.want) return; // spóźniony wynik starszego zadania nie zastępuje widoku
+        if (ok) { BL.last = (fresh ? 'scena i obraz' : 'tylko obraz') + (BL.last && BL.last.indexOf('tkanina') === 0 ? ', ' + BL.last : ''); blShow(q.file, q.key); blNote(); } else { blStat(''); BL.why2 = 'Blender nie wyrenderował tego widoku: ' + msg; blNote(); }
+      });
+    } catch (e) { BL.busy = false; BL.cur = null; blStat(''); BL.why2 = 'Nie udało się przekazać sceny do Blendera: ' + String((e && e.message) || e).slice(0, 140); blNote(); }
   }
   $('blPathGo').addEventListener('click', () => { const v = $('blPath').value.trim(); if (v) blInit(v); });
-  window.__bl = { BL, blGlb, blInit }; // tylko do testów
+  window.__bl = { BL, blGlb, blInit, get g3() { return g3; } }; // tylko do testów
   // ---------- aplikacja desktopowa ----------
   function drawIcon() {
     const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d'); g.scale(8, 8);

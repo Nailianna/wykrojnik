@@ -5,9 +5,9 @@
     const p = sil.imported ? Object.assign({}, state.p, { gora: sil.strap ? 'bez' : 'ramiona', dl: sil.impDl, kn: 0, gf: 0, ff: 1, flare: 0, tren: 0, rozp: 0, pasek: 0, pasT: 0, zakK: 0, crop: 0, bok: 0, ram: 'brak', ramW: 0, rek: sil.sleeve ? 'dlugi' : 'brak', mank: false, kol: 'brak', kolW: 0, kop: false, falN: false, falR: false, marsz: false, sciag: false, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, bk: 'prosta', luzG: 4, luzT: 4, luzB: 4, fac: 'brak', extras: [] }) : state.p;
     if (g3.group) { g3.scene.remove(g3.group); g3.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
     const FG = figData(), fs = FG ? m.wzrost / FG.H : 0, headLen = FG ? (FG.H - FG.lv.neck) * fs : m.wzrost * 0.165;
-    const grp = new T3.Group(), floor = -(m.wzrost - a.Dts - headLen);
+    const grp = new T3.Group(), floor = -(m.wzrost - a.Dts - headLen); g3.floorY = floor;
     // manekin
-    const bm = new T3.MeshStandardMaterial({ color: state.figure ? 0xd2c8b6 : 0xcdc3ae, roughness: state.figure ? 0.85 : 0.95, metalness: 0, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+    const bm = new T3.MeshStandardMaterial({ color: state.figure ? 0xd2c8b6 : 0xcdc3ae, roughness: state.figure ? 0.85 : 0.95, metalness: 0, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 }); bm.userData.body = true;
     const NB = 64;
     const useFig = state.figure && !!FG;
     if (!useFig) grp.add(surface(72, NB, (u, v) => {
@@ -384,7 +384,7 @@
                 const nx = uy * vz - uz * vy, ny2 = uz * vx - ux * vz, nz = ux * vy - uy * vx, mx = (X[i0] + X[i1] + X[i2]) / 3 - c0[0], my = gr.pk === 'S' ? (X[i0 + 1] + X[i1 + 1] + X[i2 + 1]) / 3 - c0[1] : 0, mz = (X[i0 + 2] + X[i1 + 2] + X[i2 + 2]) / 3 - c0[2]; sum += nx * mx + ny2 * my + nz * mz; }
               if (sum < 0) for (let t = gr.t0; t < gr.t1; t++) { const k = g.tri[t * 3 + 1]; g.tri[t * 3 + 1] = g.tri[t * 3 + 2]; g.tri[t * 3 + 2] = k; }
             }
-            g3.top = { key, g, S, yPinW, pinned, hasSl, ready: false, done: false, prev: g3.top && !g3.top.fail ? (g3.top.ready ? g3.top : g3.top.prev) : null };
+            g3.top = { key, g, S, yPinW, pinned, hasSl, holdOn: stl, fab: { st: F.st, knit }, ready: false, done: false, prev: g3.top && !g3.top.fail ? (g3.top.ready ? g3.top : g3.top.prev) : null };
             clearTimeout(g3.topT); const tp = g3.top; g3.topT = setTimeout(() => topRun(tp), 260);
           }
         }
