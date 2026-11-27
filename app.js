@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.86.0', n: 92, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.86.1', n: 93, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -416,18 +416,18 @@
   // ---------- rysunek 2D ----------
   // wykrój wczytany z PDF: gotowe elementy jednego rozmiaru zamiast konstrukcji z wymiarów
   function impDraft(imp, m) {
-    const adjK = JSON.stringify((imp && imp.adj) || {}); if (!impAdjC || impAdjC.imp !== imp || impAdjC.k !== adjK) impAdjC = { imp, k: adjK, r: impAdj(imp) };
+    const adjK = JSON.stringify((imp && imp.adj) || {}) + [m.og, m.ot, m.ob, m.wzrost].join(','), planAx = impAxes(imp, m); if (!impAdjC || impAdjC.imp !== imp || impAdjC.k !== adjK) impAdjC = { imp, k: adjK, r: impAdj(imp, planAx) };
     const pcs = impAdjC.r.pieces, an = imp.an || null, sa = an && an.sa, bd = an && an.body;
     // opisy cięcia, zapas i wymiary ciała dla rozmiaru pochodzą z analizy arkusza
     const fit = bd && bd.b ? ' Rozmiar ' + bd.n + ' jest szyty na biust ' + f1(bd.b) + (bd.t ? ', talię ' + f1(bd.t) : '') + (bd.h ? ', biodra ' + f1(bd.h) : '') + ' cm; modelka ma ' + [m.og, m.ot, m.ob].map((v) => f1(v)).join(' / ') + '.' : '';
     const saT = !sa ? 'Linie i zapasy na szwy są takie jak w oryginale, Wykrojnik ich nie przelicza.' : (sa.inc ? 'Zapas na szwy jest wliczony w linie' + (sa.cm !== null ? ': ' + f1(sa.cm) + ' cm' : ', ale arkusz nie podaje, ile wynosi') : 'Linie nie zawierają zapasu na szwy' + (sa.cm !== null ? ', dodaj ' + f1(sa.cm) + ' cm' : '')) + (sa.ex && sa.ex.length ? ' (' + sa.ex.map((w) => w.gdzie + ': ' + f1(w.cm) + ' cm').join(', ') + ')' : '') + '.' + (an.skos ? ' Wykrój jest cięty ze skosu.' : '');
     // zszyte elementy do podglądu 3D: liczone raz na wykrój i modelkę
     const sk = adjK + (imp.size || '') + '|' + pcs.length + '|' + (pcs[0] ? pcs[0].name + pcs[0].w : '') + '|' + [m.og, m.ot, m.ob, m.wzrost].join(',');
-    if (!impSewC || impSewC.k !== sk || impSewC.imp !== imp) { let sw; try { sw = impSew(Object.assign({}, imp, { pieces: pcs }), m); } catch (e) { sw = { err: 'Nie umiem jeszcze zszyć tego fasonu.' }; }
+    if (!impSewC || impSewC.k !== sk || impSewC.imp !== imp) { let sw; if (planAx) sw = { err: 'plan' }; else try { sw = impSew(Object.assign({}, imp, { pieces: pcs }), m); } catch (e) { sw = { err: 'Nie umiem jeszcze zszyć tego fasonu.' }; }
       if ((sw.err || window['__forcePlan']) && an && an.szwy && an.szwy.length) { // kształt nie pasuje do znanych krojów: szyję według szwów wskazanych przez analizę
-        let pl = null; try { pl = impPlan(Object.assign({}, imp, { pieces: pcs }), m); } catch (e) { pl = null; }
+        let pl = null; try { pl = impPlan(imp, m, impAdjC.r.fn); } catch (e) { pl = null; }
         if (pl && !pl.err) sw = { plan: pl.plan, used: pl.used, pieces: [], dl: pl.dl, hemC: pl.hemC, sleeve: null, gather: null, skip: pl.skip, strap: pl.strap ? { F: true, B: true, yMax: pl.plan.yMax } : null, byPlan: true };
-        else if (pl && pl.err) sw = { err: sw.err + ' ' + pl.err };
+        else if (pl && pl.err) sw = { err: (sw.err === 'plan' ? '' : sw.err + ' ') + pl.err }; else if (sw.err === 'plan') sw = { err: 'Po tej zmianie nie umiem zszyć wykroju według szwów z analizy.' };
       } impSewC = { k: sk, imp, sw }; }
     const sw = impSewC.sw, sew3 = !sw.err ? (sw.byPlan ? ' Podgląd 3D jest zszyty według szwów z analizy' + (sw.strap ? ', na ramiączkach' : '') : ' Podgląd 3D pokazuje przód' + (sw.strap ? (sw.strap.F && sw.strap.B ? ' i tył na ramiączkach' : ' i tył z górną krawędzią przytrzymaną na miejscu') : ', tył') + (sw.kim ? ' razem z rękawami' : sw.sleeve ? ' i rękawy' + (sw.gather ? ' zmarszczone do długości mankietu' : '') : '') + '') + (sw.used && sw.used.length ? '. Zszyte elementy: ' + sw.used.map((x) => x.toLowerCase()).join(', ') : '') + (sw.skip.length ? '; bez elementów: ' + sw.skip.join(', ').toLowerCase() : '') + '.' : '';
     return { pieces: pcs, sewn: sw.err ? null : { pieces: sw.pieces, plan: sw.plan || null }, sewErr: sw.err || '', info: { rows: [], darts: [], cut: pcs.map((q) => [q.name, q.cut ? q.cut.replace(/^wytnij /, '') : 'według oryginału']), warn: 'Wykrój wczytany z pliku, rozmiar ' + (imp.size || 'jedyny') + '. ' + saT + fit + sew3 },
@@ -435,7 +435,13 @@
   }
   // nowy projekt zaczyna od pustego manekina: fason wybiera się dopiero w panelu
   function emptyDraft(m) { return { pieces: [], info: { rows: [], darts: [], cut: [], warn: '' }, sil: { top: 'waist', lower: 'none', empty: true, hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: 'bez fasonu', notions: [], bases: {}, empty: true }; }
-  let impSewC = null, impAdjC = null;
+  let impSewC = null, impAdjC = null, impAxC = null;
+  // czy ubranie jest szyte według planu z analizy (kroju nie da się rozpoznać z kształtu) i które elementy zmieniają wtedy długość; liczone na oryginalnych elementach, raz na wykrój i modelkę
+  function impAxes(imp, m) {
+    const k = [m.og, m.ot, m.ob, m.wzrost].join(','); if (impAxC && impAxC.pcs === imp.pieces && impAxC.an === imp.an && impAxC.k === k) return impAxC.ax;
+    let ax = null; if (imp.an && imp.an.szwy && imp.an.szwy.length) { let g; try { g = window['__forcePlan'] ? { err: 1 } : impSew(Object.assign({}, imp, { adj: null }), m); } catch (e) { g = { err: 1 }; } if (g.err) { let pl = null; try { pl = impPlan(Object.assign({}, imp, { adj: null }), m); } catch (e) { pl = null; } if (pl && !pl.err && pl.lenAx.length) ax = pl.lenAx; } }
+    impAxC = { pcs: imp.pieces, an: imp.an, k, ax }; return ax;
+  }
   const impCache = {}; // pełne dane ostatnio wczytanych plików (wszystkie rozmiary), tylko na czas sesji
   async function impLoad(file) {
     if (!file) return; const bz = busyOn('Czytam wykrój z pliku.'); await paintTick();
@@ -454,10 +460,10 @@
     const sel = $('impSize'); sel.textContent = ''; for (const z of state.imp.sizes || []) { const o = document.createElement('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.value = state.imp.size || ''; sel.disabled = !(state.imp.sizes || []).length; $('impSizeRow').hidden = sel.disabled;
     { const uw = (state.imp.an && state.imp.an.uw) || [], nb = $('impNotesB'); $('impNotes').hidden = !uw.length; nb.textContent = ''; for (const [k, title] of [['spr', 'Do sprawdzenia'], ['zapas', 'Zapasy na szwy'], ['druk', 'Druk'], ['material', 'Materiał']]) { const it = uw.filter((u) => u.k === k); if (!it.length) continue; const b = document.createElement('b'); b.textContent = title; nb.appendChild(b); it.forEach((u) => { const p = document.createElement('p'); p.textContent = u.t + (u.s ? ' (' + u.s + ')' : ''); nb.appendChild(p); }); } }
     { // długość: suwaki działają, gdy wiem, który element jest przodem, tyłem i rękawem
-      const r = impAdj(state.imp), adj = state.imp.adj || {}, set = (id, o, v) => { for (const e of [$('i_' + id), $('is_' + id)]) { e.min = o ? o.min : 0; if (document.activeElement !== e) e.value = o ? o.d : 0; } };
-      $('dopImp').hidden = false; $('impLenBox').hidden = !r.body && !r.sleeve; $('i_lb').closest('label').hidden = !r.body; $('impLsRow').hidden = !r.sleeve; set('lb', r.body, adj.b); set('ls', r.sleeve, adj.s);
+      const r = impAdj(state.imp, impAxes(state.imp, cur())), adj = state.imp.adj || {}, set = (id, o, v) => { for (const e of [$('i_' + id), $('is_' + id)]) { e.min = o ? o.min : 0; if (document.activeElement !== e) e.value = o ? o.d : 0; } };
+      $('dopImp').hidden = false; $('impLbT').textContent = r.body && r.body.plan ? 'Dół dłuższy o' : 'Przód i tył dłuższe o'; $('impLenBox').hidden = !r.body && !r.sleeve; $('i_lb').closest('label').hidden = !r.body; $('impLsRow').hidden = !r.sleeve; set('lb', r.body, adj.b); set('ls', r.sleeve, adj.s);
       $('impLenN').textContent = !r.body && !r.sleeve ? (state.imp.an ? 'W tym wykroju nie umiem wskazać przodu, tyłu ani rękawa, więc długości tu nie zmienisz.' : 'Długość zmienisz po analizie wykroju, bo muszę wiedzieć, który element jest przodem, tyłem i rękawem.')
-        : (r.body && r.body.loose ? 'W tym fasonie nie ma pachy, więc wydłużam i skracam w dolnej połowie elementu. Sprawdź na rysunku, czy zmienił się właściwy koniec.' : 'Wydłużam i skracam pod pachą, więc dół i jego szerokość zostają jak w oryginale.') + (!r.body ? ' Przodu i tyłu nie rozpoznałam, zmienisz tylko rękaw.' : '') + ' Podszewkę i odszycia popraw ręcznie.';
+        : r.body && r.body.plan ? 'Wydłużam i skracam elementy sięgające dołu, w połowie ich długości, więc dół i jego szerokość zostają jak w oryginale. Elementy doszyte luzem popraw ręcznie.' : (r.body && r.body.loose ? 'W tym fasonie nie ma pachy, więc wydłużam i skracam w dolnej połowie elementu. Sprawdź na rysunku, czy zmienił się właściwy koniec.' : 'Wydłużam i skracam pod pachą, więc dół i jego szerokość zostają jak w oryginale.') + (!r.body ? ' Przodu i tyłu nie rozpoznałam, zmienisz tylko rękaw.' : '') + ' Podszewkę i odszycia popraw ręcznie.';
     }
     $('impNote').textContent = sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
   }
@@ -494,6 +500,7 @@
     try { model = compute(); } catch (e) { say('Z tych wymiarów nie da się zbudować wykroju. Sprawdź wpisane wartości.'); return; }
     const { d, lay, tl } = model;
     $('emptyN').hidden = !d.empty || !$('home').hidden; cardUi();
+    if (state.view === '3d' && d.imported && !d.sewn) { say(d.sewErr || 'Tego wykroju nie umiem pokazać w 3D.', true); setView('2d'); return; } // po zmianie ustawień wykrój przestał się zszywać: zamiast przypadkowej bryły wraca rysunek
     { const mb = $('miniS').closest('.float') || $('miniS').parentElement; if (mb) mb.style.display = d.empty ? 'none' : ''; }
     $('sub').textContent = (projCur().name || 'Bez nazwy') + ' · ' + d.title + ' · ' + (cur().name || 'Bez imienia');
     if (state.view === '3d') {
@@ -2264,8 +2271,9 @@
     }
     return null;
   }
+  const swMove = (ax, d) => (x, y) => { const t = (x - ax.o[0]) * ax.dir[0] + (y - ax.o[1]) * ax.dir[1]; if (t <= ax.cut) return [x, y]; const s = d >= 0 ? d : Math.max(ax.cut - t, d); return [x + ax.dir[0] * s, y + ax.dir[1] * s]; };
   function swStretch(pc, ax, d) {
-    const mv = (x, y) => { const t = (x - ax.o[0]) * ax.dir[0] + (y - ax.o[1]) * ax.dir[1]; if (t <= ax.cut) return [x, y]; const s = d >= 0 ? d : Math.max(ax.cut - t, d); return [x + ax.dir[0] * s, y + ax.dir[1] * s]; };
+    const mv = swMove(ax, d);
     // przy skracaniu punkty z wyciętego pasa znikają, a linia łączy się prosto nad nim i pod nim (zsunięte na linię cięcia robiłyby schodek na skośnym szwie)
     const gone = (p) => { if (d >= 0) return false; const t = (p[0] - ax.o[0]) * ax.dir[0] + (p[1] - ax.o[1]) * ax.dir[1]; return t > ax.cut && t < ax.cut - d; };
     const line = (pts) => { const n = pts.length, closed = n > 3 && Math.hypot(pts[0][0] - pts[n - 1][0], pts[0][1] - pts[n - 1][1]) < 0.3, keep = pts.filter((p) => !gone(p)).map((p) => mv(p[0], p[1])); if (keep.length < 2 || (closed && keep.length < 4)) return pts.map((p) => mv(p[0], p[1])); if (closed && Math.hypot(keep[0][0] - keep[keep.length - 1][0], keep[0][1] - keep[keep.length - 1][1]) > 0.3) keep.push([keep[0][0], keep[0][1]]); return keep; };
@@ -2276,15 +2284,15 @@
   }
   const swRoleOf = (pc) => { const nm = String(pc.name || ''); return pc.role ? pc.role : SW_NOT.test(nm) ? '' : (SW_ROLE.find((x) => x.re.test(nm)) || { r: '' }).r; };
   // elementy po zmianie długości oraz to, co panel ma pokazać: czy korpus i rękaw dają się zmieniać i w jakich granicach
-  function impAdj(imp) {
-    const pcs = (imp && imp.pieces) || [], adj = (imp && imp.adj) || {}, out = { pieces: pcs, body: null, sleeve: null };
+  function impAdj(imp, planAx) { // planAx: osie elementów sięgających dołu, gdy ubranie jest szyte według planu z analizy
+    const pcs = (imp && imp.pieces) || [], adj = (imp && imp.adj) || {}, out = { pieces: pcs, body: null, sleeve: null, fn: {} };
     const grp = (roles) => { const g = pcs.map((pc, i) => ({ i, pc, r: swRoleOf(pc) })).filter((x) => roles.includes(x.r)).map((x) => Object.assign(x, { ax: swAxis(x.pc, x.r) })); return g.length && g.every((x) => x.ax) ? g : null; };
     const res = pcs.slice();
     for (const [key, roles, val] of /** @type {any[][]} */ ([['body', ['F', 'B'], +adj.b || 0], ['sleeve', ['S'], +adj.s || 0]])) {
-      const g = grp(roles); if (!g || (key === 'body' && !(g.some((x) => x.r === 'F') && g.some((x) => x.r === 'B')))) continue;
+      const viaPlan = key === 'body' && planAx && planAx.length, g = viaPlan ? planAx.filter((q) => pcs[q.pi]).map((q) => ({ i: q.pi, pc: pcs[q.pi], r: 'P', ax: q })) : grp(roles); if (!g || !g.length || (key === 'body' && !viaPlan && !(g.some((x) => x.r === 'F') && g.some((x) => x.r === 'B')))) continue;
       const min = -Math.floor(Math.min(...g.map((x) => x.ax.room)) * 0.85 * 2) / 2, d = Math.max(min, val);
-      out[key] = { min, d, loose: g.some((x) => x.ax.loose), n: g.length };
-      if (d) for (const x of g) res[x.i] = swStretch(x.pc, x.ax, d);
+      out[key] = { min, d, loose: g.some((x) => x.ax.loose), n: g.length, plan: !!viaPlan };
+      if (d) for (const x of g) { res[x.i] = swStretch(x.pc, x.ax, d); out.fn[x.i] = swMove(x.ax, d); }
     }
     out.pieces = res; return out;
   }
@@ -2357,9 +2365,10 @@
   const plRef = (r) => (Array.isArray(r) ? { at: r, i: 1, m: false } : r && r.at ? { at: r.at, i: r.i || 1, m: !!r.m, w: !!r.w, r: Array.isArray(r.r) && r.r[1] > r.r[0] ? [Math.max(0, r.r[0]), Math.min(1, r.r[1])] : null } : null);
   // odcinek łamanej między ułamkami jej długości
   function plSub(pts, t0, t1) { const L = swLen(pts), out = [ptOn(pts, t0)]; let acc = 0; for (let i = 1; i < pts.length - 1; i++) { acc += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); const f = acc / (L || 1); if (f > t0 + 1e-6 && f < t1 - 1e-6) out.push(pts[i]); } out.push(ptOn(pts, t1)); return out; }
-  function impPlan(imp, m) {
+  function impPlan(imp, m, fn) { // fn: przesunięcia punktów elementów po zmianie długości; krawędzie rozpoznaję na oryginale, żeby wskazania z analizy trafiały w to samo miejsce
     const an = imp && imp.an, pcs = (imp && imp.pieces) || []; if (!an || !an.szwy || !an.szwy.length || !an.srodek || !an.srodek.p) return null;
-    const a = W.full(m), all = plAll(pcs), near = (r) => plNear(all, r && r.at), L1 = (v) => (v == null ? [] : Array.isArray(v) && (typeof v[0] === 'number') ? [plRef(v)] : (Array.isArray(v) ? v : [v]).map(plRef).filter(Boolean));
+    const a = W.full(m), all = plAll(pcs); if (fn) for (const e of all) if (fn[e.pi]) { e.pts = e.pts.map((p) => fn[e.pi](p[0], p[1])); e.len = swLen(e.pts); }
+    const near = (r) => plNear(all, r && r.at), L1 = (v) => (v == null ? [] : Array.isArray(v) && (typeof v[0] === 'number') ? [plRef(v)] : (Array.isArray(v) ? v : [v]).map(plRef).filter(Boolean));
     const cfL = L1(an.srodek.p), cbL = L1(an.srodek.t), cfR = cfL.find((r) => !r.w), cbR = cbL.find((r) => !r.w), cf0 = cfR ? near(cfR) : null, cb0 = cbR ? near(cbR) : null;
     if (!cf0) return { err: 'Nie znalazłam krawędzi środka przodu wskazanej przez analizę.' };
     const foldE = (an.rozloz || []).map((q) => plNear(all, q)).filter(Boolean), centred = cfL.concat(cbL).filter((r) => r.w).map((r) => { const e = near(r); return e ? e.pi + '#' + r.i : ''; });
@@ -2428,8 +2437,13 @@
     let dl = 0, wid = 0, area = 0; for (const p of outParts) { let ar = 0; const rr = []; for (const e of p.ed) for (const q of e.pts) { dl = Math.max(dl, q[1]); wid = Math.max(wid, q[0]); rr.push(q); } for (let k = 0; k < rr.length; k++) { const q0 = rr[k], q1 = rr[(k + 1) % rr.length]; ar += q0[0] * q1[1] - q1[0] * q0[1]; } area += Math.abs(ar); }
     { const bad = swSane(Ucb ? 2 * cbU(-pit) : 0, dl, m, an); if (bad) return { err: bad }; }
     const usedPi = new Set(placed.map((P) => P.pi)), skip = pcs.filter((_, i2) => !usedPi.has(i2)).map((pc) => String(pc.name || '').replace(/ \(część.*$/, ''));
+    // osie do zmiany długości: elementy sięgające dołu ubrania, każdy wzdłuż własnego pionu po złożeniu (klin wzdłuż swojej osi)
+    const lenAx = [], seenPi = new Set(); for (const P of placed) { let vm = -1e9; for (const p of ring(P)) vm = Math.max(vm, plAp(T[P.key], p)[1]); if (vm < dl - 15 || seenPi.has(P.pi)) continue; seenPi.add(P.pi);
+      const t = T[P.key]; let o = [0, 0], dir = [t[2], t[3]]; if (P.unf) { const A = P.unf[0], B = P.unf[1], l = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1; dir = [(B[0] - A[0]) / l, (B[1] - A[1]) / l]; o = A; if (plAp(t, B)[1] < plAp(t, A)[1]) dir = [-dir[0], -dir[1]]; }
+      let t0 = 1e9, t1 = -1e9; for (const e of all) if (e.pi === P.pi) for (const p of e.pts) { const tt = (p[0] - o[0]) * dir[0] + (p[1] - o[1]) * dir[1]; t0 = Math.min(t0, tt); t1 = Math.max(t1, tt); }
+      if (t1 - t0 > 12) lenAx.push({ pi: P.pi, o, dir, cut: t0 + 0.5 * (t1 - t0), room: 0.4 * (t1 - t0) }); }
     const cbLine = cbQ ? (cbQ[0][1] < cbQ[cbQ.length - 1][1] ? [cbQ[0], cbQ[cbQ.length - 1]] : [cbQ[cbQ.length - 1], cbQ[0]]) : null;
-    return { plan: { parts: outParts, seams: outSeams, hold, Ucb, cbLine, area, yMax: an.trzym === 'ramiona' ? null : pit + 8 }, dl, hemC: 4 * (Ucb || wid), used: Array.from(usedPi).map((k) => String(pcs[k].name || '')), skip: skip.filter((x, i2, arr) => x && arr.indexOf(x) === i2), strap: hold.length === 2 };
+    return { lenAx, plan: { parts: outParts, seams: outSeams, hold, Ucb, cbLine, area, yMax: an.trzym === 'ramiona' ? null : pit + 8 }, dl, hemC: 4 * (Ucb || wid), used: Array.from(usedPi).map((k) => String(pcs[k].name || '')), skip: skip.filter((x, i2, arr) => x && arr.indexOf(x) === i2), strap: hold.length === 2 };
   }
   // punkt na łamanej w ułamku jej długości
   function ptOn(pts, f) { const L = swLen(pts); let acc = 0; for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (acc + d >= f * L - 1e-9) { const t = (f * L - acc) / (d || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; } acc += d; } return pts[pts.length - 1]; }

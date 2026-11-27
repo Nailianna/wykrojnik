@@ -224,8 +224,9 @@
     }
     return null;
   }
+  const swMove = (ax, d) => (x, y) => { const t = (x - ax.o[0]) * ax.dir[0] + (y - ax.o[1]) * ax.dir[1]; if (t <= ax.cut) return [x, y]; const s = d >= 0 ? d : Math.max(ax.cut - t, d); return [x + ax.dir[0] * s, y + ax.dir[1] * s]; };
   function swStretch(pc, ax, d) {
-    const mv = (x, y) => { const t = (x - ax.o[0]) * ax.dir[0] + (y - ax.o[1]) * ax.dir[1]; if (t <= ax.cut) return [x, y]; const s = d >= 0 ? d : Math.max(ax.cut - t, d); return [x + ax.dir[0] * s, y + ax.dir[1] * s]; };
+    const mv = swMove(ax, d);
     // przy skracaniu punkty z wyciętego pasa znikają, a linia łączy się prosto nad nim i pod nim (zsunięte na linię cięcia robiłyby schodek na skośnym szwie)
     const gone = (p) => { if (d >= 0) return false; const t = (p[0] - ax.o[0]) * ax.dir[0] + (p[1] - ax.o[1]) * ax.dir[1]; return t > ax.cut && t < ax.cut - d; };
     const line = (pts) => { const n = pts.length, closed = n > 3 && Math.hypot(pts[0][0] - pts[n - 1][0], pts[0][1] - pts[n - 1][1]) < 0.3, keep = pts.filter((p) => !gone(p)).map((p) => mv(p[0], p[1])); if (keep.length < 2 || (closed && keep.length < 4)) return pts.map((p) => mv(p[0], p[1])); if (closed && Math.hypot(keep[0][0] - keep[keep.length - 1][0], keep[0][1] - keep[keep.length - 1][1]) > 0.3) keep.push([keep[0][0], keep[0][1]]); return keep; };
@@ -236,15 +237,15 @@
   }
   const swRoleOf = (pc) => { const nm = String(pc.name || ''); return pc.role ? pc.role : SW_NOT.test(nm) ? '' : (SW_ROLE.find((x) => x.re.test(nm)) || { r: '' }).r; };
   // elementy po zmianie długości oraz to, co panel ma pokazać: czy korpus i rękaw dają się zmieniać i w jakich granicach
-  function impAdj(imp) {
-    const pcs = (imp && imp.pieces) || [], adj = (imp && imp.adj) || {}, out = { pieces: pcs, body: null, sleeve: null };
+  function impAdj(imp, planAx) { // planAx: osie elementów sięgających dołu, gdy ubranie jest szyte według planu z analizy
+    const pcs = (imp && imp.pieces) || [], adj = (imp && imp.adj) || {}, out = { pieces: pcs, body: null, sleeve: null, fn: {} };
     const grp = (roles) => { const g = pcs.map((pc, i) => ({ i, pc, r: swRoleOf(pc) })).filter((x) => roles.includes(x.r)).map((x) => Object.assign(x, { ax: swAxis(x.pc, x.r) })); return g.length && g.every((x) => x.ax) ? g : null; };
     const res = pcs.slice();
     for (const [key, roles, val] of /** @type {any[][]} */ ([['body', ['F', 'B'], +adj.b || 0], ['sleeve', ['S'], +adj.s || 0]])) {
-      const g = grp(roles); if (!g || (key === 'body' && !(g.some((x) => x.r === 'F') && g.some((x) => x.r === 'B')))) continue;
+      const viaPlan = key === 'body' && planAx && planAx.length, g = viaPlan ? planAx.filter((q) => pcs[q.pi]).map((q) => ({ i: q.pi, pc: pcs[q.pi], r: 'P', ax: q })) : grp(roles); if (!g || !g.length || (key === 'body' && !viaPlan && !(g.some((x) => x.r === 'F') && g.some((x) => x.r === 'B')))) continue;
       const min = -Math.floor(Math.min(...g.map((x) => x.ax.room)) * 0.85 * 2) / 2, d = Math.max(min, val);
-      out[key] = { min, d, loose: g.some((x) => x.ax.loose), n: g.length };
-      if (d) for (const x of g) res[x.i] = swStretch(x.pc, x.ax, d);
+      out[key] = { min, d, loose: g.some((x) => x.ax.loose), n: g.length, plan: !!viaPlan };
+      if (d) for (const x of g) { res[x.i] = swStretch(x.pc, x.ax, d); out.fn[x.i] = swMove(x.ax, d); }
     }
     out.pieces = res; return out;
   }

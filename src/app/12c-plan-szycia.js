@@ -66,9 +66,10 @@
   const plRef = (r) => (Array.isArray(r) ? { at: r, i: 1, m: false } : r && r.at ? { at: r.at, i: r.i || 1, m: !!r.m, w: !!r.w, r: Array.isArray(r.r) && r.r[1] > r.r[0] ? [Math.max(0, r.r[0]), Math.min(1, r.r[1])] : null } : null);
   // odcinek łamanej między ułamkami jej długości
   function plSub(pts, t0, t1) { const L = swLen(pts), out = [ptOn(pts, t0)]; let acc = 0; for (let i = 1; i < pts.length - 1; i++) { acc += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); const f = acc / (L || 1); if (f > t0 + 1e-6 && f < t1 - 1e-6) out.push(pts[i]); } out.push(ptOn(pts, t1)); return out; }
-  function impPlan(imp, m) {
+  function impPlan(imp, m, fn) { // fn: przesunięcia punktów elementów po zmianie długości; krawędzie rozpoznaję na oryginale, żeby wskazania z analizy trafiały w to samo miejsce
     const an = imp && imp.an, pcs = (imp && imp.pieces) || []; if (!an || !an.szwy || !an.szwy.length || !an.srodek || !an.srodek.p) return null;
-    const a = W.full(m), all = plAll(pcs), near = (r) => plNear(all, r && r.at), L1 = (v) => (v == null ? [] : Array.isArray(v) && (typeof v[0] === 'number') ? [plRef(v)] : (Array.isArray(v) ? v : [v]).map(plRef).filter(Boolean));
+    const a = W.full(m), all = plAll(pcs); if (fn) for (const e of all) if (fn[e.pi]) { e.pts = e.pts.map((p) => fn[e.pi](p[0], p[1])); e.len = swLen(e.pts); }
+    const near = (r) => plNear(all, r && r.at), L1 = (v) => (v == null ? [] : Array.isArray(v) && (typeof v[0] === 'number') ? [plRef(v)] : (Array.isArray(v) ? v : [v]).map(plRef).filter(Boolean));
     const cfL = L1(an.srodek.p), cbL = L1(an.srodek.t), cfR = cfL.find((r) => !r.w), cbR = cbL.find((r) => !r.w), cf0 = cfR ? near(cfR) : null, cb0 = cbR ? near(cbR) : null;
     if (!cf0) return { err: 'Nie znalazłam krawędzi środka przodu wskazanej przez analizę.' };
     const foldE = (an.rozloz || []).map((q) => plNear(all, q)).filter(Boolean), centred = cfL.concat(cbL).filter((r) => r.w).map((r) => { const e = near(r); return e ? e.pi + '#' + r.i : ''; });
@@ -137,8 +138,13 @@
     let dl = 0, wid = 0, area = 0; for (const p of outParts) { let ar = 0; const rr = []; for (const e of p.ed) for (const q of e.pts) { dl = Math.max(dl, q[1]); wid = Math.max(wid, q[0]); rr.push(q); } for (let k = 0; k < rr.length; k++) { const q0 = rr[k], q1 = rr[(k + 1) % rr.length]; ar += q0[0] * q1[1] - q1[0] * q0[1]; } area += Math.abs(ar); }
     { const bad = swSane(Ucb ? 2 * cbU(-pit) : 0, dl, m, an); if (bad) return { err: bad }; }
     const usedPi = new Set(placed.map((P) => P.pi)), skip = pcs.filter((_, i2) => !usedPi.has(i2)).map((pc) => String(pc.name || '').replace(/ \(część.*$/, ''));
+    // osie do zmiany długości: elementy sięgające dołu ubrania, każdy wzdłuż własnego pionu po złożeniu (klin wzdłuż swojej osi)
+    const lenAx = [], seenPi = new Set(); for (const P of placed) { let vm = -1e9; for (const p of ring(P)) vm = Math.max(vm, plAp(T[P.key], p)[1]); if (vm < dl - 15 || seenPi.has(P.pi)) continue; seenPi.add(P.pi);
+      const t = T[P.key]; let o = [0, 0], dir = [t[2], t[3]]; if (P.unf) { const A = P.unf[0], B = P.unf[1], l = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1; dir = [(B[0] - A[0]) / l, (B[1] - A[1]) / l]; o = A; if (plAp(t, B)[1] < plAp(t, A)[1]) dir = [-dir[0], -dir[1]]; }
+      let t0 = 1e9, t1 = -1e9; for (const e of all) if (e.pi === P.pi) for (const p of e.pts) { const tt = (p[0] - o[0]) * dir[0] + (p[1] - o[1]) * dir[1]; t0 = Math.min(t0, tt); t1 = Math.max(t1, tt); }
+      if (t1 - t0 > 12) lenAx.push({ pi: P.pi, o, dir, cut: t0 + 0.5 * (t1 - t0), room: 0.4 * (t1 - t0) }); }
     const cbLine = cbQ ? (cbQ[0][1] < cbQ[cbQ.length - 1][1] ? [cbQ[0], cbQ[cbQ.length - 1]] : [cbQ[cbQ.length - 1], cbQ[0]]) : null;
-    return { plan: { parts: outParts, seams: outSeams, hold, Ucb, cbLine, area, yMax: an.trzym === 'ramiona' ? null : pit + 8 }, dl, hemC: 4 * (Ucb || wid), used: Array.from(usedPi).map((k) => String(pcs[k].name || '')), skip: skip.filter((x, i2, arr) => x && arr.indexOf(x) === i2), strap: hold.length === 2 };
+    return { lenAx, plan: { parts: outParts, seams: outSeams, hold, Ucb, cbLine, area, yMax: an.trzym === 'ramiona' ? null : pit + 8 }, dl, hemC: 4 * (Ucb || wid), used: Array.from(usedPi).map((k) => String(pcs[k].name || '')), skip: skip.filter((x, i2, arr) => x && arr.indexOf(x) === i2), strap: hold.length === 2 };
   }
   // punkt na łamanej w ułamku jej długości
   function ptOn(pts, f) { const L = swLen(pts); let acc = 0; for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (acc + d >= f * L - 1e-9) { const t = (f * L - acc) / (d || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; } acc += d; } return pts[pts.length - 1]; }
