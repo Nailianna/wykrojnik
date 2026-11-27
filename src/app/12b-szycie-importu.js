@@ -1,0 +1,116 @@
+  // ---------- wczytany wykrój w 3D: z obrysów na arkuszu do zszytych elementów ----------
+  // Na razie układ przód + tył (+ rękaw), każdy narysowany jako połowa od linii środka. Krawędzie rozpoznaje geometria:
+  // narożniki obrysu wyznaczają ramię, pachę, bok i dół. Role elementów (przód, tył, rękaw) pochodzą z analizy arkusza albo z nazwy.
+  const swLen = (pts) => { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return s; };
+  const swArea = (pts) => { let s = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; s += a[0] * b[1] - b[0] * a[1]; } return s / 2; };
+  // linia szycia elementu: zamknięty obrys; gdy są dwa prawie jednakowe (cięcie i szycie), bierze wewnętrzny
+  function swRing(pc) {
+    const cl = pc.prims.filter((q) => q.t === 'poly' && q.s === 'cut' && q.pts.length > 3 && Math.hypot(q.pts[0][0] - q.pts[q.pts.length - 1][0], q.pts[0][1] - q.pts[q.pts.length - 1][1]) < 0.3).map((q) => ({ pts: q.pts.slice(0, -1), ar: Math.abs(swArea(q.pts)) })).sort((a, b) => b.ar - a.ar);
+    if (!cl.length) { // obrys z kilku otwartych linii: łączę je końcami w łańcuch; brakujący bok (element „ze złożenia”) domyka prosta, która jest wtedy linią środka
+      const op = pc.prims.filter((q) => q.t === 'poly' && q.s === 'cut' && q.pts.length > 1).map((q) => ({ pts: q.pts, len: swLen(q.pts), used: false })).sort((a, b) => b.len - a.len);
+      if (!op.length) return null;
+      let chain = op[0].pts.slice(); op[0].used = true; const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.6;
+      for (let guard = 0; guard < 40; guard++) {
+        const end = chain[chain.length - 1], start = chain[0]; let done = true;
+        for (const o of op) { if (o.used || o.len < 3) continue; const a = o.pts[0], b = o.pts[o.pts.length - 1];
+          if (near(end, a)) chain = chain.concat(o.pts.slice(1)); else if (near(end, b)) chain = chain.concat(o.pts.slice(0, -1).reverse()); else if (near(start, b)) chain = o.pts.slice(0, -1).concat(chain); else if (near(start, a)) chain = o.pts.slice(1).reverse().concat(chain); else continue;
+          o.used = true; done = false; break; }
+        if (done) break;
+      }
+      const b = pc.box, per = 2 * (b.x1 - b.x0 + b.y1 - b.y0); if (swLen(chain) < per * 0.45 || chain.length < 6) return null;
+      if (near(chain[0], chain[chain.length - 1])) chain.pop();
+      return { pts: chain, sa: false };
+    }
+    const out = cl[0], inn = cl.find((c) => c !== out && c.ar > out.ar * 0.6 && c.ar < out.ar * 0.995);
+    return { pts: (inn || out).pts, sa: !!inn };
+  }
+  // narożniki: wierzchołki, w których kierunek linii zmienia się skokowo (łuk pachy czy główki zmienia go stopniowo)
+  function swCorners(pts) {
+    const n = pts.length, cum = [0]; for (let i = 1; i <= n; i++) cum.push(cum[i - 1] + Math.hypot(pts[i % n][0] - pts[i - 1][0], pts[i % n][1] - pts[i - 1][1]));
+    const L = cum[n], at = (s) => { s = ((s % L) + L) % L; let i = 0; while (i < n - 1 && cum[i + 1] < s) i++; const a = pts[i], b = pts[(i + 1) % n], t = (s - cum[i]) / (cum[i + 1] - cum[i] || 1); return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; };
+    const turn = (i, w) => { const p = pts[i], a = at(cum[i] - w), b = at(cum[i] + w), ux = p[0] - a[0], uy = p[1] - a[1], vx = b[0] - p[0], vy = b[1] - p[1]; return Math.abs(Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy)); };
+    const w = Math.max(0.8, Math.min(1.5, L / 120)), sc = pts.map((_, i) => Math.min(turn(i, w), turn(i, w * 2.2))), out = [];
+    for (let i = 0; i < n; i++) { if (sc[i] < 0.6) continue; let top = true; for (let j = 0; j < n; j++) { if (j === i) continue; let d = Math.abs(cum[j] - cum[i]); d = Math.min(d, L - d); if (d < 2.5 && (sc[j] > sc[i] || (sc[j] === sc[i] && j < i))) { top = false; break; } } if (top) out.push(i); }
+    return { idx: out, cum, L };
+  }
+  const swSub = (pts, i, j) => { const n = pts.length, out = [pts[i]]; let k = i; while (k !== j) { k = (k + 1) % n; out.push(pts[k]); } return out; };
+  // przód albo tył: połowa elementu od linii środka. Zwraca krawędzie w układzie silnika tkaniny (x od środka w bok, y w dół, punkt szyjny na wysokości -top)
+  function swBodice(pc, top) {
+    const R = swRing(pc); if (!R) return { err: 'nie ma zamkniętego obrysu' };
+    const pts = R.pts, C = swCorners(pts); if (C.idx.length < 4) return { err: 'obrys ma za mało narożników' };
+    // linia środka: najdłuższy prosty odcinek obrysu, po którego jednej stronie leży cały element (dekolt może do niej dochodzić łagodnie, bez narożnika)
+    const n = pts.length; let iA = -1, iB = -1, bl = 0;
+    for (let i = 0; i < n; i++) {
+      for (let s = 1; s < n; s++) {
+        const j = (i + s) % n, a = pts[i], b = pts[j], ch = Math.hypot(b[0] - a[0], b[1] - a[1]); if (ch < 1e-6) break;
+        let ok = true; for (let q = 1; q < s && ok; q++) { const p = pts[(i + q) % n]; if (Math.abs((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / ch > 0.12) ok = false; }
+        if (!ok) break;
+        if (ch > bl) { let sg = 0, one = true; for (const p of pts) { const d = ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / ch; if (Math.abs(d) < 0.3) continue; if (!sg) sg = Math.sign(d); else if (Math.sign(d) !== sg) { one = false; break; } } if (one) { bl = ch; iA = i; iB = j; } }
+      }
+    }
+    if (iA < 0 || bl < 8) return { err: 'nie znalazłam prostej linii środka' };
+    const inRun = (q) => (iA <= iB ? q > iA && q < iB : q > iA || q < iB), cset = C.idx.filter((q) => !inRun(q) && q !== iA && q !== iB);
+    // obrót: linia środka pionowo na x = 0
+    const A = pts[iA], B = pts[iB], ang = Math.atan2(B[0] - A[0], B[1] - A[1]), ca = Math.cos(ang), sa = Math.sin(ang), rot = (p) => [(p[0] - A[0]) * ca - (p[1] - A[1]) * sa, (p[0] - A[0]) * sa + (p[1] - A[1]) * ca];
+    let Q = pts.map(rot); const cx = Q.reduce((s, p) => s + p[0], 0) / n; if (cx < 0) Q = Q.map((p) => [-p[0], p[1]]);
+    // pierwszy narożnik za każdym końcem linii środka (idąc od niej): przy dole leży daleko w bok, przy dekolcie blisko
+    const nextC = (from, step) => { let c = from; for (let s = 0; s < n; s++) { c = (c + step) % n; if (cset.includes(c)) return c; } return from; }, nxt = nextC(iB, 1), prv = nextC(iA, n - 1);
+    // który koniec linii środka jest przy dekolcie: przy dole sąsiednia krawędź jest szeroka i biegnie w poprzek
+    const wB = Math.abs(Q[nxt][0] - Q[iB][0]), wA = Math.abs(Q[prv][0] - Q[iA][0]);
+    let iTop = wA < wB ? iA : iB, iBot = wA < wB ? iB : iA; if (Q[iTop][1] > Q[iBot][1]) Q = Q.map((p) => [p[0], -p[1]]);
+    // obejście od dekoltu do dołu z pominięciem linii środka (ta leży między narożnikami iA i iB w kierunku rosnących numerów)
+    const order = []; { const step = iTop === iB ? 1 : n - 1; let c = iTop; for (let s = 0; s <= n; s++) { order.push(c); if (c === iBot) break; c = (c + step) % n; } }
+    const W = order.map((i) => Q[i]), isC = new Set(cset), cor = []; order.forEach((i, t) => { if (isC.has(i) && t > 0 && t < order.length - 1) cor.push(t); });
+    if (cor.length < 4) return { err: 'nie umiem wskazać ramienia i pachy' };
+    // narożnik dołu przy boku: najdalej od środka wśród narożników na wysokości dołu
+    const yB = W[W.length - 1][1], hgt = yB - Math.min(...W.map((p) => p[1])); let hc = -1;
+    for (const t of cor) if (W[t][1] > yB - 0.15 * hgt && (hc < 0 || W[t][0] > W[hc][0])) hc = t;
+    const ci = cor.indexOf(hc); if (hc < 0 || ci < 3) return { err: 'nie umiem wskazać ramienia i pachy' };
+    const ua = cor[ci - 1], sp = cor[ci - 2], np = cor[ci - 3], sh = W.slice(np, sp + 1), shL = swLen(sh);
+    const nkL = swLen(W.slice(0, np + 1)), arL = swLen(W.slice(sp, ua + 1));
+    if (shL < 3 || shL > 30 || W[ua][1] < W[sp][1] || arL < 12 || nkL > 48 || W[np][0] < 3 || W[np][0] > 16) return { err: 'kształt nie przypomina przodu ani tyłu z ramieniem i pachą' };
+    const dy = -top - W[np][1], T = (a) => a.map((p) => [Math.max(0, p[0]), p[1] + dy]);
+    const ed = [{ pts: T(W.slice(0, np + 1)), tag: 'neck' }, { pts: T(sh), tag: 'shoulder' }, { pts: T(W.slice(sp, ua + 1)), tag: 'arm' }, { pts: T(W.slice(ua, hc + 1)), tag: 'side' }, { pts: T(W.slice(hc)), tag: 'bottom' }];
+    ed.push({ pts: [[0, ed[4].pts[ed[4].pts.length - 1][1]], [0, ed[0].pts[0][1]]], tag: 'center' }); ed[4].pts[ed[4].pts.length - 1][0] = 0; ed[0].pts[0][0] = 0;
+    return { ed, sh: shL, arm: swLen(ed[2].pts), side: swLen(ed[3].pts), hem: W[hc][0], bot: Math.max(...ed.map((e) => Math.max(...e.pts.map((p) => p[1])))), sa: R.sa };
+  }
+  // rękaw: główka u góry (środek na x = 0, szczyt na y = 0), szwy rękawa po bokach, dół na dole
+  function swSleeve(pc) {
+    const R = swRing(pc); if (!R) return { err: 'nie ma zamkniętego obrysu' };
+    const pts = R.pts, C = swCorners(pts), k = C.idx.length, n = pts.length; if (k < 4) return { err: 'obrys ma za mało narożników' };
+    // główka: krawędź najmocniej wygięta ponad swoją cięciwę
+    let best = -1, bb = 0;
+    for (let e = 0; e < k; e++) { const i = C.idx[e], j = C.idx[(e + 1) % k], seg = swSub(pts, i, j), a = pts[i], b = pts[j], ch = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; let mx = 0; for (const p of seg) mx = Math.max(mx, Math.abs((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / ch); if (mx > bb && ch > 15) { bb = mx; best = e; } }
+    if (best < 0 || bb < 4) return { err: 'nie znalazłam główki rękawa' };
+    const i0 = C.idx[best], i1 = C.idx[(best + 1) % k], A = pts[i0], B = pts[i1], ang = -Math.atan2(B[1] - A[1], B[0] - A[0]), ca = Math.cos(ang), sa = Math.sin(ang);
+    let Q = pts.map((p, i) => [(p[0] - A[0]) * ca - (p[1] - A[1]) * sa, (p[0] - A[0]) * sa + (p[1] - A[1]) * ca, C.idx.includes(i) ? 1 : 0]); // trzecia liczba: czy punkt jest narożnikiem
+    const cap0 = swSub(Q, i0, i1); if (cap0.reduce((s, p) => s + p[1], 0) > 0) Q = Q.map((p) => [p[0], -p[1], p[2]]); // główka ma być nad cięciwą
+    let cap = swSub(Q, i0, i1), rest = swSub(Q, i1, i0); if (cap[0][0] > cap[cap.length - 1][0]) { cap = cap.slice().reverse(); rest = rest.slice().reverse(); } // obejście: tył pachy, szczyt, przód pachy, szew, dół, szew
+    let ti = 0; cap.forEach((p, t) => { if (p[1] < cap[ti][1]) ti = t; }); const ox = cap[ti][0], oy = cap[ti][1], T = (a) => a.map((p) => [p[0] - ox, p[1] - oy, p[2]]);
+    cap = T(cap); rest = T(rest); // rest: od przodu pachy przez dół do tyłu pachy
+    const H = (cap[0][1] + cap[cap.length - 1][1]) / 2; let h1 = -1, h2 = -1; rest.forEach((p, t) => { if (!p[2] || t === 0 || t === rest.length - 1) return; if (h1 < 0 || p[1] + p[0] * 0.25 > rest[h1][1] + rest[h1][0] * 0.25) h1 = t; if (h2 < 0 || p[1] - p[0] * 0.25 > rest[h2][1] - rest[h2][0] * 0.25) h2 = t; }); // narożniki dołu: najniżej z przodu i najniżej z tyłu
+    if (h1 >= h2 || h1 < 1 || h2 > rest.length - 2) return { err: 'nie umiem wskazać dołu rękawa' };
+    const Lb = Math.max(...rest.map((p) => p[1]));
+    const cl = (arr) => arr.map((p) => [p[0], p[1]]);
+    const ed = [{ pts: cap.slice(0, ti + 1), tag: 'capB' }, { pts: cap.slice(ti), tag: 'capF' }, { pts: rest.slice(0, h1 + 1), tag: 'underF' }, { pts: rest.slice(h1, h2 + 1), tag: 'bottom' }, { pts: rest.slice(h2), tag: 'underB' }].map((e) => ({ pts: cl(e.pts), tag: e.tag }));
+    return { ed, H, L: Lb, bic: cap[cap.length - 1][0] - cap[0][0], hem: Math.hypot(rest[h2][0] - rest[h1][0], rest[h2][1] - rest[h1][1]), cap: swLen(cap), sa: R.sa };
+  }
+  const SW_ROLE = [{ r: 'F', re: /prz[oó]d|front/i }, { r: 'B', re: /ty[lł]|back/i }, { r: 'S', re: /r[eę]kaw|sleeve/i }], SW_NOT = /odszyci|facing|podszew|lining|mankiet|cuff|lam[oó]w|binding|d[oó][lł]|skirt|falban|ko[lł]nierz|collar|rami[aą]cz|strap|pas|band|klin|godet|tren|train|skrzyd/i;
+  // zszyte elementy wczytanego wykroju albo powód, dla którego podglądu nie będzie
+  function impSew(imp, m) {
+    const a = W.full(m), pcs = (imp && imp.pieces) || [], pick = {}, skip = [];
+    // rola z analizy ma pierwszeństwo przed nazwą elementu
+    for (const pc of pcs) { const nm = String(pc.name || ''), r0 = pc.role ? (/^[FBS]$/.test(pc.role) ? pc.role : null) : (SW_NOT.test(nm) ? null : (SW_ROLE.find((x) => x.re.test(nm)) || { r: null }).r), r = r0; if (r && !pick[r]) pick[r] = pc; else skip.push(nm.replace(/ \(część.*$/, '')); }
+    if (!pick.F || !pick.B) return { err: 'Podgląd 3D potrzebuje przodu i tyłu, a na liście elementów ich nie rozpoznałam.' };
+    const F = swBodice(pick.F, a.Dts), B = swBodice(pick.B, a.Dts);
+    if (F.err || B.err) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (' + (F.err ? 'przód: ' + F.err : 'tył: ' + B.err) + '). Na razie działa układ przód, tył i rękaw z ramieniem i pachą.' };
+    // przód i tył muszą do siebie pasować: te same ramiona i szwy boczne; inaczej krawędzie zostały rozpoznane źle
+    if (Math.abs(F.sh - B.sh) > 1.5 || Math.abs(F.side - B.side) > Math.max(2, 0.08 * F.side)) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (ramiona albo boki przodu i tyłu nie pasują do siebie).' };
+    const S = pick.S ? swSleeve(pick.S) : null, slOk = S && !S.err;
+    if (pick.S && !slOk) skip.push(String(pick.S.name));
+    // mankiet: dół rękawa jest do niego zmarszczony; długość mankietu to dłuższy bok prostokąta bez zapasów
+    const cuff = pcs.find((pc) => pc.role === 'C' || /mankiet|cuff/i.test(String(pc.name || ''))), cuffL = cuff ? Math.max(cuff.w, cuff.h) - 2 : 0, gather = slOk && cuffL > 8 && cuffL < S.hem * 0.87 ? { S: Math.max(0.2, cuffL / S.hem) } : null;
+    const mk = (id, o) => ({ id, ed: o.ed, prims: [] }), pieces = [mk('przod', F), mk('tyl', B)]; if (slOk) pieces.push(mk('stanik-rekaw', S));
+    return { pieces, dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: slOk ? { L: S.L, bic: S.bic, hem: S.hem, H: S.H, puff: false, ruf: 0 } : null, gather, skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: pick.S && !slOk ? S.err : '', sa: F.sa };
+  }
+  window.__sw = { impSew, swBodice, swSleeve, swCorners, swRing }; // tylko do testów

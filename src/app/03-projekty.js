@@ -115,7 +115,11 @@
   function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(k === 'tiles'); }); $(id).setAttribute('aria-pressed', state[k]); }
   toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); $('tFig').addEventListener('click', () => { state.figure = !state.figure; $('tFig').setAttribute('aria-pressed', state.figure); persist(); draw(true); }); $('tFig').setAttribute('aria-pressed', state.figure);
   function setView(v) {
-    if (v === '3d' && state.style === 'import') { say('Wczytane wykroje nie mają jeszcze podglądu 3D. Pracuję nad tym, żeby szwy brały się z analizy arkusza i instrukcji.'); v = '2d'; }
+    if (v === '3d' && state.style === 'import') {
+      const d = model && model.d; // wczytany wykrój ma podgląd tylko jako zszyta tkanina na sylwetce
+      if (!d || !d.sewn) { say((d && d.sewErr) || 'Tego wykroju nie umiem jeszcze pokazać w 3D.', true); v = '2d'; }
+      else if (!state.figure) { state.figure = true; say('Włączyłam sylwetkę, bo wczytany wykrój układa się tylko na niej.'); }
+    }
     state.view = v;
     $('v2d').setAttribute('aria-pressed', v === '2d'); $('v3d').setAttribute('aria-pressed', v === '3d');
     $('cv').toggleAttribute('hidden', v !== '2d'); $('gl').toggleAttribute('hidden', v !== '3d');

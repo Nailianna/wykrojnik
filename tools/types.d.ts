@@ -45,6 +45,7 @@ interface Window {
   claude: any; __noSelf?: boolean;
   /** podstawiona odpowiedź analizatora, tylko do testów */
   __anFake?: (prompt: string, images: Blob[]) => any;
+  __sw?: any;
 }
 declare const claude: any;
 

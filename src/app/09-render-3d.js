@@ -1,6 +1,8 @@
   function render3d(refit) {
     if (!init3d()) { say('Podgląd 3D nie działa w tym widoku (brak WebGL).', true); return; }
-    const m = cur(), p = state.p, a = W.full(m), sil = model.d.sil, body = bodyFn(m, a), TAU = Math.PI * 2;
+    const m = cur(), sil = model.d.sil, a = W.full(m), body = bodyFn(m, a), TAU = Math.PI * 2;
+    // wczytany wykrój nie ma parametrów fasonu: podgląd dostaje obojętne wartości i długość odczytaną z elementów
+    const p = sil.imported ? Object.assign({}, state.p, { gora: 'ramiona', dl: sil.impDl, kn: 0, gf: 0, ff: 1, flare: 0, tren: 0, rozp: 0, pasek: 0, pasT: 0, zakK: 0, crop: 0, bok: 0, ram: 'brak', ramW: 0, rek: sil.sleeve ? 'dlugi' : 'brak', mank: false, kol: 'brak', kolW: 0, kop: false, falN: false, falR: false, marsz: false, sciag: false, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, bk: 'prosta', luzG: 4, luzT: 4, luzB: 4, fac: 'brak', extras: [] }) : state.p;
     if (g3.group) { g3.scene.remove(g3.group); g3.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
     const FG = figData(), fs = FG ? m.wzrost / FG.H : 0, headLen = FG ? (FG.H - FG.lv.neck) * fs : m.wzrost * 0.165;
     const grp = new T3.Group(), floor = -(m.wzrost - a.Dts - headLen);
@@ -293,8 +295,8 @@
       if (figClear) { figClear(q); if (figDrape) figDrape(q, eOf(y)); }
       return q;
     };
-    const topOk = useFig && !!figCol && !!g3.sdf && state.sim && !!window.Cloth && sil.top === 'dress' && model.d.pieces.some((q) => q.id === 'przod' && q.ed) && model.d.pieces.some((q) => q.id === 'tyl' && q.ed);
-    const topFull = topOk && (sil.lower === 'straight' || sil.lower === 'trapez') && !sil.tren && p.dl >= m.wb + 1; // sukienka i top z jednego kawałka: całość układa się jako zszyta tkanina
+    const topOk = useFig && !!figCol && !!g3.sdf && state.sim && !!window.Cloth && sil.top === 'dress' && (model.d.sewn || model.d).pieces.some((q) => q.id === 'przod' && q.ed) && (model.d.sewn || model.d).pieces.some((q) => q.id === 'tyl' && q.ed);
+    const topFull = topOk && (sil.imported || ((sil.lower === 'straight' || sil.lower === 'trapez') && !sil.tren && p.dl >= m.wb + 1)); // sukienka i top z jednego kawałka: całość układa się jako zszyta tkanina
     // symulacja: poniżej linii przypięcia (talia, biodra, odcięcie) położenie tkaniny bierze się z symulacji, nie z reguł
     let simRef = null; $('simS').textContent = '';
     {
@@ -326,16 +328,16 @@
     // góra zszyta z elementów wykroju: przód, tył i rękawy jako tkanina ułożona na sylwetce (na razie tylko góry z ramionami, na sylwetce)
     let topSim = null;
     {
-      const D = model.d, ok = topOk;
+      const D = model.d.sewn || model.d, ok = topOk;
       if (!ok) g3.top = null;
       else {
         const toHip = sil.lower !== 'circle' && sil.lower !== 'none' && sil.lower !== 'empire', longEnough = p.dl >= m.wb + 1;
         const cutY = toHip && longEnough && !topFull ? m.wb : null, pinned = topFull ? false : toHip ? longEnough : !(sil.crop > 0), yPinW = cutY != null ? -cutY : 0, hasSl = !!sil.sleeve && !!figArmP;
         const pk = Object.assign({}, p, { extras: 0, saSzew: 0, saDol: 0, saTalia: 0, fac: 0, facW: 0, kol: 0, kolW: 0, falN: 0, falR: 0, sciag: 0 }); if (!topFull && cutY == null && pinned) Object.assign(pk, { dl: 0, flare: 0, kn: 0, gf: 0, ff: 0, zakK: 0, tren: 0, rozp: 0, pasT: 0, luzB: 0 }); else if (cutY != null) Object.assign(pk, { dl: 0, flare: 0, kn: 0, gf: 0, ff: 0, tren: 0, rozp: 0 });
-        const key = 'top' + JSON.stringify([state.style, pk, m, state.fabric]);
+        const key = 'top' + JSON.stringify([state.style, pk, m, state.fabric, sil.imported ? [state.proj, state.imp && state.imp.size, sil.hemC, sil.impDl, sil.gather] : 0]);
         if (!g3.top || g3.top.key !== key) {
           const hh = topFull ? Math.max(1.7, Math.min(3, Math.sqrt(((m.ob + 8) * (a.Dts + p.dl) + (hasSl ? 70 * sil.sleeve.L : 0)) / 3300))) : 1.6; // gęstość siatki dobrana do wielkości ubrania
-          let g = null; try { g = window.Cloth.build(D, { h: hh, sleeve: hasSl, cutY }); } catch (e) { g = null; }
+          let g = null; try { g = window.Cloth.build(D, { h: hh, sleeve: hasSl, cutY, gather: sil.gather || null }); } catch (e) { g = null; }
           if (!g) g3.top = { key, fail: true };
           else {
             const stl = p.gora === 'bez', yTopW = a.Dts - 0.3, FI = g.info.F, BI = g.info.B, SB = g.info.S ? g.info.S.box : null, SL = sil.sleeve, rr = SB ? (SB[2] - SB[0]) / TAU : 0;
@@ -427,7 +429,7 @@
         return Math.max(t, Math.min(yU, ybL + 1.5));
       };
       const yTop0 = topSim ? topSim.yPinW : bez ? Math.max(yU, ybL + bhh) + 1.5 : yNP, yMid = topSim ? topSim.yPinW + (yBot - topSim.yPinW) * 0.42 : bez ? ybL - 3 : Math.min(yArm, yCf, yCb) - 1.5;
-      if (!topSim || (topSim.pinned && topSim.yPinW - yBot > 0.6)) addG(surface(200, 140, (u, v) => {
+      if (!sil.imported && (!topSim || (topSim.pinned && topSim.yPinW - yBot > 0.6))) addG(surface(200, 140, (u, v) => {
         let phi = u * TAU, cut = 0;
         const yBt = sil.tren ? yBot - sil.tren * Math.pow(Math.max(0, -Math.sin(phi)), 1.3) : yBot; // tren wydłuża dół z tyłu
         let y = v < 0.42 ? yTop0 + (yMid - yTop0) * (v / 0.42) : yMid + (yBt - yMid) * ((v - 0.42) / 0.58);
@@ -471,7 +473,7 @@
         addG(new T3.Mesh(geo, gm));
         if (state.seams) for (const ch of g.seams) { const pts = ch.map((i) => new T3.Vector3(X[i * 3] + nrm[i * 3] * 0.12, X[i * 3 + 1] + nrm[i * 3 + 1] * 0.12, X[i * 3 + 2] + nrm[i * 3 + 2] * 0.12)); grp.add(new T3.Line(new T3.BufferGeometry().setFromPoints(pts), new T3.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.42 }))); }
       }
-      if (sil.sleeve && !bez && !(topSim && topSim.hasSl)) { // rękaw: rura wzdłuż ręki sylwetki, a na manekinie pod stałym kątem od barku
+      if (sil.sleeve && !bez && !sil.imported && !(topSim && topSim.hasSl)) { // rękaw: rura wzdłuż ręki sylwetki, a na manekinie pod stałym kątem od barku
         const SL = sil.sleeve, rB = SL.bic / TAU, rH = SL.hem / TAU, ang = 0.42, cA = Math.cos(ang), sA = Math.sin(ang), z0s = fit(yc).z + 0.4;
         for (const sx of [1, -1]) addG(surface(28, 26, (u, v) => {
           const t = v * (SL.L - 2) - (figArmAt ? 6 * (1 - v) * (1 - v) * Math.pow(Math.max(0, -sx * Math.cos(u * TAU)), 2) : 0), A = figArmAt ? figArmAt(sx, t) : { c: [sx * (a.Sb / 2 - 2.5 + sA * t), a.Dts - 3.2 - cA * t, z0s], r: 0 };
@@ -591,7 +593,7 @@
         const pts = []; for (let i = 0; i <= 80; i++) { const ph = (i / 80) * Math.PI, q = bodyPt(yy, ph, 0.08); pts.push(new T3.Vector3(q[0], q[1], q[2])); }
         grp.add(new T3.Line(new T3.BufferGeometry().setFromPoints(pts), lm));
       }
-      if (dress) {
+      if (dress && !sil.imported) {
         const gpv = sil.neckGap, el = $('gap'), bz = p.gora === 'bez'; el.className = 'float' + (gpv < (bz ? 2 : 3) ? ' low' : '');
         el.append(bz ? 'Góra kończy się na środku ' : gpv >= 0 ? 'Dekolt kończy się ' : 'Dekolt schodzi ', Object.assign(document.createElement('b'), { textContent: f1(Math.abs(gpv)) + ' cm' }), gpv >= 0 ? ' nad linią biustu' : ' poniżej linii biustu');
       }

@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.78.0', n: 81, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.79.0', n: 82, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -378,7 +378,11 @@
   function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(k === 'tiles'); }); $(id).setAttribute('aria-pressed', state[k]); }
   toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); $('tFig').addEventListener('click', () => { state.figure = !state.figure; $('tFig').setAttribute('aria-pressed', state.figure); persist(); draw(true); }); $('tFig').setAttribute('aria-pressed', state.figure);
   function setView(v) {
-    if (v === '3d' && state.style === 'import') { say('Wczytane wykroje nie mają jeszcze podglądu 3D. Pracuję nad tym, żeby szwy brały się z analizy arkusza i instrukcji.'); v = '2d'; }
+    if (v === '3d' && state.style === 'import') {
+      const d = model && model.d; // wczytany wykrój ma podgląd tylko jako zszyta tkanina na sylwetce
+      if (!d || !d.sewn) { say((d && d.sewErr) || 'Tego wykroju nie umiem jeszcze pokazać w 3D.', true); v = '2d'; }
+      else if (!state.figure) { state.figure = true; say('Włączyłam sylwetkę, bo wczytany wykrój układa się tylko na niej.'); }
+    }
     state.view = v;
     $('v2d').setAttribute('aria-pressed', v === '2d'); $('v3d').setAttribute('aria-pressed', v === '3d');
     $('cv').toggleAttribute('hidden', v !== '2d'); $('gl').toggleAttribute('hidden', v !== '3d');
@@ -426,11 +430,16 @@
     // opisy cięcia, zapas i wymiary ciała dla rozmiaru pochodzą z analizy arkusza
     const fit = bd && bd.b ? ' Rozmiar ' + bd.n + ' jest szyty na biust ' + f1(bd.b) + (bd.t ? ', talię ' + f1(bd.t) : '') + (bd.h ? ', biodra ' + f1(bd.h) : '') + ' cm; modelka ma ' + [m.og, m.ot, m.ob].map((v) => f1(v)).join(' / ') + '.' : '';
     const saT = !sa ? 'Linie i zapasy na szwy są takie jak w oryginale, Wykrojnik ich nie przelicza.' : (sa.inc ? 'Zapas na szwy jest wliczony w linie' + (sa.cm !== null ? ': ' + f1(sa.cm) + ' cm' : ', ale arkusz nie podaje, ile wynosi') : 'Linie nie zawierają zapasu na szwy' + (sa.cm !== null ? ', dodaj ' + f1(sa.cm) + ' cm' : '')) + (sa.ex && sa.ex.length ? ' (' + sa.ex.map((w) => w.gdzie + ': ' + f1(w.cm) + ' cm').join(', ') + ')' : '') + '.' + (an.skos ? ' Wykrój jest cięty ze skosu.' : '');
-    return { pieces: pcs, info: { rows: [], darts: [], cut: pcs.map((q) => [q.name, q.cut ? q.cut.replace(/^wytnij /, '') : 'według oryginału']), warn: 'Wykrój wczytany z pliku, rozmiar ' + (imp.size || 'jedyny') + '. ' + saT + fit },
-      sil: { top: 'import', lower: 'none', hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: (imp.name || 'Wykrój z pliku') + (imp.size ? ' · ' + imp.size : ''), notions: an && an.pasm ? an.pasm.map((x) => [x, '']) : [], bases: {}, imported: true };
+    // zszyte elementy do podglądu 3D: liczone raz na wykrój i modelkę
+    const sk = (imp.size || '') + '|' + pcs.length + '|' + (pcs[0] ? pcs[0].name + pcs[0].w : '') + '|' + [m.og, m.ot, m.ob, m.wzrost].join(',');
+    if (!impSewC || impSewC.k !== sk || impSewC.imp !== imp) { let sw; try { sw = impSew(imp, m); } catch (e) { sw = { err: 'Nie umiem jeszcze zszyć tego fasonu.' }; } impSewC = { k: sk, imp, sw }; }
+    const sw = impSewC.sw, sew3 = !sw.err ? ' Podgląd 3D pokazuje przód, tył' + (sw.sleeve ? ' i rękawy' + (sw.gather ? ' zmarszczone do długości mankietu' : '') : '') + (sw.skip.length ? '; bez elementów: ' + sw.skip.join(', ').toLowerCase() : '') + '.' : '';
+    return { pieces: pcs, sewn: sw.err ? null : { pieces: sw.pieces }, sewErr: sw.err || '', info: { rows: [], darts: [], cut: pcs.map((q) => [q.name, q.cut ? q.cut.replace(/^wytnij /, '') : 'według oryginału']), warn: 'Wykrój wczytany z pliku, rozmiar ' + (imp.size || 'jedyny') + '. ' + saT + fit + sew3 },
+      sil: sw.err ? { top: 'import', lower: 'none', hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 } : { top: 'dress', lower: 'straight', imported: true, impDl: sw.dl, frac: 0, hemC: sw.hemC, a: W.full(m), neckGap: 99, lowerArm: 0, sleeve: sw.sleeve, gather: sw.gather, seams: { side: true } }, title: (imp.name || 'Wykrój z pliku') + (imp.size ? ' · ' + imp.size : ''), notions: an && an.pasm ? an.pasm.map((x) => [x, '']) : [], bases: {}, imported: true };
   }
   // nowy projekt zaczyna od pustego manekina: fason wybiera się dopiero w panelu
   function emptyDraft(m) { return { pieces: [], info: { rows: [], darts: [], cut: [], warn: '' }, sil: { top: 'waist', lower: 'none', empty: true, hemC: 0, a: W.full(m), neckGap: 99, lowerArm: 0 }, title: 'bez fasonu', notions: [], bases: {}, empty: true }; }
+  let impSewC = null;
   const impCache = {}; // pełne dane ostatnio wczytanych plików (wszystkie rozmiary), tylko na czas sesji
   async function impLoad(file) {
     if (!file) return; const bz = busyOn('Czytam wykrój z pliku.'); await paintTick();
@@ -482,7 +491,7 @@
     try { model = compute(); } catch (e) { say('Z tych wymiarów nie da się zbudować wykroju. Sprawdź wpisane wartości.'); return; }
     const { d, lay, tl } = model;
     $('emptyN').hidden = !d.empty || !$('home').hidden;
-    $('tune').style.display = d.empty ? 'none' : ''; { const mb = $('miniS').closest('.float') || $('miniS').parentElement; if (mb) mb.style.display = d.empty ? 'none' : ''; }
+    $('tune').style.display = d.empty || d.imported ? 'none' : ''; { const mb = $('miniS').closest('.float') || $('miniS').parentElement; if (mb) mb.style.display = d.empty ? 'none' : ''; }
     $('sub').textContent = (projCur().name || 'Bez nazwy') + ' · ' + d.title + ' · ' + (cur().name || 'Bez imienia');
     if (state.view === '3d') {
       $('miniS').innerHTML = `<svg viewBox="0 0 ${lay.w} ${lay.h}" aria-hidden="true">` + lay.prims.filter((q) => q.t === 'poly' && q.s === 'cut').map((q) => `<path d="M${q.pts.map((a) => a[0].toFixed(1) + ' ' + a[1].toFixed(1)).join('L')}Z"/>`).join('') + '</svg>';
@@ -803,7 +812,9 @@
   }
   function render3d(refit) {
     if (!init3d()) { say('Podgląd 3D nie działa w tym widoku (brak WebGL).', true); return; }
-    const m = cur(), p = state.p, a = W.full(m), sil = model.d.sil, body = bodyFn(m, a), TAU = Math.PI * 2;
+    const m = cur(), sil = model.d.sil, a = W.full(m), body = bodyFn(m, a), TAU = Math.PI * 2;
+    // wczytany wykrój nie ma parametrów fasonu: podgląd dostaje obojętne wartości i długość odczytaną z elementów
+    const p = sil.imported ? Object.assign({}, state.p, { gora: 'ramiona', dl: sil.impDl, kn: 0, gf: 0, ff: 1, flare: 0, tren: 0, rozp: 0, pasek: 0, pasT: 0, zakK: 0, crop: 0, bok: 0, ram: 'brak', ramW: 0, rek: sil.sleeve ? 'dlugi' : 'brak', mank: false, kol: 'brak', kolW: 0, kop: false, falN: false, falR: false, marsz: false, sciag: false, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, bk: 'prosta', luzG: 4, luzT: 4, luzB: 4, fac: 'brak', extras: [] }) : state.p;
     if (g3.group) { g3.scene.remove(g3.group); g3.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
     const FG = figData(), fs = FG ? m.wzrost / FG.H : 0, headLen = FG ? (FG.H - FG.lv.neck) * fs : m.wzrost * 0.165;
     const grp = new T3.Group(), floor = -(m.wzrost - a.Dts - headLen);
@@ -1096,8 +1107,8 @@
       if (figClear) { figClear(q); if (figDrape) figDrape(q, eOf(y)); }
       return q;
     };
-    const topOk = useFig && !!figCol && !!g3.sdf && state.sim && !!window.Cloth && sil.top === 'dress' && model.d.pieces.some((q) => q.id === 'przod' && q.ed) && model.d.pieces.some((q) => q.id === 'tyl' && q.ed);
-    const topFull = topOk && (sil.lower === 'straight' || sil.lower === 'trapez') && !sil.tren && p.dl >= m.wb + 1; // sukienka i top z jednego kawałka: całość układa się jako zszyta tkanina
+    const topOk = useFig && !!figCol && !!g3.sdf && state.sim && !!window.Cloth && sil.top === 'dress' && (model.d.sewn || model.d).pieces.some((q) => q.id === 'przod' && q.ed) && (model.d.sewn || model.d).pieces.some((q) => q.id === 'tyl' && q.ed);
+    const topFull = topOk && (sil.imported || ((sil.lower === 'straight' || sil.lower === 'trapez') && !sil.tren && p.dl >= m.wb + 1)); // sukienka i top z jednego kawałka: całość układa się jako zszyta tkanina
     // symulacja: poniżej linii przypięcia (talia, biodra, odcięcie) położenie tkaniny bierze się z symulacji, nie z reguł
     let simRef = null; $('simS').textContent = '';
     {
@@ -1129,16 +1140,16 @@
     // góra zszyta z elementów wykroju: przód, tył i rękawy jako tkanina ułożona na sylwetce (na razie tylko góry z ramionami, na sylwetce)
     let topSim = null;
     {
-      const D = model.d, ok = topOk;
+      const D = model.d.sewn || model.d, ok = topOk;
       if (!ok) g3.top = null;
       else {
         const toHip = sil.lower !== 'circle' && sil.lower !== 'none' && sil.lower !== 'empire', longEnough = p.dl >= m.wb + 1;
         const cutY = toHip && longEnough && !topFull ? m.wb : null, pinned = topFull ? false : toHip ? longEnough : !(sil.crop > 0), yPinW = cutY != null ? -cutY : 0, hasSl = !!sil.sleeve && !!figArmP;
         const pk = Object.assign({}, p, { extras: 0, saSzew: 0, saDol: 0, saTalia: 0, fac: 0, facW: 0, kol: 0, kolW: 0, falN: 0, falR: 0, sciag: 0 }); if (!topFull && cutY == null && pinned) Object.assign(pk, { dl: 0, flare: 0, kn: 0, gf: 0, ff: 0, zakK: 0, tren: 0, rozp: 0, pasT: 0, luzB: 0 }); else if (cutY != null) Object.assign(pk, { dl: 0, flare: 0, kn: 0, gf: 0, ff: 0, tren: 0, rozp: 0 });
-        const key = 'top' + JSON.stringify([state.style, pk, m, state.fabric]);
+        const key = 'top' + JSON.stringify([state.style, pk, m, state.fabric, sil.imported ? [state.proj, state.imp && state.imp.size, sil.hemC, sil.impDl, sil.gather] : 0]);
         if (!g3.top || g3.top.key !== key) {
           const hh = topFull ? Math.max(1.7, Math.min(3, Math.sqrt(((m.ob + 8) * (a.Dts + p.dl) + (hasSl ? 70 * sil.sleeve.L : 0)) / 3300))) : 1.6; // gęstość siatki dobrana do wielkości ubrania
-          let g = null; try { g = window.Cloth.build(D, { h: hh, sleeve: hasSl, cutY }); } catch (e) { g = null; }
+          let g = null; try { g = window.Cloth.build(D, { h: hh, sleeve: hasSl, cutY, gather: sil.gather || null }); } catch (e) { g = null; }
           if (!g) g3.top = { key, fail: true };
           else {
             const stl = p.gora === 'bez', yTopW = a.Dts - 0.3, FI = g.info.F, BI = g.info.B, SB = g.info.S ? g.info.S.box : null, SL = sil.sleeve, rr = SB ? (SB[2] - SB[0]) / TAU : 0;
@@ -1230,7 +1241,7 @@
         return Math.max(t, Math.min(yU, ybL + 1.5));
       };
       const yTop0 = topSim ? topSim.yPinW : bez ? Math.max(yU, ybL + bhh) + 1.5 : yNP, yMid = topSim ? topSim.yPinW + (yBot - topSim.yPinW) * 0.42 : bez ? ybL - 3 : Math.min(yArm, yCf, yCb) - 1.5;
-      if (!topSim || (topSim.pinned && topSim.yPinW - yBot > 0.6)) addG(surface(200, 140, (u, v) => {
+      if (!sil.imported && (!topSim || (topSim.pinned && topSim.yPinW - yBot > 0.6))) addG(surface(200, 140, (u, v) => {
         let phi = u * TAU, cut = 0;
         const yBt = sil.tren ? yBot - sil.tren * Math.pow(Math.max(0, -Math.sin(phi)), 1.3) : yBot; // tren wydłuża dół z tyłu
         let y = v < 0.42 ? yTop0 + (yMid - yTop0) * (v / 0.42) : yMid + (yBt - yMid) * ((v - 0.42) / 0.58);
@@ -1274,7 +1285,7 @@
         addG(new T3.Mesh(geo, gm));
         if (state.seams) for (const ch of g.seams) { const pts = ch.map((i) => new T3.Vector3(X[i * 3] + nrm[i * 3] * 0.12, X[i * 3 + 1] + nrm[i * 3 + 1] * 0.12, X[i * 3 + 2] + nrm[i * 3 + 2] * 0.12)); grp.add(new T3.Line(new T3.BufferGeometry().setFromPoints(pts), new T3.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.42 }))); }
       }
-      if (sil.sleeve && !bez && !(topSim && topSim.hasSl)) { // rękaw: rura wzdłuż ręki sylwetki, a na manekinie pod stałym kątem od barku
+      if (sil.sleeve && !bez && !sil.imported && !(topSim && topSim.hasSl)) { // rękaw: rura wzdłuż ręki sylwetki, a na manekinie pod stałym kątem od barku
         const SL = sil.sleeve, rB = SL.bic / TAU, rH = SL.hem / TAU, ang = 0.42, cA = Math.cos(ang), sA = Math.sin(ang), z0s = fit(yc).z + 0.4;
         for (const sx of [1, -1]) addG(surface(28, 26, (u, v) => {
           const t = v * (SL.L - 2) - (figArmAt ? 6 * (1 - v) * (1 - v) * Math.pow(Math.max(0, -sx * Math.cos(u * TAU)), 2) : 0), A = figArmAt ? figArmAt(sx, t) : { c: [sx * (a.Sb / 2 - 2.5 + sA * t), a.Dts - 3.2 - cA * t, z0s], r: 0 };
@@ -1394,7 +1405,7 @@
         const pts = []; for (let i = 0; i <= 80; i++) { const ph = (i / 80) * Math.PI, q = bodyPt(yy, ph, 0.08); pts.push(new T3.Vector3(q[0], q[1], q[2])); }
         grp.add(new T3.Line(new T3.BufferGeometry().setFromPoints(pts), lm));
       }
-      if (dress) {
+      if (dress && !sil.imported) {
         const gpv = sil.neckGap, el = $('gap'), bz = p.gora === 'bez'; el.className = 'float' + (gpv < (bz ? 2 : 3) ? ' low' : '');
         el.append(bz ? 'Góra kończy się na środku ' : gpv >= 0 ? 'Dekolt kończy się ' : 'Dekolt schodzi ', Object.assign(document.createElement('b'), { textContent: f1(Math.abs(gpv)) + ' cm' }), gpv >= 0 ? ' nad linią biustu' : ' poniżej linii biustu');
       }
@@ -1774,8 +1785,8 @@
       'Wszystkie napisy z pliku, wierszami od góry strony:\n' + (outside.join('\n') || 'brak'),
       'Warstwy PDF: ' + (d.layers.join(', ') || 'brak'),
       st.instrText ? 'Instrukcja szycia dołączona przez użytkowniczkę (sam tekst):\n' + st.instrText : 'Instrukcji szycia nie dołączono.',
-      'Odpowiedz samym obiektem JSON w tym kształcie:\n{"nazwa":"nazwa wykroju","marka":"","typ":"sukienka|top|spodnica|gorset|spodnie|okrycie|inne","opis":"jedno zdanie po polsku","ze_skosu":false,"czytelnosc":"dobra|czesciowa|slaba","zapas":{"wliczony":true,"cm":0.7,"wyjatki":[{"gdzie":"szwy boczne","cm":1.3}]},"rozmiary":[{"nazwa":"M","biust":88,"talia":68,"biodra":94,"wzrost":null,"warstwa":"Size M"}],"elementy":[{"nazwa":"FRONT BODY","nazwa_pl":"Przód","kontury":["k1"],"ile":1,"ze_zlozenia":false,"para":false,"odbij":false,"nitka":"prosta|skos|poprzeczna|brak","material":"","podszewka_ile":0,"znaki":["zaszewka piersiowa"]}],"nie_elementy":["k2"],"pasmanteria":["zamek kryty 40-50 cm"],"instrukcja":{"potrzebna":false,"po_co":[]},"niepewne":[]}',
-      'Zasady:\n- Jeden element wykroju może składać się z kilku konturów, gdy przechodzi przez dwie strony albo dwa arkusze: wpisz wszystkie identyfikatory. Każdy kontur należy najwyżej do jednego elementu.\n- Kontury, które na pewno nie są elementami wykroju (strzałka nitki prostej, ramka strony, legenda, test wydruku, tabela), wpisz do \"nie_elementy\". Konturu, co do którego nie masz pewności, nie wpisuj nigdzie.\n- "ile": ile razy wyciąć z tkaniny głównej. "ze_zlozenia": krawędź elementu leży na złożeniu tkaniny. "para": elementy tnie się w lustrzanej parze. "odbij": narysowana jest połowa elementu i trzeba ją odbić wzdłuż linii środka, żeby wyciąć cały element z pojedynczej warstwy.\n- "podszewka_ile": ile razy ten sam element wyciąć dodatkowo z podszewki, 0 gdy wcale.\n- "nazwa_pl": krótka polska nazwa krawiecka. "material": rodzaj tkaniny, jeśli arkusz go podaje, po polsku.\n- "rozmiary": tabela wymiarów ciała w centymetrach; "warstwa" to nazwa warstwy PDF z listy wyżej, która zawiera linie tego rozmiaru, albo null.\n- "zapas.wliczony": true, false albo null, gdy arkusz o tym milczy. "zapas.cm": null, gdy liczba nie pada.\n- "czytelnosc": "slaba", gdy nazw większości elementów nie da się odczytać; "czesciowa", gdy brakuje części opisów.\n- "instrukcja.potrzebna": true, gdy z tego, co masz, nie da się ustalić czegoś potrzebnego do cięcia: wielkości zapasu na szwy, liczby elementów do wycięcia, nazw elementów albo tabeli rozmiarów, oraz zawsze gdy czytelność jest słaba. W "po_co" wypisz po polsku, w mianowniku, czego brakuje, na przykład "wielkość zapasu na szwy". Gdy instrukcja jest dołączona, a czegoś nadal brakuje, też to wypisz i zostaw true.\n- Czego nie da się odczytać, wpisz jako null i dodaj do "niepewne" jedno krótkie zdanie po polsku. Niczego nie zgaduj.',
+      'Odpowiedz samym obiektem JSON w tym kształcie:\n{"nazwa":"nazwa wykroju","marka":"","typ":"sukienka|top|spodnica|gorset|spodnie|okrycie|inne","opis":"jedno zdanie po polsku","ze_skosu":false,"czytelnosc":"dobra|czesciowa|slaba","zapas":{"wliczony":true,"cm":0.7,"wyjatki":[{"gdzie":"szwy boczne","cm":1.3}]},"rozmiary":[{"nazwa":"M","biust":88,"talia":68,"biodra":94,"wzrost":null,"warstwa":"Size M"}],"elementy":[{"nazwa":"FRONT BODY","nazwa_pl":"Przód","rola":"przod|tyl|rekaw|mankiet|inne","kontury":["k1"],"ile":1,"ze_zlozenia":false,"para":false,"odbij":false,"nitka":"prosta|skos|poprzeczna|brak","material":"","podszewka_ile":0,"znaki":["zaszewka piersiowa"]}],"nie_elementy":["k2"],"pasmanteria":["zamek kryty 40-50 cm"],"instrukcja":{"potrzebna":false,"po_co":[]},"niepewne":[]}',
+      'Zasady:\n- Jeden element wykroju może składać się z kilku konturów, gdy przechodzi przez dwie strony albo dwa arkusze: wpisz wszystkie identyfikatory. Każdy kontur należy najwyżej do jednego elementu.\n- Kontury, które na pewno nie są elementami wykroju (strzałka nitki prostej, ramka strony, legenda, test wydruku, tabela), wpisz do \"nie_elementy\". Konturu, co do którego nie masz pewności, nie wpisuj nigdzie.\n- "ile": ile razy wyciąć z tkaniny głównej. "ze_zlozenia": krawędź elementu leży na złożeniu tkaniny. "para": elementy tnie się w lustrzanej parze. "odbij": narysowana jest połowa elementu i trzeba ją odbić wzdłuż linii środka, żeby wyciąć cały element z pojedynczej warstwy.\n- "podszewka_ile": ile razy ten sam element wyciąć dodatkowo z podszewki, 0 gdy wcale.\n- "rola": "przod" i "tyl" tylko dla głównego elementu przodu i tyłu, czyli tego z ramieniem i pachą; "rekaw" dla rękawa, "mankiet" dla mankietu, wszystko inne to "inne".\n- "nazwa_pl": krótka polska nazwa krawiecka. "material": rodzaj tkaniny, jeśli arkusz go podaje, po polsku.\n- "rozmiary": tabela wymiarów ciała w centymetrach; "warstwa" to nazwa warstwy PDF z listy wyżej, która zawiera linie tego rozmiaru, albo null.\n- "zapas.wliczony": true, false albo null, gdy arkusz o tym milczy. "zapas.cm": null, gdy liczba nie pada.\n- "czytelnosc": "slaba", gdy nazw większości elementów nie da się odczytać; "czesciowa", gdy brakuje części opisów.\n- "instrukcja.potrzebna": true, gdy z tego, co masz, nie da się ustalić czegoś potrzebnego do cięcia: wielkości zapasu na szwy, liczby elementów do wycięcia, nazw elementów albo tabeli rozmiarów, oraz zawsze gdy czytelność jest słaba. W "po_co" wypisz po polsku, w mianowniku, czego brakuje, na przykład "wielkość zapasu na szwy". Gdy instrukcja jest dołączona, a czegoś nadal brakuje, też to wypisz i zostaw true.\n- Czego nie da się odczytać, wpisz jako null i dodaj do "niepewne" jedno krótkie zdanie po polsku. Niczego nie zgaduj.',
     ].join('\n\n');
   }
   // odpowiedź analizatora to dane z zewnątrz: zostają tylko pola o oczekiwanym typie i kontury, które naprawdę istnieją
@@ -1793,7 +1804,7 @@
       if (!e || typeof e !== 'object') continue;
       const ks = (Array.isArray(e.kontury) ? e.kontury : []).map((k) => +String(k).replace(/^k/i, '')).filter((k) => Number.isInteger(k) && k >= 1 && k <= n && !seen.has(k)); ks.forEach((k) => seen.add(k));
       const nm = S(e.nazwa_pl, 40) || S(e.nazwa, 40); if (!nm || !ks.length) continue;
-      out.elementy.push({ nazwa: S(e.nazwa, 60), pl: nm, k: ks, ile: Math.max(1, Math.min(40, Math.round(+e.ile) || 1)), fold: B(e.ze_zlozenia), para: B(e.para), odbij: B(e.odbij), nitka: ['prosta', 'skos', 'poprzeczna'].includes(e.nitka) ? e.nitka : '', mat: S(e.material, 30), pod: Math.max(0, Math.min(40, Math.round(+e.podszewka_ile) || 0)), znaki: L(e.znaki, 60, 8) });
+      out.elementy.push({ nazwa: S(e.nazwa, 60), pl: nm, role: { przod: 'F', tyl: 'B', rekaw: 'S', mankiet: 'C', inne: 'X' }[e.rola] || '', k: ks, ile: Math.max(1, Math.min(40, Math.round(+e.ile) || 1)), fold: B(e.ze_zlozenia), para: B(e.para), odbij: B(e.odbij), nitka: ['prosta', 'skos', 'poprzeczna'].includes(e.nitka) ? e.nitka : '', mat: S(e.material, 30), pod: Math.max(0, Math.min(40, Math.round(+e.podszewka_ile) || 0)), znaki: L(e.znaki, 60, 8) });
     }
     out.skip = (Array.isArray(r.nie_elementy) ? r.nie_elementy : []).map((k) => +String(k).replace(/^k/i, '')).filter((k) => Number.isInteger(k) && k >= 1 && k <= n && !seen.has(k));
     if (out.czytelnosc === 'slaba') out.instrukcja.potrzebna = true;
@@ -1822,7 +1833,7 @@
       const parts = hit.filter((h) => h === e).length, idx = hit.slice(0, i + 1).filter((h) => h === e).length, name = e.pl.toUpperCase() + (parts > 1 ? ' (część ' + idx + ' z ' + parts + ')' : '');
       const prims = pc.prims.filter((q) => q.t !== 'text'), cx = (pc.box.x0 + pc.box.x1) / 2, cy = (pc.box.y0 + pc.box.y1) / 2;
       prims.push({ t: 'text', x: cx, y: cy, text: name, size: 'M', anchor: 'middle' }, { t: 'text', x: cx, y: cy + 1.6, text: e.cut, size: 'S', anchor: 'middle' });
-      return Object.assign({}, pc, { name, cut: e.cut, prims });
+      return Object.assign({}, pc, { name, cut: e.cut, prims }, e.role ? { role: e.role } : {});
     });
   }
   function anOpen() { anSt = { sheet: null, instr: null }; $('anSheet').value = ''; $('anInstr').value = ''; $('anSheetN').textContent = ''; $('anInstrN').textContent = ''; $('anRes').hidden = true; $('anStat').textContent = ''; $('anGo').disabled = true; $('anRaw').disabled = true; $('anStop').hidden = true; $('anKeyBox').hidden = !!sampleFn; $('anKeyIn').value = anKey(); $('anBox').hidden = false; }
@@ -1886,7 +1897,7 @@
     const cmv = parseFloat(String($('anSa').value).replace(',', '.')), at = (k) => { const pc = st.pieces[k - 1]; return [[(pc.box.x0 + pc.box.x1) / 2, (pc.box.y0 + pc.box.y1) / 2]]; };
     const rs = r.rozmiary.find((x) => anLayer(x, d.sizes) === size) || (d.sizes.length ? null : anSize(r.rozmiary, cur()));
     const an = {
-      el: r.elementy.map((e) => ({ pl: e.pl, cut: anCut(e), at: e.k.reduce((a, k) => a.concat(at(k)), []) })),
+      el: r.elementy.map((e) => ({ pl: e.pl, role: e.role, cut: anCut(e), at: e.k.reduce((a, k) => a.concat(at(k)), []) })),
       skip: r.skip.map((k) => at(k)[0]),
       sa: { inc: $('anSaIn').checked, cm: isFinite(cmv) && cmv >= 0 && cmv < 10 ? cmv : null, ex: r.zapas.wyjatki }, skos: r.ze_skosu, pasm: r.pasmanteria, marka: r.marka,
       rozm: r.rozmiary.map((x) => ({ w: anLayer(x, d.sizes), n: x.nazwa, b: x.biust, t: x.talia, h: x.biodra })).filter((x) => x.w), body: rs ? { n: rs.nazwa, b: rs.biust, t: rs.talia, h: rs.biodra } : null,
@@ -1903,6 +1914,122 @@
   $('anSaveB').addEventListener('click', anSave); $('anX').addEventListener('click', anClose); $('anPrz').addEventListener('click', () => { anClose(); przOpen(); });
   $('anKeyIn').addEventListener('input', () => { const v = $('anKeyIn').value.trim(); try { if (v) localStorage.setItem(AN_KEY, v); else localStorage.removeItem(AN_KEY); } catch (e) {} if (v && $('anStat').textContent === AN_ERR.no_channel) $('anStat').textContent = ''; });
   $('hPdf').addEventListener('click', anOpen);
+  // ---------- wczytany wykrój w 3D: z obrysów na arkuszu do zszytych elementów ----------
+  // Na razie układ przód + tył (+ rękaw), każdy narysowany jako połowa od linii środka. Krawędzie rozpoznaje geometria:
+  // narożniki obrysu wyznaczają ramię, pachę, bok i dół. Role elementów (przód, tył, rękaw) pochodzą z analizy arkusza albo z nazwy.
+  const swLen = (pts) => { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return s; };
+  const swArea = (pts) => { let s = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; s += a[0] * b[1] - b[0] * a[1]; } return s / 2; };
+  // linia szycia elementu: zamknięty obrys; gdy są dwa prawie jednakowe (cięcie i szycie), bierze wewnętrzny
+  function swRing(pc) {
+    const cl = pc.prims.filter((q) => q.t === 'poly' && q.s === 'cut' && q.pts.length > 3 && Math.hypot(q.pts[0][0] - q.pts[q.pts.length - 1][0], q.pts[0][1] - q.pts[q.pts.length - 1][1]) < 0.3).map((q) => ({ pts: q.pts.slice(0, -1), ar: Math.abs(swArea(q.pts)) })).sort((a, b) => b.ar - a.ar);
+    if (!cl.length) { // obrys z kilku otwartych linii: łączę je końcami w łańcuch; brakujący bok (element „ze złożenia”) domyka prosta, która jest wtedy linią środka
+      const op = pc.prims.filter((q) => q.t === 'poly' && q.s === 'cut' && q.pts.length > 1).map((q) => ({ pts: q.pts, len: swLen(q.pts), used: false })).sort((a, b) => b.len - a.len);
+      if (!op.length) return null;
+      let chain = op[0].pts.slice(); op[0].used = true; const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.6;
+      for (let guard = 0; guard < 40; guard++) {
+        const end = chain[chain.length - 1], start = chain[0]; let done = true;
+        for (const o of op) { if (o.used || o.len < 3) continue; const a = o.pts[0], b = o.pts[o.pts.length - 1];
+          if (near(end, a)) chain = chain.concat(o.pts.slice(1)); else if (near(end, b)) chain = chain.concat(o.pts.slice(0, -1).reverse()); else if (near(start, b)) chain = o.pts.slice(0, -1).concat(chain); else if (near(start, a)) chain = o.pts.slice(1).reverse().concat(chain); else continue;
+          o.used = true; done = false; break; }
+        if (done) break;
+      }
+      const b = pc.box, per = 2 * (b.x1 - b.x0 + b.y1 - b.y0); if (swLen(chain) < per * 0.45 || chain.length < 6) return null;
+      if (near(chain[0], chain[chain.length - 1])) chain.pop();
+      return { pts: chain, sa: false };
+    }
+    const out = cl[0], inn = cl.find((c) => c !== out && c.ar > out.ar * 0.6 && c.ar < out.ar * 0.995);
+    return { pts: (inn || out).pts, sa: !!inn };
+  }
+  // narożniki: wierzchołki, w których kierunek linii zmienia się skokowo (łuk pachy czy główki zmienia go stopniowo)
+  function swCorners(pts) {
+    const n = pts.length, cum = [0]; for (let i = 1; i <= n; i++) cum.push(cum[i - 1] + Math.hypot(pts[i % n][0] - pts[i - 1][0], pts[i % n][1] - pts[i - 1][1]));
+    const L = cum[n], at = (s) => { s = ((s % L) + L) % L; let i = 0; while (i < n - 1 && cum[i + 1] < s) i++; const a = pts[i], b = pts[(i + 1) % n], t = (s - cum[i]) / (cum[i + 1] - cum[i] || 1); return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; };
+    const turn = (i, w) => { const p = pts[i], a = at(cum[i] - w), b = at(cum[i] + w), ux = p[0] - a[0], uy = p[1] - a[1], vx = b[0] - p[0], vy = b[1] - p[1]; return Math.abs(Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy)); };
+    const w = Math.max(0.8, Math.min(1.5, L / 120)), sc = pts.map((_, i) => Math.min(turn(i, w), turn(i, w * 2.2))), out = [];
+    for (let i = 0; i < n; i++) { if (sc[i] < 0.6) continue; let top = true; for (let j = 0; j < n; j++) { if (j === i) continue; let d = Math.abs(cum[j] - cum[i]); d = Math.min(d, L - d); if (d < 2.5 && (sc[j] > sc[i] || (sc[j] === sc[i] && j < i))) { top = false; break; } } if (top) out.push(i); }
+    return { idx: out, cum, L };
+  }
+  const swSub = (pts, i, j) => { const n = pts.length, out = [pts[i]]; let k = i; while (k !== j) { k = (k + 1) % n; out.push(pts[k]); } return out; };
+  // przód albo tył: połowa elementu od linii środka. Zwraca krawędzie w układzie silnika tkaniny (x od środka w bok, y w dół, punkt szyjny na wysokości -top)
+  function swBodice(pc, top) {
+    const R = swRing(pc); if (!R) return { err: 'nie ma zamkniętego obrysu' };
+    const pts = R.pts, C = swCorners(pts); if (C.idx.length < 4) return { err: 'obrys ma za mało narożników' };
+    // linia środka: najdłuższy prosty odcinek obrysu, po którego jednej stronie leży cały element (dekolt może do niej dochodzić łagodnie, bez narożnika)
+    const n = pts.length; let iA = -1, iB = -1, bl = 0;
+    for (let i = 0; i < n; i++) {
+      for (let s = 1; s < n; s++) {
+        const j = (i + s) % n, a = pts[i], b = pts[j], ch = Math.hypot(b[0] - a[0], b[1] - a[1]); if (ch < 1e-6) break;
+        let ok = true; for (let q = 1; q < s && ok; q++) { const p = pts[(i + q) % n]; if (Math.abs((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / ch > 0.12) ok = false; }
+        if (!ok) break;
+        if (ch > bl) { let sg = 0, one = true; for (const p of pts) { const d = ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / ch; if (Math.abs(d) < 0.3) continue; if (!sg) sg = Math.sign(d); else if (Math.sign(d) !== sg) { one = false; break; } } if (one) { bl = ch; iA = i; iB = j; } }
+      }
+    }
+    if (iA < 0 || bl < 8) return { err: 'nie znalazłam prostej linii środka' };
+    const inRun = (q) => (iA <= iB ? q > iA && q < iB : q > iA || q < iB), cset = C.idx.filter((q) => !inRun(q) && q !== iA && q !== iB);
+    // obrót: linia środka pionowo na x = 0
+    const A = pts[iA], B = pts[iB], ang = Math.atan2(B[0] - A[0], B[1] - A[1]), ca = Math.cos(ang), sa = Math.sin(ang), rot = (p) => [(p[0] - A[0]) * ca - (p[1] - A[1]) * sa, (p[0] - A[0]) * sa + (p[1] - A[1]) * ca];
+    let Q = pts.map(rot); const cx = Q.reduce((s, p) => s + p[0], 0) / n; if (cx < 0) Q = Q.map((p) => [-p[0], p[1]]);
+    // pierwszy narożnik za każdym końcem linii środka (idąc od niej): przy dole leży daleko w bok, przy dekolcie blisko
+    const nextC = (from, step) => { let c = from; for (let s = 0; s < n; s++) { c = (c + step) % n; if (cset.includes(c)) return c; } return from; }, nxt = nextC(iB, 1), prv = nextC(iA, n - 1);
+    // który koniec linii środka jest przy dekolcie: przy dole sąsiednia krawędź jest szeroka i biegnie w poprzek
+    const wB = Math.abs(Q[nxt][0] - Q[iB][0]), wA = Math.abs(Q[prv][0] - Q[iA][0]);
+    let iTop = wA < wB ? iA : iB, iBot = wA < wB ? iB : iA; if (Q[iTop][1] > Q[iBot][1]) Q = Q.map((p) => [p[0], -p[1]]);
+    // obejście od dekoltu do dołu z pominięciem linii środka (ta leży między narożnikami iA i iB w kierunku rosnących numerów)
+    const order = []; { const step = iTop === iB ? 1 : n - 1; let c = iTop; for (let s = 0; s <= n; s++) { order.push(c); if (c === iBot) break; c = (c + step) % n; } }
+    const W = order.map((i) => Q[i]), isC = new Set(cset), cor = []; order.forEach((i, t) => { if (isC.has(i) && t > 0 && t < order.length - 1) cor.push(t); });
+    if (cor.length < 4) return { err: 'nie umiem wskazać ramienia i pachy' };
+    // narożnik dołu przy boku: najdalej od środka wśród narożników na wysokości dołu
+    const yB = W[W.length - 1][1], hgt = yB - Math.min(...W.map((p) => p[1])); let hc = -1;
+    for (const t of cor) if (W[t][1] > yB - 0.15 * hgt && (hc < 0 || W[t][0] > W[hc][0])) hc = t;
+    const ci = cor.indexOf(hc); if (hc < 0 || ci < 3) return { err: 'nie umiem wskazać ramienia i pachy' };
+    const ua = cor[ci - 1], sp = cor[ci - 2], np = cor[ci - 3], sh = W.slice(np, sp + 1), shL = swLen(sh);
+    const nkL = swLen(W.slice(0, np + 1)), arL = swLen(W.slice(sp, ua + 1));
+    if (shL < 3 || shL > 30 || W[ua][1] < W[sp][1] || arL < 12 || nkL > 48 || W[np][0] < 3 || W[np][0] > 16) return { err: 'kształt nie przypomina przodu ani tyłu z ramieniem i pachą' };
+    const dy = -top - W[np][1], T = (a) => a.map((p) => [Math.max(0, p[0]), p[1] + dy]);
+    const ed = [{ pts: T(W.slice(0, np + 1)), tag: 'neck' }, { pts: T(sh), tag: 'shoulder' }, { pts: T(W.slice(sp, ua + 1)), tag: 'arm' }, { pts: T(W.slice(ua, hc + 1)), tag: 'side' }, { pts: T(W.slice(hc)), tag: 'bottom' }];
+    ed.push({ pts: [[0, ed[4].pts[ed[4].pts.length - 1][1]], [0, ed[0].pts[0][1]]], tag: 'center' }); ed[4].pts[ed[4].pts.length - 1][0] = 0; ed[0].pts[0][0] = 0;
+    return { ed, sh: shL, arm: swLen(ed[2].pts), side: swLen(ed[3].pts), hem: W[hc][0], bot: Math.max(...ed.map((e) => Math.max(...e.pts.map((p) => p[1])))), sa: R.sa };
+  }
+  // rękaw: główka u góry (środek na x = 0, szczyt na y = 0), szwy rękawa po bokach, dół na dole
+  function swSleeve(pc) {
+    const R = swRing(pc); if (!R) return { err: 'nie ma zamkniętego obrysu' };
+    const pts = R.pts, C = swCorners(pts), k = C.idx.length, n = pts.length; if (k < 4) return { err: 'obrys ma za mało narożników' };
+    // główka: krawędź najmocniej wygięta ponad swoją cięciwę
+    let best = -1, bb = 0;
+    for (let e = 0; e < k; e++) { const i = C.idx[e], j = C.idx[(e + 1) % k], seg = swSub(pts, i, j), a = pts[i], b = pts[j], ch = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; let mx = 0; for (const p of seg) mx = Math.max(mx, Math.abs((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / ch); if (mx > bb && ch > 15) { bb = mx; best = e; } }
+    if (best < 0 || bb < 4) return { err: 'nie znalazłam główki rękawa' };
+    const i0 = C.idx[best], i1 = C.idx[(best + 1) % k], A = pts[i0], B = pts[i1], ang = -Math.atan2(B[1] - A[1], B[0] - A[0]), ca = Math.cos(ang), sa = Math.sin(ang);
+    let Q = pts.map((p, i) => [(p[0] - A[0]) * ca - (p[1] - A[1]) * sa, (p[0] - A[0]) * sa + (p[1] - A[1]) * ca, C.idx.includes(i) ? 1 : 0]); // trzecia liczba: czy punkt jest narożnikiem
+    const cap0 = swSub(Q, i0, i1); if (cap0.reduce((s, p) => s + p[1], 0) > 0) Q = Q.map((p) => [p[0], -p[1], p[2]]); // główka ma być nad cięciwą
+    let cap = swSub(Q, i0, i1), rest = swSub(Q, i1, i0); if (cap[0][0] > cap[cap.length - 1][0]) { cap = cap.slice().reverse(); rest = rest.slice().reverse(); } // obejście: tył pachy, szczyt, przód pachy, szew, dół, szew
+    let ti = 0; cap.forEach((p, t) => { if (p[1] < cap[ti][1]) ti = t; }); const ox = cap[ti][0], oy = cap[ti][1], T = (a) => a.map((p) => [p[0] - ox, p[1] - oy, p[2]]);
+    cap = T(cap); rest = T(rest); // rest: od przodu pachy przez dół do tyłu pachy
+    const H = (cap[0][1] + cap[cap.length - 1][1]) / 2; let h1 = -1, h2 = -1; rest.forEach((p, t) => { if (!p[2] || t === 0 || t === rest.length - 1) return; if (h1 < 0 || p[1] + p[0] * 0.25 > rest[h1][1] + rest[h1][0] * 0.25) h1 = t; if (h2 < 0 || p[1] - p[0] * 0.25 > rest[h2][1] - rest[h2][0] * 0.25) h2 = t; }); // narożniki dołu: najniżej z przodu i najniżej z tyłu
+    if (h1 >= h2 || h1 < 1 || h2 > rest.length - 2) return { err: 'nie umiem wskazać dołu rękawa' };
+    const Lb = Math.max(...rest.map((p) => p[1]));
+    const cl = (arr) => arr.map((p) => [p[0], p[1]]);
+    const ed = [{ pts: cap.slice(0, ti + 1), tag: 'capB' }, { pts: cap.slice(ti), tag: 'capF' }, { pts: rest.slice(0, h1 + 1), tag: 'underF' }, { pts: rest.slice(h1, h2 + 1), tag: 'bottom' }, { pts: rest.slice(h2), tag: 'underB' }].map((e) => ({ pts: cl(e.pts), tag: e.tag }));
+    return { ed, H, L: Lb, bic: cap[cap.length - 1][0] - cap[0][0], hem: Math.hypot(rest[h2][0] - rest[h1][0], rest[h2][1] - rest[h1][1]), cap: swLen(cap), sa: R.sa };
+  }
+  const SW_ROLE = [{ r: 'F', re: /prz[oó]d|front/i }, { r: 'B', re: /ty[lł]|back/i }, { r: 'S', re: /r[eę]kaw|sleeve/i }], SW_NOT = /odszyci|facing|podszew|lining|mankiet|cuff|lam[oó]w|binding|d[oó][lł]|skirt|falban|ko[lł]nierz|collar|rami[aą]cz|strap|pas|band|klin|godet|tren|train|skrzyd/i;
+  // zszyte elementy wczytanego wykroju albo powód, dla którego podglądu nie będzie
+  function impSew(imp, m) {
+    const a = W.full(m), pcs = (imp && imp.pieces) || [], pick = {}, skip = [];
+    // rola z analizy ma pierwszeństwo przed nazwą elementu
+    for (const pc of pcs) { const nm = String(pc.name || ''), r0 = pc.role ? (/^[FBS]$/.test(pc.role) ? pc.role : null) : (SW_NOT.test(nm) ? null : (SW_ROLE.find((x) => x.re.test(nm)) || { r: null }).r), r = r0; if (r && !pick[r]) pick[r] = pc; else skip.push(nm.replace(/ \(część.*$/, '')); }
+    if (!pick.F || !pick.B) return { err: 'Podgląd 3D potrzebuje przodu i tyłu, a na liście elementów ich nie rozpoznałam.' };
+    const F = swBodice(pick.F, a.Dts), B = swBodice(pick.B, a.Dts);
+    if (F.err || B.err) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (' + (F.err ? 'przód: ' + F.err : 'tył: ' + B.err) + '). Na razie działa układ przód, tył i rękaw z ramieniem i pachą.' };
+    // przód i tył muszą do siebie pasować: te same ramiona i szwy boczne; inaczej krawędzie zostały rozpoznane źle
+    if (Math.abs(F.sh - B.sh) > 1.5 || Math.abs(F.side - B.side) > Math.max(2, 0.08 * F.side)) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (ramiona albo boki przodu i tyłu nie pasują do siebie).' };
+    const S = pick.S ? swSleeve(pick.S) : null, slOk = S && !S.err;
+    if (pick.S && !slOk) skip.push(String(pick.S.name));
+    // mankiet: dół rękawa jest do niego zmarszczony; długość mankietu to dłuższy bok prostokąta bez zapasów
+    const cuff = pcs.find((pc) => pc.role === 'C' || /mankiet|cuff/i.test(String(pc.name || ''))), cuffL = cuff ? Math.max(cuff.w, cuff.h) - 2 : 0, gather = slOk && cuffL > 8 && cuffL < S.hem * 0.87 ? { S: Math.max(0.2, cuffL / S.hem) } : null;
+    const mk = (id, o) => ({ id, ed: o.ed, prims: [] }), pieces = [mk('przod', F), mk('tyl', B)]; if (slOk) pieces.push(mk('stanik-rekaw', S));
+    return { pieces, dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: slOk ? { L: S.L, bic: S.bic, hem: S.hem, H: S.H, puff: false, ruf: 0 } : null, gather, skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: pick.S && !slOk ? S.err : '', sa: F.sa };
+  }
+  window.__sw = { impSew, swBodice, swSleeve, swCorners, swRing }; // tylko do testów
   // ---------- paleta poleceń (⌘K) ----------
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
   let cmdSel = 0, cmdItems = [];
@@ -2002,7 +2129,7 @@
   let shotT = 0, shotN = 0;
   function shotPlan() { clearTimeout(shotT); shotN = 0; shotT = setTimeout(() => projShot(false), 2500); }
   function projShot(now) {
-    const pr = projCur(); if (!pr || !g3 || state.view !== '3d' || state.style === 'pusty' || state.style === 'import' || !$('home').hidden) return;
+    const pr = projCur(); if (!pr || !g3 || state.view !== '3d' || state.style === 'pusty' || !$('home').hidden) return;
     if (pr.thumb && pr.thumbKey === pr.key) return;
     if (!now && g3.top && !g3.top.ready && !g3.top.fail && shotN++ < 8) { shotT = setTimeout(() => projShot(false), 1500); return; } // tkanina jeszcze się układa
     try {

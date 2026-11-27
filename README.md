@@ -54,4 +54,6 @@ Na pulpicie jest „Nowy z pliku PDF”. Aplikacja czyta z pliku linie, warstwy 
 
 W Wykrojniku otwartym w Claude analiza idzie wbudowanym kanałem i nie wymaga klucza. W kopii z tego repozytorium wklejasz własny klucz API Claude w ekranie analizy. Klucz jest zapisywany tylko w pamięci przeglądarki (`localStorage`, wpis `wykrojnik.apikey`), nie trafia do projektów ani kopii zapasowych, a zapytania są rozliczane z konta, do którego należy. Domyślny model to `claude-sonnet-5-5`; inny ustawisz wpisem `wykrojnik.apimodel`. Bez klucza wykrój można wczytać bez analizy.
 
+Wczytany wykrój ma podgląd 3D, gdy składa się z przodu i tyłu z ramieniem i pachą, narysowanych jako połowy od linii środka, oraz ewentualnie rękawa. Krawędzie (dekolt, ramię, pacha, bok, dół) rozpoznaje geometria obrysu w `src/app/12b-szycie-importu.js`; dół rękawa jest marszczony do długości mankietu. Sukienki na ramiączkach, fasony z wielu paneli i elementy rysowane w całości jeszcze nie działają.
+
 Repozytorium nie zawiera żadnych wykrojów w PDF ani kluczy, wgrywasz własne.

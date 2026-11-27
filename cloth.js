@@ -219,6 +219,8 @@
       }
       grp.push({ pk: I.pk, sx: I.sx, t0, t1: tri.length / 3, v0: off, v1: rmap.length });
     }
+    // marszczenie: dolna krawędź elementu ściągnięta do krótszej długości (dół rękawa wszyty w mankiet)
+    if (o.gather) for (const I of inst) { const k = o.gather[I.pk]; if (!(k > 0 && k < 1)) continue; for (const c of I.P.ch) if (c.tag === 'bottom' && c.ids) for (let i = 0; i < c.ids.length - 1; i++) { const s0 = sid[I.map[c.ids[i]]], s1 = sid[I.map[c.ids[i + 1]]]; if (s0 === s1) continue; const e = E.get(s0 < s1 ? s0 * 65536 + s1 : s1 * 65536 + s0); if (e) e[2] *= k; } }
     const edges = Array.from(E.values()).map((e) => [e[0], e[1], Math.max(0.05, e[2])]), bends = [];
     // zgięcie przez krawędź: odległość wierzchołków naprzeciw niej po rozłożeniu na płasko; przez szew liczona z wysokości obu trójkątów, bo elementy leżą w wykroju osobno
     TE.forEach((l) => { if (l.length !== 2) return; const s0 = sid[l[0][0].map[l[0][1]]], s1 = sid[l[1][0].map[l[1][1]]]; if (s0 === s1) return; const flat = l[0][2] + l[1][2], same = l[0][0] === l[1][0] ? dist(l[0][0].P.pts[l[0][1]], l[1][0].P.pts[l[1][1]]) : 1e9; bends.push([s0, s1, same < flat * 1.25 ? same : flat * 0.97]); });

@@ -56,7 +56,7 @@
   let shotT = 0, shotN = 0;
   function shotPlan() { clearTimeout(shotT); shotN = 0; shotT = setTimeout(() => projShot(false), 2500); }
   function projShot(now) {
-    const pr = projCur(); if (!pr || !g3 || state.view !== '3d' || state.style === 'pusty' || state.style === 'import' || !$('home').hidden) return;
+    const pr = projCur(); if (!pr || !g3 || state.view !== '3d' || state.style === 'pusty' || !$('home').hidden) return;
     if (pr.thumb && pr.thumbKey === pr.key) return;
     if (!now && g3.top && !g3.top.ready && !g3.top.fail && shotN++ < 8) { shotT = setTimeout(() => projShot(false), 1500); return; } // tkanina jeszcze się układa
     try {
