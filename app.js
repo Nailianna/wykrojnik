@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.86.1', n: 93, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.87.0', n: 94, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -1785,29 +1785,65 @@
     refused: 'Claude odmówił analizy tego pliku. Możesz wczytać wykrój bez analizy.',
     session_expired: 'Sesja wygasła. Zaloguj się ponownie w Claude.',
     invalid_json: 'Odpowiedź analizatora była nieczytelna. Spróbuj jeszcze raz.',
-    no_channel: 'Poza Claude analiza potrzebuje klucza API. Wklej go wyżej albo wczytaj wykrój bez analizy.',
-    key_rejected: 'Klucz API został odrzucony. Sprawdź, czy jest wklejony w całości i czy jest aktywny.',
+    no_channel: 'Żeby przeanalizować wykrój, podłącz Claude własnym kluczem API. Bez klucza możesz wczytać wykrój bez analizy.',
+    key_rejected: 'Ten klucz nie został przyjęty przez Anthropic. Sprawdź, czy jest wklejony w całości i czy jest aktywny.',
+    key_billing: 'Na Twoim koncie Anthropic brakuje środków albo rozliczenia nie są skonfigurowane. Analiza nie została wykonana.',
+    key_rate: 'Chwilowy limit zapytań na Twoim koncie Anthropic. Spróbuj ponownie za minutę.',
     key_model: 'Ten klucz nie ma dostępu do modelu, którego używa analiza.',
-    key_network: 'Nie udało się połączyć z API Claude. Sprawdź połączenie z internetem.',
-    key_overloaded: 'API Claude jest chwilowo przeciążone. Spróbuj za kilka minut.',
+    key_network: 'Usługa Claude jest teraz niedostępna. Spróbuj ponownie za chwilę.',
+    key_overloaded: 'Usługa Claude jest teraz niedostępna. Spróbuj ponownie za chwilę.',
+    no_proxy: 'Ta kopia Wykrojnika nie ma funkcji serwerowej do rozmowy z Claude’em, więc analiza tu nie zadziała. Wykrój możesz wczytać bez analizy.',
   };
-  // własny klucz API: tylko poza Claude, trzymany wyłącznie w tej przeglądarce, poza stanem aplikacji i kopiami zapasowymi
-  const AN_KEY = 'wykrojnik.apikey', AN_MODEL = 'claude-sonnet-5-5';
-  const anKey = () => { try { return (localStorage.getItem(AN_KEY) || '').trim(); } catch (e) { return ''; } };
+  // Własny klucz API (tylko poza Claude). Klucz żyje wyłącznie w tej zmiennej: nie trafia do pamięci przeglądarki, stanu aplikacji, kopii zapasowych,
+  // adresów ani logów, a odświeżenie karty go usuwa. Każde zapytanie niesie go w nagłówku do funkcji serwerowej api/claude, która przekazuje je do Anthropic.
+  const AN_MODEL = 'claude-sonnet-5-5', AN_API = 'api/claude';
+  let anKeyMem = '', anKeyState = ''; // '' brak, 'entered' wpisany i jeszcze niepotwierdzony, 'ok' przyjęty przez API
+  try { localStorage.removeItem('wykrojnik.apikey'); } catch (e) { /* starsze wersje zapisywały klucz w przeglądarce: usuwam go */ }
+  const anKey = () => anKeyMem;
   const anModel = () => { try { return (localStorage.getItem('wykrojnik.apimodel') || '').trim() || AN_MODEL; } catch (e) { return AN_MODEL; } };
   const anB64 = (blob) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => no(new Error('Nie udało się przygotować obrazu.')); r.readAsDataURL(blob); });
+  // kod błędu z odpowiedzi API: zły klucz, rozliczenia, limit, niedostępność
+  function anErrCode(status, data, isJson) {
+    const er = (data && data.error) || {}, ty = er.type || '', msg = String(er.message || '');
+    if (!isJson && (status === 404 || status === 405)) return 'no_proxy';
+    if (status === 401 || ty === 'authentication_error') return 'key_rejected';
+    if (status === 402 || ty === 'billing_error' || /credit balance|billing|payment/i.test(msg)) return 'key_billing';
+    if (status === 403 || ty === 'permission_error') return 'key_rejected';
+    if (status === 404 || ty === 'not_found_error') return 'key_model';
+    if (status === 429 || ty === 'rate_limit_error') return 'key_rate';
+    return status >= 500 || ty === 'overloaded_error' ? 'key_overloaded' : 'upstream_error';
+  }
+  async function anCall(method, body, signal) {
+    const key = anKeyMem; let res; // klucz z chwili wysłania: odłączenie w trakcie nie zmienia trwającego zapytania
+    try { res = await fetch(AN_API, { method, signal, cache: 'no-store', credentials: 'omit', headers: Object.assign({ 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body ? { 'content-type': 'application/json' } : {}), body: body || undefined }); }
+    catch (e) { throw { code: signal && signal.aborted ? 'cancelled' : location.protocol === 'file:' ? 'no_proxy' : 'key_network' }; }
+    let data = null, isJson = true; try { data = await res.json(); } catch (e) { isJson = false; }
+    if (!res.ok) { const code = anErrCode(res.status, data, isJson); if (code === 'key_rejected' && key === anKeyMem) anKeyState = 'entered'; throw { code }; }
+    if (!isJson) throw { code: 'no_proxy' };
+    if (key === anKeyMem) anKeyState = 'ok'; return data;
+  }
+  // bezpłatne sprawdzenie klucza (lista modeli), żeby odróżnić klucz wpisany od przyjętego
+  const anKeyCheck = () => anCall('GET', null, null);
   async function anApi(prompt, blobs, signal) {
     const content = []; for (const b of blobs) content.push({ type: 'image', source: { type: 'base64', media_type: b.type || 'image/jpeg', data: await anB64(b) } });
     content.push({ type: 'text', text: prompt });
-    let res;
-    try { res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal, headers: { 'content-type': 'application/json', 'x-api-key': anKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: anModel(), max_tokens: 16000, messages: [{ role: 'user', content }] }) }); }
-    catch (e) { throw { code: signal && signal.aborted ? 'cancelled' : 'key_network' }; }
-    let data = null; try { data = await res.json(); } catch (e) { /* odpowiedź bez JSON-u obsługuje kod statusu */ }
-    if (!res.ok) { const ty = data && data.error && data.error.type; throw { code: res.status === 401 || res.status === 403 ? 'key_rejected' : res.status === 404 || ty === 'not_found_error' ? 'key_model' : res.status === 429 ? 'rate_limited' : res.status === 529 || ty === 'overloaded_error' ? 'key_overloaded' : 'upstream_error' }; }
+    const data = await anCall('POST', JSON.stringify({ model: anModel(), max_tokens: 16000, messages: [{ role: 'user', content }] }), signal);
     const text = ((data && data.content) || []).filter((c) => c && c.type === 'text').map((c) => c.text).join(''), i = text.indexOf('{'), j = text.lastIndexOf('}');
     if (i < 0 || j <= i || (data && data.stop_reason === 'max_tokens')) throw { code: 'invalid_json' };
     try { return JSON.parse(text.slice(i, j + 1)); } catch (e) { throw { code: 'invalid_json' }; }
   }
+  function anKeyUi(err) {
+    const on = !!anKeyMem; $('anKeySt').textContent = !on ? 'Claude nie jest podłączony.' : anKeyState === 'ok' ? 'Claude jest podłączony Twoim kluczem.' : 'Klucz jest wpisany, ale jeszcze niepotwierdzony.';
+    $('anKeyOpen').hidden = on; $('anKeyOff').hidden = !on; if (on) $('anKeyForm').hidden = true; $('anKeyErr').textContent = err || ''; $('anKeyErr').hidden = !err;
+  }
+  function anKeyForm() { $('anKeyForm').hidden = false; $('anKeyErr').hidden = true; $('anKeyIn').value = ''; $('anKeyIn').focus(); $('anKeyBox').scrollIntoView({ block: 'center' }); }
+  async function anKeyConnect() {
+    const v = $('anKeyIn').value.trim(); if (!/^sk-ant-[A-Za-z0-9_-]{16,}$/.test(v)) { anKeyUi('To nie wygląda na klucz API Anthropic. Klucz zaczyna się od „sk-ant-”.'); $('anKeyForm').hidden = false; return; }
+    anKeyMem = v; anKeyState = 'entered'; $('anKeyIn').value = ''; $('anKeyGo').disabled = true; anKeyUi(''); $('anKeySt').textContent = 'Sprawdzam klucz…';
+    let err = ''; try { await anKeyCheck(); } catch (e) { err = e && e.code === 'key_rejected' ? AN_ERR.key_rejected : (e && AN_ERR[e.code]) || AN_ERR.key_network; if (e && e.code === 'key_rejected') { anKeyMem = ''; anKeyState = ''; } }
+    $('anKeyGo').disabled = false; anKeyUi(err); if (err && !anKeyMem) $('anKeyForm').hidden = false; anDocs(); // analiza nie rusza sama: po podłączeniu klikasz „Analizuj wykrój”
+  }
+  function anKeyDrop() { anKeyMem = ''; anKeyState = ''; $('anKeyIn').value = ''; anKeyUi(''); anDocs(); }
   // jedno miejsce, przez które idzie każde pytanie do Claude; reszta analizatora nie wie, którą drogą
   async function anLimit() { if (window.__anFake) return 8; if (!sampleFn) return anKey() ? 12 : 0; const l = await sampleFn.limits().catch(() => null); return l && l.images ? l.images.maxCount : 0; }
   async function anAsk(prompt, blobs, signal) {
@@ -1911,7 +1947,7 @@
   const anEl = (tag, txt, cls) => { const e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; };
   const anSheetDoc = () => (anSt ? anSt.docs.find((x) => x.role === 'arkusz') || null : null);
   const anSrc = (list) => (list && list.length ? list.map((x) => { const p = x.split(':'); return p[0].replace(/^inne/, 'inny plik') + ', s. ' + p[1]; }).join('; ') : '');
-  function anOpen() { anSt = { docs: [] }; $('anFiles').value = ''; anDocs(); $('anRes').hidden = true; $('anStop').hidden = true; $('anKeyBox').hidden = !!sampleFn; $('anKeyIn').value = anKey(); $('anBox').hidden = false; }
+  function anOpen() { anSt = { docs: [] }; $('anFiles').value = ''; anDocs(); $('anRes').hidden = true; $('anStop').hidden = true; $('anKeyBox').hidden = !!sampleFn; anKeyUi(''); $('anBox').hidden = false; }
   function anClose() { if (anCtl) anCtl.abort(); $('anBox').hidden = true; anSt = null; }
   function anReset() { if (!anSt) return; anSt.data = null; anSt.res = null; $('anRes').hidden = true; }
   // lista dokumentów: każdy ma rodzaj, który można zmienić; arkusz jest jeden i to z niego pochodzą linie
@@ -2041,9 +2077,11 @@
   $('anAddB').addEventListener('click', () => $('anFiles').click());
   $('anFiles').addEventListener('change', () => { const fs = Array.from($('anFiles').files); $('anFiles').value = ''; anAdd(fs); });
   { const dz = $('anDrop'); dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('over'); }); dz.addEventListener('dragleave', () => dz.classList.remove('over')); dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('over'); anAdd(e.dataTransfer ? e.dataTransfer.files : null); }); }
-  $('anGo').addEventListener('click', anRun); $('anRaw').addEventListener('click', anRaw); $('anStop').addEventListener('click', () => { if (anCtl) anCtl.abort(); });
+  // bez podłączonego klucza „Analizuj” otwiera formularz; wybrane pliki i ich role zostają, a analiza rusza dopiero po ponownym kliknięciu
+  $('anGo').addEventListener('click', () => { if (!sampleFn && !anKey() && !window.__anFake) { anKeyForm(); return; } anRun(); }); $('anRaw').addEventListener('click', anRaw); $('anStop').addEventListener('click', () => { if (anCtl) anCtl.abort(); });
   $('anSaveB').addEventListener('click', anSave); $('anX').addEventListener('click', anClose); $('anPrz').addEventListener('click', () => { anClose(); przOpen(); });
-  $('anKeyIn').addEventListener('input', () => { const v = $('anKeyIn').value.trim(); try { if (v) localStorage.setItem(AN_KEY, v); else localStorage.removeItem(AN_KEY); } catch (e) {} anDocs(); });
+  $('anKeyOpen').addEventListener('click', anKeyForm); $('anKeyOff').addEventListener('click', anKeyDrop); $('anKeyGo').addEventListener('click', anKeyConnect);
+  $('anKeyIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); anKeyConnect(); } });
   $('hPdf').addEventListener('click', anOpen);
   // ---------- wczytany wykrój w 3D: z obrysów na arkuszu do zszytych elementów ----------
   // Na razie układ przód + tył (+ rękaw), każdy narysowany jako połowa od linii środka. Krawędzie rozpoznaje geometria:

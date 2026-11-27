@@ -390,7 +390,14 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
 <div id="anBox" hidden><div class="anBar"><b>Wykrój z pliku PDF</b><span style="flex:1"></span><button id="anPrz">Otwórz w Przymiarce</button><button id="anX">Wróć do Wykrojnika</button></div><div class="anBody"><div class="anCol">
   <div class="anDropZ" id="anDrop"><div><b>Pliki wykroju</b><span>Dodaj arkusz na duży format (A0) i, jeśli masz, instrukcję szycia.</span></div><button id="anAddB">Dodaj pliki PDF</button><input id="anFiles" type="file" accept="application/pdf,.pdf" multiple hidden></div>
   <div id="anDocs"></div>
-  <div id="anKeyBox" hidden style="margin-top:16px;max-width:520px"><div class="f2"><span>Klucz API Claude</span><input id="anKeyIn" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" style="width:300px" aria-label="Klucz API Claude"></div><p class="note" style="margin-top:0">Poza Claude analiza idzie przez twój klucz i jest rozliczana z jego konta. Klucz zostaje tylko w tej przeglądarce.</p></div>
+  <div id="anKeyBox" hidden style="margin-top:16px;max-width:560px">
+    <div class="f2"><span id="anKeySt">Claude nie jest podłączony.</span><span style="display:flex;gap:8px"><button id="anKeyOpen">Podłącz Claude</button><button id="anKeyOff" hidden>Odłącz klucz</button></span></div>
+    <div id="anKeyForm" hidden>
+      <div class="f2"><input id="anKeyIn" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-…" style="flex:1" aria-label="Klucz API Anthropic"><button id="anKeyGo">Podłącz</button></div>
+      <p class="note" style="margin-top:0">Analizy są rozliczane na Twoim koncie Anthropic. Klucz jest przechowywany w pamięci tej karty i przesyłany do serwera Wykrojnika przy każdym zapytaniu do Claude’a. <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener noreferrer">Utwórz klucz API</a></p>
+    </div>
+    <p class="warn" id="anKeyErr" hidden></p>
+  </div>
   <div class="row" style="margin-top:16px"><button class="primary" id="anGo" disabled>Analizuj wykrój</button><button id="anRaw" disabled>Wczytaj bez analizy</button><button id="anStop" hidden style="flex:0 0 auto">Przerwij</button></div>
   <p class="note" id="anStat"></p>
   <div id="anRes" hidden>
