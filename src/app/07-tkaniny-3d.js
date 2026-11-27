@@ -50,6 +50,11 @@
     if (!g3 || g3.top !== tp || state.view !== '3d') { tp.run = false; quiet(); return; }
     if (!tp.run && !tp.bzT && !tp.bz) tp.bzT = setTimeout(() => { tp.bzT = 0; if (tp.run) tp.bz = busyOn('Układam tkaninę na sylwetce.'); }, 500);
     tp.run = true; tp.S.step(3); tp.done = tp.S.done;
+    if (tp.done && !tp.chk && tp.g && tp.g.plan) { // kontrola po ułożeniu: mocno naciągnięta siatka znaczy zwykle, że szew łączy nie te krawędzie
+      tp.chk = true; const X = tp.S.X, ds = []; for (const e of tp.g.edges) { const a = e[0] * 3, b = e[1] * 3, d = Math.hypot(X[b] - X[a], X[b + 1] - X[a + 1], X[b + 2] - X[a + 2]); if (d > e[2]) ds.push(d / e[2] - 1); }
+      ds.sort((x, y) => x - y); const p95 = ds.length > 20 ? ds[Math.floor(ds.length * 0.95)] : 0;
+      if (p95 > 0.3) say('Tkanina w tym podglądzie jest miejscami naciągnięta o ' + Math.round(p95 * 100) + '%. Zwykle znaczy to, że analiza połączyła nie te krawędzie. Porównaj podgląd z rysunkiem z instrukcji.', true);
+    }
     if (tp.done || tp.S.steps % 24 === 0) { tp.ready = true; render3d(); }
     if (!tp.done) requestAnimationFrame(() => topRun(tp)); else { tp.run = false; quiet(); }
   }

@@ -41,11 +41,12 @@ Pola odpowiedzi:
 - `szwy`: lista `{ "a": [...], "b": [...], "marszczenie": false }`. Każda strona to lista krawędzi jednego elementu; kilka krawędzi oznacza jeden szew złożony z odcinków (na przykład bok przerwany zaszewką).
 - Egzemplarze: `k7#2c` to krawędź `c` drugiego egzemplarza konturu `k7` w połowie ubrania, licząc od środka przodu.
 - `rozloz`: krawędzie złożenia elementów, które trzeba rozłożyć (klin, rękaw). Krawędzie odbitej połowy mają apostrof: `k6b'`.
+- Część krawędzi: `k4e:0-35` to odcinek od 0 do 35 procent długości krawędzi `k4e`, licząc od końca przy poprzedniej literze. Służy do szwów, w których jedna krawędź łączy się z dwoma elementami.
 - `srodek_przodu`, `srodek_tylu`: krawędzie na środku albo cały symetryczny element leżący na środku, zapisany bez litery (`k7#1`). Taki element jest dzielony wzdłuż osi symetrii.
 - `dol`, `trzymanie` (`ramiona`, `ramiaczka`, `bez`).
 
 Aplikacja zapisuje wskazania jako punkty na arkuszu (środek krawędzi), numer egzemplarza i znacznik odbicia.
 
-Szycie: elementy są składane na płasko wzdłuż szwów, zaczynając od przodu; najpierw te bliżej przodu w łańcuchu szwów, wstawki rozkładane ze złożenia na końcu. Arkusz jest owijany wokół sylwetki, a wstawki startują złożone, jako płetwy przy swoim szwie. Wynik przechodzi kontrolę obwodu i długości.
+Szycie: elementy są składane na płasko wzdłuż szwów, zaczynając od przodu; najpierw te bliżej przodu w łańcuchu szwów, wstawki rozkładane ze złożenia na końcu. Arkusz jest owijany wokół sylwetki, a wstawki startują złożone, jako płetwy przy swoim szwie. Wynik przechodzi kontrolę obwodu i długości, a po ułożeniu także kontrolę naciągnięcia siatki (ostrzeżenie powyżej 30%).
 
 Jeszcze nieobsługiwane: elementy wszyte jedną krawędzią i wiszące luźno (skrzydła, treny, falbany), marszczenie do krótszej krawędzi w symulacji, dokrojone odszycia za linią zgięcia, rękawy wszywane w pachę w tej ścieżce (działają w rozpoznawaniu z kształtu).

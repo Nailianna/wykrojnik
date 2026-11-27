@@ -63,7 +63,9 @@
     edges[bestS] = merged; const keep = edges.filter((_, k) => !drop.has(k)); edges.length = 0; keep.forEach((e) => edges.push(e)); return merged;
   }
   // wskazanie z analizy (punkt na arkuszu, numer egzemplarza, czy krawędź odbita) -> krawędź elementu
-  const plRef = (r) => (Array.isArray(r) ? { at: r, i: 1, m: false } : r && r.at ? { at: r.at, i: r.i || 1, m: !!r.m, w: !!r.w } : null);
+  const plRef = (r) => (Array.isArray(r) ? { at: r, i: 1, m: false } : r && r.at ? { at: r.at, i: r.i || 1, m: !!r.m, w: !!r.w, r: Array.isArray(r.r) && r.r[1] > r.r[0] ? [Math.max(0, r.r[0]), Math.min(1, r.r[1])] : null } : null);
+  // odcinek łamanej między ułamkami jej długości
+  function plSub(pts, t0, t1) { const L = swLen(pts), out = [ptOn(pts, t0)]; let acc = 0; for (let i = 1; i < pts.length - 1; i++) { acc += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); const f = acc / (L || 1); if (f > t0 + 1e-6 && f < t1 - 1e-6) out.push(pts[i]); } out.push(ptOn(pts, t1)); return out; }
   function impPlan(imp, m) {
     const an = imp && imp.an, pcs = (imp && imp.pieces) || []; if (!an || !an.szwy || !an.szwy.length || !an.srodek || !an.srodek.p) return null;
     const a = W.full(m), all = plAll(pcs), near = (r) => plNear(all, r && r.at), L1 = (v) => (v == null ? [] : Array.isArray(v) && (typeof v[0] === 'number') ? [plRef(v)] : (Array.isArray(v) ? v : [v]).map(plRef).filter(Boolean));
@@ -76,9 +78,14 @@
       let unf = null; if (fe) { const f = ed.find((e) => e.id === fe.id); if (f) { unf = [f.pts[0], f.pts[f.pts.length - 1]]; ed = plUnfold(ed, f); } }
       if (centred.includes(key)) { const h = plHalve(ed); if (h) { ed = h.edges; alias = h.alias; } }
       return (parts[key] = { key, pi, ed, alias, unf, depth: 0 }); };
-    const edgeOf = (r) => { const e0 = near(r); if (!e0) return null; const P = part(e0.pi, r.i), id0 = e0.id + (r.m ? "'" : ''), id = P.ed.some((e) => e.id === id0) ? id0 : P.alias[id0] || P.alias[e0.id] || (P.ed.some((e) => e.id === e0.id) ? e0.id : ''); return id ? { P, id } : null; };
+    const edgeOf = (r, cutOk) => { const e0 = near(r); if (!e0) return null; const P = part(e0.pi, r.i), id0 = e0.id + (r.m ? "'" : ''), has = (id) => P.ed.some((e) => e.id === id || (cutOk && e.of === id)), id = has(id0) ? id0 : P.alias[id0] || P.alias[e0.id] || (has(e0.id) ? e0.id : ''); return id ? { P, id } : null; };
+    // krawędź wskazana z zakresem procentów jest dzielona na odcinki; najpierw zbieram wszystkie punkty podziału, potem dzielę raz
+    const rawSeams = an.szwy.map((s) => (Array.isArray(s) ? { a: [plRef([s[0], s[1]])], b: [plRef([s[2], s[3]])] } : { a: L1(s.a), b: L1(s.b), g: !!s.g })), cuts = new Map();
+    for (const s of rawSeams) for (const r of s.a.concat(s.b)) { if (!r.r) continue; const x = edgeOf(r); if (!x) continue; const k = x.P.key + '|' + x.id; if (!cuts.has(k)) cuts.set(k, { P: x.P, id: x.id, at: new Set([0, 1]) }); cuts.get(k).at.add(r.r[0]); cuts.get(k).at.add(r.r[1]); }
+    cuts.forEach((c) => { const k = c.P.ed.findIndex((e) => e.id === c.id); if (k < 0) return; const e = c.P.ed[k], fs = Array.from(c.at).sort((x, y) => x - y), segs = []; for (let q = 0; q < fs.length - 1; q++) if (fs[q + 1] - fs[q] > 0.01) { const pts = plSub(e.pts, fs[q], fs[q + 1]); segs.push({ id: c.id + '~' + q, pts, len: swLen(pts), f0: fs[q], f1: fs[q + 1], of: c.id }); } c.P.ed.splice(k, 1, ...segs); });
+    const idsOf = (r) => { const x = edgeOf(r, true); if (!x) return null; const segs = x.P.ed.filter((e) => e.of === x.id); if (!segs.length) return { P: x.P, ids: [x.id] }; const t0 = r.r ? r.r[0] : 0, t1 = r.r ? r.r[1] : 1; return { P: x.P, ids: segs.filter((e) => e.f0 >= t0 - 0.005 && e.f1 <= t1 + 0.005).map((e) => e.id) }; };
     const seams = [];
-    for (const s of an.szwy) { const sa = Array.isArray(s) ? { a: [plRef([s[0], s[1]])], b: [plRef([s[2], s[3]])] } : { a: L1(s.a), b: L1(s.b), g: !!s.g }, side = (lst) => { const es = lst.map(edgeOf).filter(Boolean); if (!es.length || es.some((e) => e.P !== es[0].P)) return null; const e = plChain(es[0].P.ed, es.map((x) => x.id)); return e ? { P: es[0].P, e } : null; };
+    for (const s of rawSeams) { const sa = s, side = (lst) => { const es = lst.map(idsOf).filter(Boolean); if (!es.length || es.some((e) => e.P !== es[0].P)) return null; const ids = es.reduce((o, x) => o.concat(x.ids), []); if (!ids.length) return null; const e = plChain(es[0].P.ed, ids); return e ? { P: es[0].P, e } : null; };
       const A = side(sa.a), B = side(sa.b); if (!A || !B || A.P === B.P) continue; const q = A.e.len / B.e.len; if (!sa.g && (q < 0.72 || q > 1.4)) continue; seams.push({ a: A, b: B }); }
     if (!seams.length) return { err: 'Analiza nie wskazała szwów, które umiem odnaleźć na elementach.' };
     const F = part(cf0.pi, cfR.i), cfE = F.ed.find((e) => e.id === cf0.id), cbP = cb0 ? parts[cb0.pi + '#' + cbR.i] : null, cbE = cbP ? cbP.ed.find((e) => e.id === cb0.id) : null; if (!cfE) return { err: 'Krawędź środka przodu zniknęła po połączeniu szwów.' };
