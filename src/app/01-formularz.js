@@ -105,7 +105,7 @@
     $('gora').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.g === (state.p.gora === 'bez' ? 'bez' : 'ramiona')));
     $('baza').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.bz === (state.p.baza === 'stark' ? 'stark' : 'wlasna')));
     $('fit').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.fit === (['slim', 'oversize'].includes(state.p.fit) ? state.p.fit : 'regular')));
-    $('bk').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.b === (['serce', 'luk'].includes(state.p.bk) ? state.p.bk : 'prosta')));
+    $('bk').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.b === (state.p.bk === 'serce' || (state.p.bk === 'luk' && state.style !== 'go_nad') ? state.p.bk : 'prosta')));
   }
   function syncSl(k) { const s = $('s_' + k); if (s) { s.value = state.p[k]; $('o_' + k).textContent = f1(state.p[k]) + ' cm'; } }
   function fillAdv() {

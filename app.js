@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.73.0', n: 75, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.74.0', n: 76, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -193,7 +193,7 @@
     $('gora').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.g === (state.p.gora === 'bez' ? 'bez' : 'ramiona')));
     $('baza').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.bz === (state.p.baza === 'stark' ? 'stark' : 'wlasna')));
     $('fit').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.fit === (['slim', 'oversize'].includes(state.p.fit) ? state.p.fit : 'regular')));
-    $('bk').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.b === (['serce', 'luk'].includes(state.p.bk) ? state.p.bk : 'prosta')));
+    $('bk').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.b === (state.p.bk === 'serce' || (state.p.bk === 'luk' && state.style !== 'go_nad') ? state.p.bk : 'prosta')));
   }
   function syncSl(k) { const s = $('s_' + k); if (s) { s.value = state.p[k]; $('o_' + k).textContent = f1(state.p[k]) + ' cm'; } }
   function fillAdv() {
@@ -1444,7 +1444,7 @@
       'Program umie tylko poniższe fasony (id: opis):',
       'sk_prosta: spódnica prosta z zaszewkami; sk_olowkowa: spódnica ołówkowa, zwężana; sk_trapez: spódnica trapezowa; sk_polkole: spódnica z półkola; sk_kolo: spódnica z koła; sk_2kola: spódnica z dwóch kół, bardzo obfita;',
       'su_dopasowana: sukienka dopasowana z zaszewkami; su_trapez: sukienka w literę A; su_princeska: sukienka z cięciami princeski; su_empire: sukienka odcinana pod biustem; su_rybka_kliny: rybka z klinów od kolan; su_rybka: rybka z falbaną z koła od kolan; su_polkole: sukienka odcinana w talii, dół z półkola; su_kolo: sukienka odcinana w talii, dół z koła; su_2kola: odcinana w talii, dół z dwóch kół; to_stanik: sam top dopasowany do talii.',
-      'Każda sukienka może być z ramionami albo bez ramiączek (parametr gora: "ramiona" albo "bez"; przy "bez" bk = "prosta", "luk" (łagodnie zaokrąglona w dół) albo "serce" to kształt górnej krawędzi, bh = jej wysokość nad linią biustu 2-12). Sukienki i topy mają zamek w szwie tyłu. go_pod: gorset pod biust z paneli, sznurowany z tyłu (parametry: gr = redukcja talii 0-15, gh = wysokość nad talią 5-14, gd = długość pod talią z przodu 5-16). go_nad: gorset nad biust z paneli, bez osobnych miseczek (gr, gd oraz bh = wysokość górnej krawędzi nad linią biustu 2-12). to_tshirt i to_tshirt_k: t-shirt z dzianiny z długim albo krótkim rękawem, bez zaszewek; parametr fit = "slim", "regular" albo "oversize". to_tshirt_s: dopasowany top z dzianiny bez rękawów ze stójką (kol = "stojka", kolW = wysokość stójki 2-12). T-shirty też mogą mieć kol = "stojka" (półgolf). Program nie ma gorsetów z miseczkami, rękawów raglanowych i kimonowych, drapowań, asymetrii, kieszeni wszywanych ani spodni.',
+      'Każda sukienka może być z ramionami albo bez ramiączek (parametr gora: "ramiona" albo "bez"; przy "bez" bk = "prosta", "luk" (łagodnie zaokrąglona w dół) albo "serce" to kształt górnej krawędzi, bh = jej wysokość nad linią biustu 2-12). Sukienki i topy mają zamek w szwie tyłu. go_pod: gorset pod biust z paneli, sznurowany z tyłu (parametry: gr = redukcja talii 0-15, gh = wysokość nad talią 5-14, gd = długość pod talią z przodu 5-16). go_nad: gorset nad biust z paneli, bez osobnych miseczek (bk = "prosta" albo "serce" to kształt górnej krawędzi; gr, gd oraz bh = wysokość górnej krawędzi nad linią biustu 2-12). to_tshirt i to_tshirt_k: t-shirt z dzianiny z długim albo krótkim rękawem, bez zaszewek; parametr fit = "slim", "regular" albo "oversize". to_tshirt_s: dopasowany top z dzianiny bez rękawów ze stójką (kol = "stojka", kolW = wysokość stójki 2-12). T-shirty też mogą mieć kol = "stojka" (półgolf). Program nie ma gorsetów z miseczkami, rękawów raglanowych i kimonowych, drapowań, asymetrii, kieszeni wszywanych ani spodni.',
       'Parametry (cm): dl = długość od talii w dół (25-130, rybki od 50); flare = poszerzenie dołu na każdym szwie, ujemne zwęża (-6 do 30, tylko fasony bez koła); kn = wysokość kolan od talii dla rybek (35-90); gf = rozkloszowanie klina na szwie dla su_rybka_kliny (2-30);',
       'nk = kształt dekoltu z przodu: okragly, v, karo, serce, lodka; nd = głębokość dekoltu z przodu poniżej podstawy szyi (-4 do 24, podstawowy to 0, linia biustu wypada około 18); nw = poszerzenie dekoltu wzdłuż ramienia (0-9); nkb = kształt z tyłu: okragly albo v; nb = głębokość dekoltu z tyłu (0-30);',
       'luzG, luzT, luzB = luz w biuście, talii, biodrach (dopasowane 2-4, luźne 6-12, elastyczna dzianina ujemny).',

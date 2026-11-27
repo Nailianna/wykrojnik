@@ -717,7 +717,10 @@
     const Ctop = over ? CtopO : m.ot + (under - m.ot) * Math.min(1.15, gh / hU), Cw = m.ot - gr;
     const hipAt = (h) => m.ot + (m.ob - m.ot) * Math.pow(Math.min(1, Math.max(0, h) / m.wb), 0.8) + 1;
     const sm = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
-    const Tof = over ? (u) => (u < 0.5 ? hSide + (hb + bhO - hSide) * (1 - sm((u - 0.12) / 0.38)) : hSide + (hBack - hSide) * sm((u - 0.5) / 0.4)) : (u) => gh + (u > 0.7 ? ((u - 0.7) / 0.3) * 1.2 : 0), Bof = (u) => gd - 3.5 * Math.sin(Math.PI * u) - 1.5 * u;
+    // serce: krawędź schodzi na środku przodu, najwyżej jest nad szczytem piersi (około 0,22 połowy obwodu) i opada do pachy
+    const heart = over && p.bk === 'serce', uP = 0.22, dip = Math.min(bhO + 1, 6);
+    const Tof = heart ? (u) => (u < uP ? hb + bhO - dip * (1 - Math.sin((Math.PI / 2) * (u / uP))) : u < 0.5 ? hSide + (hb + bhO - hSide) * (1 - sm((u - uP) / (0.5 - uP))) : hSide + (hBack - hSide) * sm((u - 0.5) / 0.4))
+      : over ? (u) => (u < 0.5 ? hSide + (hb + bhO - hSide) * (1 - sm((u - 0.12) / 0.38)) : hSide + (hBack - hSide) * sm((u - 0.5) / 0.4)) : (u) => gh + (u > 0.7 ? ((u - 0.7) / 0.3) * 1.2 : 0), Bof = (u) => gd - 3.5 * Math.sin(Math.PI * u) - 1.5 * u;
     const TL = [], TR = [], P = [];
     for (let i = 0; i < n; i++) {
       const u0 = i / n, u1 = (i + 1) / n, bm = (Bof(u0) + Bof(u1)) / 2;
@@ -751,10 +754,13 @@
         extra.push(lab(x1 - 2.6, (q.b1 - TR[i]) / 2 + 3, 'oczka co 2,5 cm', -90));
       }
       const lastCb = i === n - 1, first = i === 0;
+      // górna krawędź panelu: prosta, a przy sercu łuk idący po linii dekoltu między szwami
+      let topE = [Lm[0], Rm[0]];
+      if (heart && (i + 1) / n <= 0.5 + 1e-9) { const u0 = i / n, u1 = (i + 1) / n, dL = TL[i] - Tof(u0), dR = TR[i] - Tof(u1); topE = Array.from({ length: 13 }, (_, k) => { const t = k / 12; return [Lm[0][0] + (Rm[0][0] - Lm[0][0]) * t, -(Tof(u0 + (u1 - u0) * t) + dL + (dR - dL) * t)]; }); topE[0] = Lm[0]; topE[12] = Rm[0]; }
       const pc = mkPiece({
         id: 'gorset-' + (i + 1), name: 'PANEL ' + (i + 1) + ' · ' + CNAME[n][i], small: true, labelRot: -90,
         lines: ['wytnij 2× z każdej warstwy · ' + m.name],
-        edges: [{ pts: [Lm[0], Rm[0]], sa: p.saTalia }, { pts: Rm, sa: lastCb ? 3 : p.saSzew }, { pts: [Rm[Rm.length - 1], Lm[Lm.length - 1]], sa: p.saTalia }, { pts: Lm.slice().reverse(), sa: first ? p.saSzew : p.saSzew }],
+        edges: [{ pts: topE, sa: p.saTalia }, { pts: Rm, sa: lastCb ? 3 : p.saSzew }, { pts: [Rm[Rm.length - 1], Lm[Lm.length - 1]], sa: p.saTalia }, { pts: Lm.slice().reverse(), sa: first ? p.saSzew : p.saSzew }],
         extra, label: [x0 + 1.2, (q.b0 + q.b1) / 4 - gh / 4 + 1.5], grain: { x: x0 + Math.max(3.6, (x1 - x0) * 0.62), y0: -(over ? Math.min(TL[i], TR[i]) : gh) + 1.5, y1: Math.min(q.b0, q.b1) - 1.5 },
       });
       pieces.push(pc);
@@ -768,7 +774,7 @@
       pieces,
       info: {
         rows, darts: [], cut: [['Panele 1 do ' + n, 'po 2 × z każdej warstwy']],
-        warn: (over ? 'Gorset nad biust z paneli, bez osobnych miseczek: biust mieści się w wybrzuszeniu szwów między panelami 1, 2 i 3. Przy dużej miseczce koniecznie uszyj próbę. ' : '') + 'Talia modelki ' + fmt(m.ot) + ' cm, w gorsecie ' + fmt(Cw) + ' cm' + (gr > 8 ? '. Redukcja powyżej 8 cm to już gorset modelujący, a nie kostiumowy' : '') + '. Najpierw uszyj próbny gorset z płótna i przymierz. Szyj z dwóch warstw: sztywnej (drelich gorsetowy) i wierzchniej. ' + (isFinite(m.opx) && m.opx !== null ? '' : 'Obwód pod biustem jest oszacowany, wpisz zmierzony w profilu modelki.'),
+        warn: (over ? 'Gorset nad biust z paneli, bez osobnych miseczek: biust mieści się w wybrzuszeniu szwów między panelami 1, 2 i 3. Przy dużej miseczce koniecznie uszyj próbę. ' : '') + (heart ? 'Dekolt w serce: środek przodu schodzi ' + fmt(dip) + ' cm poniżej najwyższego punktu nad piersią. Na środku przodu daj sztywną fiszbinę albo bryklę, żeby wcięcie nie odstawało. ' : '') + 'Talia modelki ' + fmt(m.ot) + ' cm, w gorsecie ' + fmt(Cw) + ' cm' + (gr > 8 ? '. Redukcja powyżej 8 cm to już gorset modelujący, a nie kostiumowy' : '') + '. Najpierw uszyj próbny gorset z płótna i przymierz. Szyj z dwóch warstw: sztywnej (drelich gorsetowy) i wierzchniej. ' + (isFinite(m.opx) && m.opx !== null ? '' : 'Obwód pod biustem jest oszacowany, wpisz zmierzony w profilu modelki.'),
       },
       sil: { top: 'corset', lower: 'corset', hemC: 0, seams: { corset: Array.from({ length: n - 1 }, (_, i) => { let acc = 0; for (let j = 0; j <= i; j++) acc += P[j].ww; return acc / (sumW + gg / 2); }) }, c: { T: Tof, B: Bof, gap: (gg / 2) / (sumW + gg / 2), gr, waist: Cw } },
       corset: { n, bones, hCb, eyelets, gg, top: 2 * sumT, bottom: 2 * sumH },
