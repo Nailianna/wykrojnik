@@ -121,7 +121,7 @@
     dl('info', chk.map((r) => [r[0], f1(r[1]) + ' cm', Math.abs(r[1] - r[2]) < 0.15 ? true : (/Szew/.test(r[0]) ? 'druga strona: ' : 'modelka + luz: ') + f1(r[2])]));
     $('verdict').textContent = bad ? (bad === 1 ? 'Jeden wymiar odbiega od modelki.' : 'Wymiary odbiegające od modelki: ' + bad + '.') : d.empty ? 'Wybierz fason, a pokażę wykrój i sprawdzę wymiary.' : d.imported ? 'Wykrój z pliku. Dopasowania do modelki jeszcze nie sprawdzam.' : 'Wykrój zgadza się z wymiarami modelki.'; $('verdict').classList.toggle('bad', !!bad);
     dl('info2', rest.map((r) => [r[0], f1(r[1]) + ' cm'])); $('moreBox').hidden = !rest.length;
-    $('warn').textContent = i.warn;
+    $('warn').textContent = i.warn; $('anCopyRow').hidden = !(state.style === 'import' && state.imp && state.imp.an);
     $('dartsH').hidden = !i.darts.length; dl('darts', i.darts);
     dl('cutlist', i.cut);
     renderLayers(d); renderPrint(model); renderExtras(d);

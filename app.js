@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.94.0', n: 104, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.94.1', n: 105, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -537,7 +537,7 @@
     dl('info', chk.map((r) => [r[0], f1(r[1]) + ' cm', Math.abs(r[1] - r[2]) < 0.15 ? true : (/Szew/.test(r[0]) ? 'druga strona: ' : 'modelka + luz: ') + f1(r[2])]));
     $('verdict').textContent = bad ? (bad === 1 ? 'Jeden wymiar odbiega od modelki.' : 'Wymiary odbiegające od modelki: ' + bad + '.') : d.empty ? 'Wybierz fason, a pokażę wykrój i sprawdzę wymiary.' : d.imported ? 'Wykrój z pliku. Dopasowania do modelki jeszcze nie sprawdzam.' : 'Wykrój zgadza się z wymiarami modelki.'; $('verdict').classList.toggle('bad', !!bad);
     dl('info2', rest.map((r) => [r[0], f1(r[1]) + ' cm'])); $('moreBox').hidden = !rest.length;
-    $('warn').textContent = i.warn;
+    $('warn').textContent = i.warn; $('anCopyRow').hidden = !(state.style === 'import' && state.imp && state.imp.an);
     $('dartsH').hidden = !i.darts.length; dl('darts', i.darts);
     dl('cutlist', i.cut);
     renderLayers(d); renderPrint(model); renderExtras(d);
@@ -2936,11 +2936,14 @@
     if (e.textContent !== t) e.textContent = t; e.hidden = !t; if (!t) { $('seeBox').hidden = true; e.setAttribute('aria-expanded', 'false'); }
   }
   // dane analizy do schowka: to, co analiza zwróciła dla tego wykroju, i powód, dla którego elementy nie zostały zszyte
-  $('seeCopy').addEventListener('click', async () => {
+  // dane analizy do schowka: to, co analiza zwróciła dla tego wykroju, i powód, dla którego elementy nie zostały zszyte
+  async function anCopyData() {
     const d = model && model.d, imp = state.imp; if (!imp) return;
-    const out = { wersja: BUILD.v, rozmiar: imp.size || '', szycie: d && d.sewn ? (d.sewn.plan ? 'plan' : 'kroj') : d && d.approx ? 'przyblizenie' : 'brak', powod: (d && d.sewErr) || '', analiza: imp.an || null, elementy: ((d && d.pieces) || []).map((q) => ({ nazwa: q.name, rola: q.role || '', ciecie: q.cut || '', w: Math.round(q.w), h: Math.round(q.h), x: Math.round(q.box.x0), y: Math.round(q.box.y0) })) };
-    try { await navigator.clipboard.writeText(JSON.stringify(out)); say('Dane analizy są w schowku.'); } catch (e) { say('Nie udało się skopiować danych do schowka.'); }
-  });
+    const out = { wersja: BUILD.v, rozmiar: imp.size || '', szycie: d && d.sewn ? (d.sewn.plan ? 'plan' : 'kroj') : d && d.approx ? 'przyblizenie' : 'brak', powod: (d && d.sewErr) || '', analiza: imp.an || null, elementy: ((d && d.pieces) || []).map((q) => ({ nazwa: q.name, rola: q.role || '', ciecie: q.cut || '', w: Math.round(q.w), h: Math.round(q.h), x: Math.round(q.box.x0), y: Math.round(q.box.y0) })) }, text = JSON.stringify(out);
+    try { await navigator.clipboard.writeText(text); say('Dane analizy są w schowku. Wklej je tam, gdzie chcesz je przekazać.'); }
+    catch (e) { try { await saveFile('wykrojnik-analiza.json', new TextEncoder().encode(text), 'application/json', false, 'Schowek jest niedostępny, więc dane analizy zapisałam w pliku wykrojnik-analiza.json w folderze Wykrojnika.', 'Schowek jest niedostępny, więc dane analizy pobrały się jako plik wykrojnik-analiza.json.'); } catch (e2) { say('Nie udało się skopiować ani zapisać danych analizy.'); } }
+  }
+  $('seeCopy').addEventListener('click', anCopyData); $('anCopy').addEventListener('click', anCopyData);
   $('seeN').addEventListener('click', () => { const b = $('seeBox'); b.hidden = !b.hidden; $('seeN').setAttribute('aria-expanded', String(!b.hidden)); });
   const blStat = (t) => { const e = $('blS'); if (e) e.textContent = t || ''; };
   function blNote() {
