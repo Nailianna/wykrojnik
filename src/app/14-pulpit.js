@@ -18,14 +18,13 @@
   let instState = '';
   function instFill() {
     const ok = instState === 'available'; $('hInst').hidden = !ok;
-    $('hInstNote').hidden = ok || instState === 'installed' || !instState; $('hInstNote').textContent = 'Żeby zainstalować Wykrojnik jako aplikację, otwórz go w aplikacji Claude na Macu. Tutaj działa jako strona.';
+    $('hInstNote').hidden = ok || instState === 'installed' || !instState; $('hInstNote').textContent = 'Żeby zainstalować Wykrojnik jako aplikację, otwórz go w aplikacji Claude na komputerze.';
   }
   function homeFill() {
     instFill();
     $('hFoot').textContent = 'Wykrojnik ' + BUILD.v + ' (build ' + BUILD.n + '), ' + BUILD.date;
     const el = (tag, txt, cls) => { const e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; };
     const list = state.projects.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)), done = list.filter(projDone), open = list.filter((x) => !projDone(x));
-    $('hStat').textContent = (open.length === 1 ? '1 projekt w toku' : open.length + ' projektów w toku') + ' · ' + (done.length === 1 ? '1 gotowy wykrój' : done.length + ' gotowych wykrojów') + ' · ' + (state.profiles.length === 1 ? '1 modelka' : state.profiles.length + ' modelek');
     const card = (pr) => {
       const w = el('div', null, 'hcard'), b = el('button', null, 'hgo'), th = el('div', null, 'hth'), body = el('div', null, 'hb'), t = projThumb(pr.snap);
       if (t && pr.thumb && pr.thumbKey === pr.key && String(pr.thumb).indexOf('data:image/') === 0) { const im = document.createElement('img'); im.src = pr.thumb; im.alt = ''; th.append(im); }

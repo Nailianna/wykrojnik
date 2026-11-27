@@ -313,7 +313,10 @@ footer select{border-radius:8px}
 #home{position:fixed;left:68px;top:0;right:0;bottom:0;z-index:6;overflow:auto;background:radial-gradient(900px 520px at 70% -10%,var(--glow),transparent 62%),var(--bg)}
 .hwrap{max-width:1120px;margin:0 auto;padding:44px 36px 60px}
 .hwrap h1{font:650 34px/1.1 "Bricolage Grotesque","Instrument Sans",system-ui,sans-serif;letter-spacing:-.02em;margin:0 0 8px}
-#hStat{color:var(--mute);margin:0 0 26px}
+#home h1{margin-bottom:26px}
+.hfoot{margin-top:8px;padding:14px 0 6px;border-top:1px solid var(--line);font-size:12px;color:var(--mute);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.hfoot #hFoot{font-family:var(--mono,ui-monospace,monospace)}
+.hfoot button{font-size:12.5px;padding:6px 13px}
 .hact{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:34px}
 .hact button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:22px 24px;border-radius:18px;background:var(--glass);border:1px solid var(--line);position:relative;overflow:hidden}
 .hact button b{font-size:17px;font-weight:650}.hact button span{color:var(--mute);font-weight:400}
@@ -351,13 +354,12 @@ footer select{border-radius:8px}
 <div id="przBox" hidden style="position:fixed;left:68px;top:0;right:0;bottom:0;z-index:8;display:flex;flex-direction:column;background:var(--bg)"><div style="display:flex;align-items:center;gap:14px;padding:9px 16px;border-bottom:1px solid var(--line)"><b style="font:650 15px 'Bricolage Grotesque',sans-serif">Import wykroju z PDF</b><span style="color:var(--mute);font-size:13px">Wymiary modelki są już wpisane w tabeli dopasowania.</span><span style="flex:1"></span><button id="przX">Wróć do Wykrojnika</button></div><iframe id="przF" title="Przymiarka: import wykroju" style="flex:1;border:0;width:100%;background:#f7f5f0"></iframe></div>
 <div id="emptyN" hidden style="position:fixed;left:50%;bottom:86px;transform:translateX(-50%);z-index:4;padding:10px 16px;border-radius:12px;background:var(--glass);border:1px solid var(--line);font-size:13.5px;pointer-events:none">Wybierz fason w panelu, a ubiorę w niego manekin.</div>
 <div id="home" hidden><div class="hwrap">
-  <h1>Co dziś szyjemy?</h1><p id="hStat"></p>
-  <div class="hact"><button id="hNew"><b>Nowy projekt</b><span>Zacznij od fasonu i wymiarów modelki.</span></button><button id="hInsp"><b>Nowy z inspiracji</b><span>Wgraj zdjęcie, a dobiorę do niego wykrój.</span></button><button id="hInst" hidden><b>Zainstaluj na Macu</b><span>Wykrojnik dostanie własne okno i ikonę w Docku.</span></button></div>
-  <p id="hInstNote" hidden style="margin:-14px 0 26px;font-size:13px;color:var(--mute)"></p>
+  <h1>Co dziś szyjemy?</h1>
+  <div class="hact"><button id="hNew"><b>Nowy projekt</b><span>Zacznij od fasonu i wymiarów modelki.</span></button><button id="hInsp"><b>Nowy z inspiracji</b><span>Wgraj zdjęcie, a dobiorę do niego wykrój.</span></button></div>
   <section id="hOpenS"><h3>W toku</h3><div class="hgrid" id="hOpen"></div></section>
   <section id="hDoneS"><h3>Gotowe wykroje</h3><div class="hgrid" id="hDone"></div></section>
   <div class="hcols"><section><h3>Modelki</h3><div id="hMod"></div></section><section><h3>Ostatnie inspiracje</h3><div id="hIn"></div></section></div>
-  <footer id="hFoot" style="margin-top:8px;padding:14px 0 6px;border-top:1px solid var(--line,rgba(255,255,255,.08));font-size:12px;color:var(--mute);font-family:var(--mono,ui-monospace,monospace)"></footer>
+  <footer class="hfoot"><span id="hFoot"></span><span id="hInstNote" hidden></span><button id="hInst" hidden>Zainstaluj jako aplikację</button></footer>
 </div></div>
 <nav aria-label="Narzędzia">
   <button class="logo" id="logoB" aria-label="Pulpit" title="Pulpit"><svg viewBox="0 0 64 64"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffa48c"/><stop offset="1" stop-color="#ffa48c"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#lg)"/><path d="M14 22l8.500 22L32 26l9.500 18L50 22" fill="none" stroke="#12302a" stroke-width="5.500" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 52h36" stroke="#12302a" stroke-width="2.600" stroke-linecap="round" stroke-dasharray="4.500 5" opacity=".85"/><circle cx="50" cy="14" r="3.200" fill="#fff"/></svg></button>
