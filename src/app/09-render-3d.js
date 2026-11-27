@@ -1,4 +1,5 @@
   function render3d(refit) {
+    BL.dirty = true;
     if (!init3d()) { say('Podgląd 3D nie działa w tym widoku (brak WebGL).', true); return; }
     const m = cur(), sil = model.d.sil, a = W.full(m), body = bodyFn(m, a), TAU = Math.PI * 2;
     // wczytany wykrój nie ma parametrów fasonu: podgląd dostaje obojętne wartości i długość odczytaną z elementów
@@ -627,14 +628,15 @@
       }
     }
     if (sil.empty) { while (grp.children.length > nBody) { const o = grp.children[grp.children.length - 1]; grp.remove(o); if (o.geometry) o.geometry.dispose(); } $('hemGap').textContent = ''; $('gap').textContent = ''; $('simS').textContent = ''; }
+    const refB = refAdd(grp, floor);
     g3.scene.add(grp); g3.group = grp;
     { // kadr: cała postać albo ubranie w obszarze między etykietami u góry a paskiem suwaków; przelicza się przy każdej zmianie rozmiaru
       const r = g3.canvas.getBoundingClientRect(), hgt = Math.max(200, r.height), asp = Math.max(0.3, r.width / hgt);
-      const top = useFig ? a.Dts + headLen + 2 : a.Dts + 6, bot = useFig ? floor - 2 : Math.max(floor, -p.dl - 14);
-      let hw = useFig ? 4.97 * fs + 4 : 26; for (let i = 0; i < 16; i++) hw = Math.max(hw, Math.abs(sect(-p.dl, (i / 16) * TAU)[0]) + 3);
+      const top = Math.max(useFig ? a.Dts + headLen + 2 : a.Dts + 6, refB ? refB.top + 4 : -1e9), bot = refB ? floor - 2 - refB.hw * 0.3 : useFig ? floor - 2 : Math.max(floor, -p.dl - 14);
+      let hw = useFig ? 4.97 * fs + 4 : 26; for (let i = 0; i < 16; i++) hw = Math.max(hw, Math.abs(sect(-p.dl, (i / 16) * TAU)[0]) + 3); if (refB) hw = Math.max(hw, refB.hw + 4);
       const padT = Math.min(0.2, 100 / hgt), padB = Math.min(0.4, 24 / hgt), avail = 1 - padT - padB;
       const V = Math.max(((top - bot) * 1.06) / avail, (2 * hw * 1.1) / asp), fd = V / (2 * Math.tan((16 * Math.PI) / 180));
-      const key = [state.style, p.dl, p.kn, state.figure, H, Math.round(hw), Math.round(hgt), Math.round(r.width)].join('|');
+      const key = [state.style, refB ? 1 : 0, p.dl, p.kn, state.figure, H, Math.round(hw), Math.round(hgt), Math.round(r.width)].join('|');
       if (refit || g3.frameKey !== key) {
         const z = refit || !g3.frameKey ? 1 : Math.max(0.2, Math.min(8, fitDist / cam.dist));
         g3.frameKey = key; fitDist = fd; cam.dist = fd / z; g3.mid = (top + bot) / 2 + (padT + avail / 2 - 0.5) * V;

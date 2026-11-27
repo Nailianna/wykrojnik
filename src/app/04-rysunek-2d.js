@@ -84,7 +84,7 @@
   function draw(refit) {
     try { model = compute(); } catch (e) { say('Z tych wymiarów nie da się zbudować wykroju. Sprawdź wpisane wartości.'); return; }
     const { d, lay, tl } = model;
-    $('emptyN').hidden = !d.empty || !$('home').hidden; cardUi();
+    $('emptyN').hidden = !d.empty || !$('home').hidden || !!state.ref; cardUi();
     if (state.view === '3d' && d.imported && !d.sewn) { say(d.sewErr || 'Tego wykroju nie umiem pokazać w 3D.', true); setView('2d'); return; } // po zmianie ustawień wykrój przestał się zszywać: zamiast przypadkowej bryły wraca rysunek
     { const mb = $('miniS').closest('.float') || $('miniS').parentElement; if (mb) mb.style.display = d.empty ? 'none' : ''; }
     $('sub').textContent = (projCur().name || 'Bez nazwy') + ' · ' + d.title + ' · ' + (cur().name || 'Bez imienia');

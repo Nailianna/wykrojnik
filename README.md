@@ -2,7 +2,7 @@
 
 Aplikacja do konstruowania wykrojów odzieży z wymiarów: spódnice, sukienki, topy, t-shirty i gorsety. Rysuje wykrój, sprawdza go z wymiarami modelki, pokazuje podgląd 3D na sylwetce i drukuje na kartkach A4 w skali 100%.
 
-Wersja 0.89.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
+Wersja 0.90.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
 
 ## Uruchomienie
 
@@ -88,6 +88,4 @@ Repozytorium nie zawiera żadnych wykrojów w PDF ani kluczy, wgrywasz własne.
 
 ## Render w Blenderze
 
-W Wykrojniku zainstalowanym jako aplikacja na Macu podgląd 3D sam dostaje gotowy obraz z Blendera. Aplikacja szuka Blendera w `/Applications/Blender.app` (albo pod ścieżką podaną raz w ustawieniach), uruchamia go w tle i przekazuje mu scenę z podglądu jako plik GLB razem z kamerą. Obraz pojawia się sekundę po zatrzymaniu widoku, w tym samym kadrze. Pliki robocze leżą w `Dokumenty/Wykrojnik/render`. Render nie korzysta z klucza API. Kod: `src/app/14a-blender.js`.
-
-Gdy ubranie jest zszyte z elementów wykroju, Blender układa też tkaninę: dostaje płaskie elementy w skali 1:1, szwy jako sprężyny zszywające, sylwetkę i podłogę jako przeszkody. Wynik wraca do tego samego obracanego podglądu i zapisuje się, więc ponowne otwarcie projektu go nie przelicza. Zmiana koloru albo kamery nie uruchamia układania.
+Podgląd 3D sam dostaje gotowy obraz z Blendera: z usługi renderującej na serwerze (zwykła przeglądarka, bez instalowania czegokolwiek) albo z Blendera na komputerze, gdy Wykrojnik jest zainstalowany jako aplikacja. Gdy ubranie jest zszyte z elementów wykroju, Blender układa też tkaninę z płaskich części. Gotowy plik GLB można wgrać jako wizualizację referencyjną. Render nie korzysta z klucza API. Opis, API i wdrożenie: [docs/render.md](docs/render.md).

@@ -12,7 +12,7 @@
     if (document.activeElement !== $('prName')) $('prName').value = projCur().name;
   }
   function loadSnap(sn) {
-    const o = JSON.parse(JSON.stringify(sn)); o.p = Object.assign({}, DEF_P, o.p);
+    const o = JSON.parse(JSON.stringify(sn)); o.p = Object.assign({}, DEF_P, o.p); if (!o.ref) o.ref = null;
     Object.assign(state, o);
     if (state.style !== 'pusty' && !(state.style === 'import' && state.imp && state.imp.pieces) && !W.STYLES.some((x) => x.id === state.style)) state.style = 'sk_prosta';
     if (!state.profiles.some((x) => x.id === state.active)) state.active = state.profiles[0].id;
@@ -35,7 +35,7 @@
   }
   $('przX').addEventListener('click', () => { $('przBox').hidden = true; });
   $('impSize').addEventListener('change', () => { const data = impCache[state.proj]; if (!data) { impFill(); say('Wczytaj plik jeszcze raz, żeby zmienić rozmiar.'); return; } { const an = state.imp.an, z = $('impSize').value, rz = an && (an.rozm || []).find((x) => x.w === z); state.imp = Object.assign({}, state.imp, { size: z, pieces: anApply(window.PatImport.pick(data, z), an) }, an ? { an: Object.assign({}, an, { body: rz ? { n: rz.n, b: rz.b, t: rz.t, h: rz.h } : null }) } : {}); } state.sel = {}; persist(); draw(true); });
-  function newProj() { const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {}; addProj('Nowy projekt', sn); }
+  function newProj() { const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.ref = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {}; addProj('Nowy projekt', sn); }
   for (const [id, k] of [['lb', 'b'], ['ls', 's']]) for (const e of [$('i_' + id), $('is_' + id)]) e.addEventListener('input', () => {
     const v = parseFloat(String(e.value).replace(',', '.')); if (!isFinite(v) || !state.imp) return;
     state.imp = Object.assign({}, state.imp, { adj: Object.assign({}, state.imp.adj, { [k]: Math.max(+e.min, Math.min(+e.max, v)) }) });

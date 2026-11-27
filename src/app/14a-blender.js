@@ -1,7 +1,7 @@
   // ---------- render w Blenderze: gotowy obraz w miejscu podglądu 3D ----------
   // Działa w Wykrojniku zainstalowanym jako aplikacja. Blender chodzi w tle jako jeden proces: dostaje scenę z podglądu (plik GLB) i kamerę,
   // odsyła obraz z przezroczystym tłem, który przykrywa podgląd, dopóki nie ruszysz widoku. Bez Blendera zostaje zwykły podgląd.
-  const BL = /** @type {any} */ ({ on: false, path: '', dir: '', proc: null, ready: false, buf: '', job: 0, busy: false, cur: null, clothQ: null, killing: null, last: '', why2: '', whyC: '', pend: null, sent: '', t: 0, shown: '', want: '', why: '', starting: false });
+  const BL = /** @type {any} */ ({ on: false, path: '', dir: '', proc: null, ready: false, buf: '', job: 0, busy: false, mode: '', lastC: '', cur: null, clothQ: null, killing: null, last: '', why2: '', whyC: '', pend: null, sent: '', t: 0, shown: '', want: '', why: '', starting: false });
   const BL_PY = [
     'import bpy, sys, json, math, os',
     'from mathutils import Vector',
@@ -132,9 +132,9 @@
       if (uv) { acc.push({ bufferView: push(uv, 34962), componentType: 5126, count: n, type: 'VEC2' }); attr.TEXCOORD_0 = acc.length - 1; }
       acc.push({ bufferView: push(idx, 34963), componentType: 5125, count: idx.length, type: 'SCALAR' }); const iAcc = acc.length - 1;
       if (!matIx.has(mt)) {
-        const c = mt.color || { r: 0.8, g: 0.8, b: 0.8 }, lin = (x) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)), pbr = { baseColorFactor: [lin(c.r), lin(c.g), lin(c.b), 1], roughnessFactor: mt.roughness == null ? 0.8 : mt.roughness, metallicFactor: mt.metalness || 0 };
+        const c = mt.color || { r: 0.8, g: 0.8, b: 0.8 }, lin = (x) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)), op = mt.transparent && !mt.alphaMap && mt.opacity < 1 ? mt.opacity : 1, pbr = { baseColorFactor: [lin(c.r), lin(c.g), lin(c.b), op], roughnessFactor: mt.roughness == null ? 0.8 : mt.roughness, metallicFactor: mt.metalness || 0 };
         if (map && uv) { if (!texIx.has(map)) { let url = ''; try { const im = map.image, cv = im.toDataURL ? im : (() => { const q = document.createElement('canvas'); q.width = im.width; q.height = im.height; q.getContext('2d').drawImage(im, 0, 0); return q; })(); url = cv.toDataURL('image/png'); } catch (e) { url = ''; } if (url) { const bin = atob(url.split(',')[1]), by = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) by[i] = bin.charCodeAt(i); imgs.push({ bufferView: push(by), mimeType: 'image/png' }); texs.push({ source: imgs.length - 1, sampler: 0 }); texIx.set(map, texs.length - 1); sig ^= by.length; sig = Math.imul(sig, 16777619); } else texIx.set(map, -1); } if (texIx.get(map) >= 0) pbr.baseColorTexture = { index: texIx.get(map) }; }
-        mats.push({ pbrMetallicRoughness: pbr, doubleSided: mt.side === T3.DoubleSide }); matIx.set(mt, mats.length - 1); sig ^= Math.round(c.r * 255) + Math.round(c.g * 255) * 256 + Math.round(c.b * 255) * 65536; sig = Math.imul(sig, 16777619);
+        mats.push(Object.assign({ name: (mt.userData && mt.userData.part) || '', pbrMetallicRoughness: pbr, doubleSided: op < 1 || mt.side === T3.DoubleSide }, op < 1 ? { alphaMode: 'BLEND' } : {})); sig ^= Math.round(op * 100) + Math.round((pbr.roughnessFactor || 0) * 1000) * 128; sig = Math.imul(sig, 16777619); matIx.set(mt, mats.length - 1); sig ^= Math.round(c.r * 255) + Math.round(c.g * 255) * 256 + Math.round(c.b * 255) * 65536; sig = Math.imul(sig, 16777619);
       }
       gm.push({ primitives: [{ attributes: attr, indices: iAcc, material: matIx.get(mt) }] }); nodes.push({ mesh: gm.length - 1 }); sig ^= n; sig = Math.imul(sig, 16777619);
     }
@@ -146,14 +146,72 @@
     let p = 20 + js.length; dv.setUint32(p, off, true); dv.setUint32(p + 4, 0x004e4942, true); p += 8; for (const c of chunks) { out.set(c, p); p += c.length; }
     return { bytes: out, sig: (sig >>> 0).toString(36) + '-' + nodes.length };
   }
+  // ---------- usługa renderująca na serwerze: te same zadania przez API, bez Blendera na komputerze ----------
+  const SRV = /** @type {any} */ ({ api: '', client: '', rj: null, cj: null, imgs: new Map() });
+  function srvHead() { let p = String(state.proj || 'projekt').replace(/[^A-Za-z0-9_-]/g, ''); while (p.length < 6) p += '0'; return { 'x-wk-client': SRV.client, 'x-wk-project': p.slice(0, 64) }; }
+  async function srvCall(method, path, body, type) {
+    const h = srvHead(); if (type) h['content-type'] = type;
+    let r; try { r = await fetch(SRV.api + path, { method, headers: h, body, cache: 'no-store' }); } catch (e) { throw new Error('Usługa renderująca nie odpowiada.'); }
+    if (!r.ok) { let m = ''; try { m = (await r.json()).error || ''; } catch (e) { m = ''; } throw new Error(m || 'Usługa renderująca odpowiedziała błędem ' + r.status + '.'); }
+    return r;
+  }
+  async function srvInit() {
+    try { SRV.client = localStorage.getItem('wykrojnik.klient') || ''; if (!/^[A-Za-z0-9_-]{16,64}$/.test(SRV.client)) { const a = new Uint8Array(18); crypto.getRandomValues(a); SRV.client = Array.from(a, (x) => (x % 36).toString(36)).join(''); localStorage.setItem('wykrojnik.klient', SRV.client); } } catch (e) { SRV.client = 'sesja' + Math.random().toString(36).slice(2, 14) + Date.now().toString(36); }
+    let base = window['__wkRender'] || ''; try { base = base || localStorage.getItem('wykrojnik.render') || ''; } catch (e) { /* zostaje adres domyślny */ }
+    SRV.api = (base || 'api/render').replace(/\/$/, '');
+    try { const r = await fetch(SRV.api + '/health', { cache: 'no-store' }); if (!r.ok) throw new Error('Usługa renderująca odpowiedziała błędem ' + r.status + '.'); const j = await r.json(); if (!j || !j.ok) throw new Error('Pod tym adresem nie ma usługi renderującej.'); BL.mode = 'server'; BL.on = true; BL.why = ''; blNote(); blTouch(); return true; }
+    catch (e) { SRV.why = /odpowiedziała|adresem/.test(String(e && e.message)) ? e.message : 'Usługa renderująca nie odpowiada.'; return false; }
+  }
+  // czeka na zadanie; fresh() mówi, czy wynik jest jeszcze potrzebny, a label(stan) ustawia napis
+  async function srvWait(slot, id, fresh, label) {
+    SRV[slot] = id; let fails = 0;
+    for (;;) {
+      if (!fresh() || SRV[slot] !== id) { srvCall('DELETE', '/jobs/' + id).catch(() => {}); if (SRV[slot] === id) SRV[slot] = null; return null; }
+      let j; try { j = await (await srvCall('GET', '/jobs/' + id)).json(); fails = 0; } catch (e) { if (++fails > 4) { SRV[slot] = null; throw e; } await new Promise((r) => setTimeout(r, 800)); continue; }
+      if (j.state === 'done') { const u8 = new Uint8Array(await (await srvCall('GET', '/jobs/' + id + '/result')).arrayBuffer()); if (SRV[slot] === id) SRV[slot] = null; return { u8, cached: !!j.cached }; }
+      if (j.state === 'failed' || j.state === 'cancelled') { if (SRV[slot] === id) SRV[slot] = null; if (j.state === 'cancelled') return null; throw new Error(j.error || 'Blender nie dokończył zadania.'); }
+      label(j.state === 'queued' ? (j.ahead > 0 ? 'W kolejce (' + j.ahead + ' przed Tobą)…' : 'W kolejce…') : null);
+      await new Promise((r) => setTimeout(r, 350));
+    }
+  }
+  function srvImg(key, u8) { if (key !== BL.want) return; const url = URL.createObjectURL(new Blob([u8], { type: 'image/png' })); SRV.imgs.set(key, url); if (SRV.imgs.size > 40) { const k = SRV.imgs.keys().next().value; URL.revokeObjectURL(SRV.imgs.get(k)); SRV.imgs.delete(k); } blPut(url, key); }
+  async function srvRender(q) {
+    if (SRV.imgs.has(q.key)) { BL.last = 'nic, obraz z zapisu'; blNote(); blPut(SRV.imgs.get(q.key), q.key); return; }
+    const p = g3.camera.position, job = JSON.stringify({ kind: 'render', key: q.key + '|' + q.w + 'x' + q.h, geo: q.glb.sig, w: q.w, h: q.h, cam: { pos: [p.x, p.y, p.z], target: [0, g3.mid, 0], fov: g3.camera.fov } });
+    try {
+      BL.why2 = ''; blStat('Dopracowywanie podglądu…'); let fresh = false;
+      let r = await (await srvCall('POST', '/jobs', job, 'application/json')).json();
+      if (r.need === 'scene') { if (q.key !== BL.want) return; await srvCall('PUT', '/scenes/' + q.glb.sig, q.glb.bytes, 'model/gltf-binary'); fresh = true; r = await (await srvCall('POST', '/jobs', job, 'application/json')).json(); }
+      if (!r.id) throw new Error('Usługa renderująca nie przyjęła zadania.');
+      const out = await srvWait('rj', r.id, () => q.key === BL.want && state.view === '3d', (t) => { if (q.key === BL.want) blStat(t || 'Dopracowywanie podglądu…'); });
+      if (!out) return; // spóźniony albo anulowany: nowszy widok ma pierwszeństwo
+      BL.last = out.cached ? 'nic, obraz z zapisu' : fresh ? 'scena i obraz' : 'tylko obraz'; if (BL.lastC) { BL.last += ', ' + BL.lastC; BL.lastC = ''; } blNote(); srvImg(q.key, out.u8);
+    } catch (e) { if (q.key === BL.want) { BL.why2 = String((e && e.message) || e).slice(0, 180); blStat(BL.why2 + ' Widzisz zwykły podgląd.'); blNote(); } }
+  }
+  async function srvCloth(tp) {
+    tp.bl = 'run'; blStat('Układanie tkaniny…');
+    try {
+      const g = tp.g, body = blBody(); if (!body.idx.length) { tp.bl = 'fail'; blStat(''); return; }
+      const r = await (await srvCall('POST', '/jobs', JSON.stringify({ kind: 'cloth', key: tp.key + '|c1|' + g.ns, data: blClothData(tp, body) }), 'application/json')).json();
+      if (!r.id) throw new Error('Usługa renderująca nie przyjęła zadania.');
+      const out = await srvWait('cj', r.id, () => g3 && g3.top === tp, (t) => blStat(t || 'Układanie tkaniny…'));
+      blStat(''); if (!out) { if (tp.bl === 'run') tp.bl = 'fail'; return; }
+      if (!blClothApply(tp, out.u8)) throw new Error('wynik nie przeszedł kontroli');
+      BL.lastC = out.cached ? 'tkanina z zapisu' : 'tkanina ułożona w Blenderze'; BL.whyC = ''; if (g3 && g3.top === tp && state.view === '3d') render3d();
+    } catch (e) { blStat(''); tp.bl = 'fail'; BL.whyC = 'Blender nie ułożył tkaniny (' + String((e && e.message) || e).slice(0, 140) + '). Widzisz ułożenie z podglądu.'; blNote(); }
+  }
   const blStat = (t) => { const e = $('blS'); if (e) e.textContent = t || ''; };
   function blNote() {
     const e = $('blStat'); if (!e) return; const inApp = !!(desktop && desktop.childProcess);
-    e.textContent = !inApp ? 'Render w Blenderze działa w Wykrojniku zainstalowanym jako aplikacja na komputerze.' : BL.on ? 'Blender jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' + (BL.whyC ? ' ' + BL.whyC : '') + (BL.why2 ? ' ' + BL.why2 : BL.last ? ' Ostatnio przeliczone: ' + BL.last + '.' : '') : BL.why || 'Szukam Blendera…';
+    const more = (BL.whyC ? ' ' + BL.whyC : '') + (BL.why2 ? ' ' + BL.why2 : BL.last ? ' Ostatnio przeliczone: ' + BL.last + '.' : '');
+    if (BL.mode === 'server' && BL.on) { e.textContent = 'Render wysokiej jakości jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' + more; $('blPathRow').hidden = true; return; }
+    e.textContent = !inApp ? 'Render wysokiej jakości jest teraz niedostępny, więc widzisz zwykły podgląd. ' + (SRV.why || 'Sprawdzam usługę renderującą…') : BL.on ? 'Blender jest podłączony. Gotowy obraz pojawia się w podglądzie 3D sekundę po zatrzymaniu widoku.' + (BL.whyC ? ' ' + BL.whyC : '') + (BL.why2 ? ' ' + BL.why2 : BL.last ? ' Ostatnio przeliczone: ' + BL.last + '.' : '') : BL.why || 'Szukam Blendera…';
     $('blPathRow').hidden = !inApp || BL.on || !BL.why;
   }
   async function blInit(custom) {
+    if (!custom && (BL.mode === 'server' || (await srvInit()))) return;
     if (!desktop || !desktop.childProcess || !desktop.fs) { blNote(); return; }
+    BL.mode = 'local';
     BL.on = false; BL.why = ''; blNote();
     try {
       const home = await desktop.os.homedir(), saved = (() => { try { return localStorage.getItem('wykrojnik.blender') || ''; } catch (e) { return ''; } })();
@@ -191,12 +249,18 @@
       if (o.geometry.index) { const a = o.geometry.index.array; for (let i = 0; i < a.length; i++) idx.push(a[i] + off); } else for (let i = 0; i < P.count; i++) idx.push(i + off); });
     return { pos, idx };
   }
+  function blClothData(tp, body) {
+    const g = tp.g, pin = []; if (tp.holdOn && g.hold) for (const i of g.hold) pin.push(i); if (tp.pinned) for (let i = 0; i < g.ns; i++) if (g.pin[i] >= 0 && g.meta[i].pk !== 'S') pin.push(i);
+    const r2 = (a) => Array.from(a, (x) => +x.toFixed(3));
+    return { ns: g.ns, rmap: Array.from(g.rmap), uv: r2(g.ruv), tri: Array.from(g.tri), X: r2(tp.S.X), pin, body, floor: g3.floorY == null ? -110 : g3.floorY, st: tp.fab ? tp.fab.st : 0.3, knit: !!(tp.fab && tp.fab.knit), frames: 45 };
+  }
   function blClothApply(tp, u8) {
     const g = tp.g; if (!u8 || u8.byteLength !== g.ns * 12) return false; const f = new Float32Array(u8.slice().buffer), lo = (g3.floorY == null ? -200 : g3.floorY) - 6;
     for (let i = 0; i < f.length; i += 3) if (!isFinite(f[i]) || !isFinite(f[i + 1]) || !isFinite(f[i + 2]) || Math.abs(f[i]) > 300 || Math.abs(f[i + 2]) > 300 || f[i + 1] < lo) return false;
     tp.S.X.set(f); tp.bl = 'done'; return true;
   }
   async function blCloth(tp) {
+    if (BL.mode === 'server') return srvCloth(tp);
     tp.bl = 'run'; const file = BL.dir + '/tk-' + blHash(tp.key + '|c1|' + tp.g.ns) + '.bin';
     if (await desktop.fs.exists(file).catch(() => false)) { const u8 = await desktop.fs.readFile(file).catch(() => null); if (blClothApply(tp, u8)) { BL.last = 'tkanina z zapisu'; if (g3 && g3.top === tp) render3d(); return; } }
     BL.clothQ = { tp, file }; blStat('Układanie tkaniny…'); blPump();
@@ -207,9 +271,8 @@
     BL.busy = true;
     try {
       const g = tp.g, body = blBody(); if (!body.idx.length) { tp.bl = 'fail'; BL.busy = false; blStat(''); blPump(); return; }
-      const pin = []; if (tp.holdOn && g.hold) for (const i of g.hold) pin.push(i); if (tp.pinned) for (let i = 0; i < g.ns; i++) if (g.pin[i] >= 0 && g.meta[i].pk !== 'S') pin.push(i);
-      const r2 = (a) => Array.from(a, (x) => +x.toFixed(3)), jf = BL.dir + '/tkanina.json';
-      await desktop.fs.writeFile(jf, JSON.stringify({ ns: g.ns, rmap: Array.from(g.rmap), uv: r2(g.ruv), tri: Array.from(g.tri), X: r2(tp.S.X), pin, body, floor: g3.floorY == null ? -110 : g3.floorY, st: tp.fab ? tp.fab.st : 0.3, knit: !!(tp.fab && tp.fab.knit), frames: 45 }), 'utf8');
+      const jf = BL.dir + '/tkanina.json';
+      await desktop.fs.writeFile(jf, JSON.stringify(blClothData(tp, body)), 'utf8');
       await blSend({ cloth: jf, out: q.file }, async (ok, msg) => {
         blStat('');
         if (ok) { const u8 = await desktop.fs.readFile(q.file).catch(() => null); if (blClothApply(tp, u8)) { BL.last = 'tkanina ułożona w Blenderze'; BL.whyC = ''; if (g3 && g3.top === tp && state.view === '3d') render3d(); return; } msg = 'wynik nie przeszedł kontroli'; desktop.fs.rm(q.file).catch(() => {}); }
@@ -218,16 +281,18 @@
     } catch (e) { BL.busy = false; BL.cur = null; tp.bl = 'fail'; blStat(''); }
   }
   async function blShow(file, key) {
-    try { const b64 = await desktop.fs.readFile(file, 'base64'); if (key !== BL.want) return; const im = $('blImg'); im.onload = () => { if (key !== BL.want) return; const cs = g3.canvas.style; im.style.left = cs.left || '0'; im.style.top = '0'; im.style.width = cs.width || '100%'; im.style.height = '100%'; im.hidden = false; g3.canvas.style.opacity = '0'; BL.shown = key; blStat(''); }; im.src = 'data:image/png;base64,' + b64; }
+    try { const b64 = await desktop.fs.readFile(file, 'base64'); blPut('data:image/png;base64,' + b64, key); }
     catch (e) { blStat(''); }
   }
+  function blPut(src, key) { if (key !== BL.want) return; const im = $('blImg'); im.onload = () => { if (key !== BL.want) return; const cs = g3.canvas.style; im.style.left = cs.left || '0'; im.style.top = '0'; im.style.width = cs.width || '100%'; im.style.height = '100%'; im.hidden = false; g3.canvas.style.opacity = '0'; BL.shown = key; blStat(''); }; im.src = src; }
   function blHide() { const im = $('blImg'); if (im && !im.hidden) { im.hidden = true; } if (g3 && g3.canvas) g3.canvas.style.opacity = ''; BL.shown = ''; }
   // wywoływane po każdym odświeżeniu podglądu: chowa gotowy obraz, gdy widok się zmienił, i zamawia nowy po sekundzie spokoju
   function blTouch() {
-    if (BL.cur && BL.cur.tp && (!g3 || g3.top !== BL.cur.tp)) { blKill(); blStat(''); } // inny projekt albo inne wymiary: stare układanie nie jest już potrzebne
-    if (!BL.on || !g3 || state.view !== '3d' || !$('home').hidden) { blHide(); clearTimeout(BL.t); return; }
+    if (BL.mode !== 'server' && BL.cur && BL.cur.tp && (!g3 || g3.top !== BL.cur.tp)) { blKill(); blStat(''); } // inny projekt albo inne wymiary: stare układanie nie jest już potrzebne
+    if (!BL.on || !g3 || state.view !== '3d' || !$('home').hidden) { blHide(); clearTimeout(BL.t); BL.want = ''; return; }
     const r = g3.canvas.getBoundingClientRect(), ck = [cam.yaw.toFixed(3), cam.pitch.toFixed(3), cam.dist.toFixed(1), Math.round(r.width), Math.round(r.height), g3.mid.toFixed(1)].join('|');
-    if (BL.shown && BL.shown.indexOf(ck + '#') !== 0) blHide(); else if (BL.shown) return;
+    const dirty = BL.dirty; BL.dirty = false;
+    if (BL.shown && (dirty || BL.shown.indexOf(ck + '#') !== 0)) blHide(); else if (BL.shown) return;
     clearTimeout(BL.t); BL.t = setTimeout(() => blAsk(ck), 1000);
   }
   async function blAsk(ck) {
@@ -238,6 +303,7 @@
     let glb; try { glb = blGlb(); } catch (e) { glb = null; } if (!glb) return;
     const r = g3.canvas.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1), sc = Math.min(1, 2000 / (Math.max(r.width, r.height) * dpr)), w = Math.round(r.width * dpr * sc), h = Math.round(r.height * dpr * sc);
     const key = ck + '#' + glb.sig, file = BL.dir + '/' + blHash(key + '|' + w + 'x' + h) + '.png'; BL.want = key; BL.pend = { glb, key, file, w, h };
+    if (BL.mode === 'server') { srvRender(BL.pend); return; }
     if (await desktop.fs.exists(file).catch(() => false)) { BL.last = 'nic, obraz z zapisu'; blNote(); blShow(file, key); return; } // ten sam projekt i kadr: zapisany wynik
     BL.why2 = ''; blStat('Dopracowywanie podglądu…'); blGo();
   }

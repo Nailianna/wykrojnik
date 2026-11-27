@@ -12,12 +12,13 @@
   async function boot() {
     const back = uiResume(); loadPrintImg(); histReset();
     fillForm(); layoutUi(); setView(state.view === '3d' ? '3d' : '2d'); showStore(); uiReady = true; homeShow(!back);
-    if (!window.claude || !window.claude.use) return;
+    if (!window.claude || !window.claude.use) { blInit(); return; }
     claude.use('downloads').then((d) => (downloads = d)).catch(() => {});
     claude.use('db').then((d) => { if (d) { dbRef = d; wishPull(); } }).catch(() => {});
     claude.use('sample').then((s) => { sampleFn = s; if (s && inBlob) { $('inGo').disabled = false; $('inStat').textContent = ''; } }).catch(() => {});
     try { desktop = window['__wkDesktop'] || (await claude.use('desktop')); } catch (e) { desktop = null; }
     blNote();
+    if (!desktop || !desktop.fs) blInit();
     if (!desktop) { instState = 'none'; instFill(); return; }
     if (desktop.fs) {
       instState = 'installed'; instFill();

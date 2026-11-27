@@ -1,0 +1,16 @@
+# Cały przepływ na jednym komputerze: strona Wykrojnika i usługa renderująca z Blenderem pod adresem http://localhost:8080
+# Uruchomienie: docker compose up --build
+services:
+  render:
+    build: ./server
+    ports: ["8080:8080"]
+    env_file: [{ path: .env, required: false }]
+    environment:
+      WK_STATIC: /strona
+      WK_DATA: /dane
+    volumes:
+      - ./:/strona:ro
+      - render-dane:/dane
+    restart: unless-stopped
+volumes:
+  render-dane:

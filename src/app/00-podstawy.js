@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.89.0', n: 96, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.90.0', n: 97, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -25,7 +25,7 @@
   };
   const DEF_P = JSON.parse(JSON.stringify(state.p));
   // projekt = fason, parametry, modelka, tkanina i ustawienia druku; modelki są wspólne dla wszystkich projektów
-  const PK = ['imp', 'style', 'p', 'active', 'fabric', 'color', 'color2', 'print', 'pscale', 'layers', 'printImg', 'sel', 'paper', 'pack', 'fabW'];
+  const PK = ['ref', 'imp', 'style', 'p', 'active', 'fabric', 'color', 'color2', 'print', 'pscale', 'layers', 'printImg', 'sel', 'paper', 'pack', 'fabW'];
   const snap = () => { const o = {}; for (const k of PK) o[k] = state[k]; return JSON.parse(JSON.stringify(o)); };
   const projCur = () => state.projects.find((x) => x.id === state.proj);
   function ensureProjects() {
