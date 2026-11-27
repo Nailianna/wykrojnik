@@ -2,7 +2,7 @@
 
 Aplikacja do konstruowania wykrojów odzieży z wymiarów: spódnice, sukienki, topy, t-shirty i gorsety. Rysuje wykrój, sprawdza go z wymiarami modelki, pokazuje podgląd 3D na sylwetce i drukuje na kartkach A4 w skali 100%.
 
-Wersja 0.96.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
+Wersja 0.97.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
 
 ## Uruchomienie
 
@@ -81,6 +81,12 @@ Domyślny model to `claude-sonnet-5-5`; inny ustawisz wpisem `wykrojnik.apimodel
 Podgląd 3D wczytanego wykroju powstaje na dwa sposoby. Kroje rozpoznawane z samego kształtu (przód i tył z wszywanym rękawem, rękaw skrojony razem z przodem i tyłem, góra na ramiączkach) zszywa `src/app/12b-szycie-importu.js`. Pozostałe są szyte według szwów wskazanych przez analizę (`src/app/12c-plan-szycia.js`, opis w `docs/analizator.md`). Elementy wiszące luzem i dokrojone odszycia jeszcze nie działają.
 
 Repozytorium nie zawiera żadnych wykrojów ani kluczy, wgrywasz własne.
+
+## Biblioteka konstrukcji
+
+„Nowy z biblioteki” otwiera Twoje własne, stopniowane konstrukcje: przelicza je na wymiary modelki, sprawdza szwy, łączy górę ze spódnicą w sukienkę, dzieli sukienkę na linii odcięcia i wymienia samą górę albo sam dół. To samo ubranie widzisz w 2D i w 3D. Wczytany z pliku wykrój jest porównywany z biblioteką element po elemencie.
+
+Plik biblioteki należy do Ciebie i zostaje na Twoim komputerze. Repozytorium ani opublikowana strona nie zawierają żadnych konstrukcji. Format pliku, zasady dopasowania i ograniczenia opisuje [docs/biblioteka.md](docs/biblioteka.md).
 
 ## Render w Blenderze
 

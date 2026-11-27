@@ -38,14 +38,16 @@
       if (opts.pages && !opts.pages.includes(pn)) continue;
       if (onStep) onStep(pn, doc.numPages);
       const page = await doc.getPage(pn), vp = page.getViewport({ scale: 1 }), H = vp.height, Kp = K * (page.userUnit || 1), ops = await page.getOperatorList(); // UserUnit: arkusze zapisane w skali 1:10 (duży obszar roboczy Illustratora) mają punkt dziesięć razy większy
-      let ctm = [1, 0, 0, 1, 0, 0], dash = false, pend = []; const stack = [], mc = [];
+      let ctm = [1, 0, 0, 1, 0, 0], dash = false, ds = '', col = '', lw = 1, pend = []; const stack = [], mc = [];
       const layer = () => { for (let i = mc.length - 1; i >= 0; i--) if (mc[i]) return mc[i]; return null; };
       const P = (x, y) => [offX + (ctm[0] * x + ctm[2] * y + ctm[4]) * Kp, (H - (ctm[1] * x + ctm[3] * y + ctm[5])) * Kp];
       for (let i = 0; i < ops.fnArray.length; i++) {
         const fn = ops.fnArray[i], a = ops.argsArray[i];
-        if (fn === OPS.save) stack.push([ctm, dash]); else if (fn === OPS.restore) { const s = stack.pop(); if (s) { ctm = s[0]; dash = s[1]; } }
+        if (fn === OPS.save) stack.push([ctm, dash, ds, col, lw]); else if (fn === OPS.restore) { const s = stack.pop(); if (s) { ctm = s[0]; dash = s[1]; ds = s[2]; col = s[3]; lw = s[4]; } }
         else if (fn === OPS.transform) ctm = mul(ctm, a);
-        else if (fn === OPS.setDash) dash = !!(a && a[0] && a[0].length);
+        else if (fn === OPS.setDash) { dash = !!(a && a[0] && a[0].length); ds = dash ? Array.from(a[0]).map((v) => Math.round(v * 10) / 10).join(' ') : ''; }
+        else if (fn === OPS.setStrokeRGBColor) col = [a[0], a[1], a[2]].map((v) => Math.round(v)).join(',');
+        else if (fn === OPS.setLineWidth) lw = Math.round(a[0] * Math.hypot(ctm[0], ctm[1]) * 100) / 100;
         else if (fn === OPS.beginMarkedContentProps) { let nm = null; if (a && a[0] === 'OC' && a[1]) { const g = groups[a[1].id] || (a[1].ids && groups[a[1].ids[0]]); nm = g ? String(g.name || '').trim() : null; } mc.push(nm); }
         else if (fn === OPS.beginMarkedContent) mc.push(null); else if (fn === OPS.endMarkedContent) mc.pop();
         else if (fn === OPS.constructPath) {
@@ -68,7 +70,7 @@
           flush();
         }
         else if (fn === OPS.stroke || fn === OPS.closeStroke || fn === OPS.fillStroke || fn === OPS.eoFillStroke || fn === OPS.closeFillStroke || fn === OPS.closeEOFillStroke) {
-          const l = layer(); for (const p of pend) { const s = simplify(p, 0.02).map((q) => [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]); if (s.length > 1) { paths.push({ l, d: dash ? 1 : 0, pn, pts: s }); counts[l || ''] = (counts[l || ''] || 0) + 1; } } pend = [];
+          const l = layer(); for (const p of pend) { const s = simplify(p, 0.02).map((q) => [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]); if (s.length > 1) { paths.push({ l, d: dash ? 1 : 0, ds, c: col, w: lw, pn, pts: s }); counts[l || ''] = (counts[l || ''] || 0) + 1; } } pend = [];
         }
         else if (fn === OPS.fill || fn === OPS.eoFill || fn === OPS.endPath || fn === OPS.clip || fn === OPS.eoClip) { if (fn !== OPS.clip && fn !== OPS.eoClip) pend = []; }
       }

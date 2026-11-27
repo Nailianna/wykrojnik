@@ -15,7 +15,7 @@
     const raw = await desktop.fs.readFile(FILE, 'utf8').catch(() => null), last = (st) => Math.max(0, ...((st && st.projects) || []).map((q) => (q && q.updated) || 0));
     let fromFile = !!raw; if (raw && late) { try { fromFile = last(JSON.parse(raw)) > last(state); } catch (e) { fromFile = false; } }
     if (fromFile && adopt(raw)) { ensureProjects(); loadPrintImg(); histReset(); fillForm(); layoutUi(); setView(state.view); if (!$('home').hidden) homeFill(); } else if (late) persist(true);
-    showStore(); BL.mode = BL.mode === 'server' ? 'server' : ''; blInit();
+    showStore(); BL.mode = BL.mode === 'server' ? 'server' : ''; blInit(); libDisk();
   }
   async function boot() {
     const back = uiResume(); loadPrintImg(); histReset();

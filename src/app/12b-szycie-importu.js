@@ -172,22 +172,22 @@
     if (usedA > 0 && lost.reduce((s, pc) => s + pc.w * pc.h, 0) > 0.5 * usedA) return { err: 'Tego wykroju nie umiem jeszcze zszyć w całości. Poza przodem i tyłem ma duże elementy, których nie doszywam: ' + lost.map((pc) => nm(pc).replace(/ \(część.*$/, '').toLowerCase()).filter((x, i, arr) => arr.indexOf(x) === i).join(', ') + '. Sam przód z tyłem udawałby całe ubranie, więc podglądu nie pokazuję.' };
     return r;
   }
-  function impSew0(imp, m) {
+  function impSew0(imp, m, pre) { // pre: przód i tył rozpoznane już wcześniej (konstrukcje z biblioteki)
     const a = W.full(m), pcs = (imp && imp.pieces) || [], pick = {}, skip = [];
     // rola z analizy ma pierwszeństwo przed nazwą elementu
     for (const pc of pcs) { const nm = String(pc.name || ''), r0 = pc.role ? (/^[FBS]$/.test(pc.role) ? pc.role : null) : (SW_NOT.test(nm) ? null : (SW_ROLE.find((x) => x.re.test(nm)) || { r: null }).r), r = r0; if (r && (!pick[r] || pc.w * pc.h > pick[r].w * pick[r].h)) { if (pick[r]) skip.push(String(pick[r].name || '').replace(/ \(część.*$/, '')); pick[r] = pc; } else skip.push(nm.replace(/ \(część.*$/, '')); } // gdy rolę ma kilka elementów, liczy się największy (odszycia i lamówki są małe)
     if (!pick.F || !pick.B) return { err: 'Podgląd 3D potrzebuje przodu i tyłu, a na liście elementów ich nie rozpoznałam.' };
-    const pit = a.Dts - a.Gp - 1; let F = /** @type {any} */ (swBodice(pick.F, a.Dts, pit)), B = /** @type {any} */ (swBodice(pick.B, a.Dts, pit));
-    if (F.strap && B.strap && Math.abs(F.side - B.side) > Math.max(2.5, 0.05 * F.side)) { // boki nie pasują: szukam pary szczytów boku, przy której szwy boczne mają tę samą długość
+    const pit = a.Dts - a.Gp - 1; let F = /** @type {any} */ (pre ? pre.F : swBodice(pick.F, a.Dts, pit)), B = /** @type {any} */ (pre ? pre.B : swBodice(pick.B, a.Dts, pit));
+    if (!pre && F.strap && B.strap && Math.abs(F.side - B.side) > Math.max(2.5, 0.05 * F.side)) { // boki nie pasują: szukam pary szczytów boku, przy której szwy boczne mają tę samą długość
       let best = null; for (const cf of F.strap.cands) for (const cb of B.strap.cands) { const dd = Math.abs(cf.L - cb.L); if (dd > Math.max(2.5, 0.04 * cf.L)) continue; const sc = (cf.mx ? 1 : 0) + (cb.mx ? 1 : 0); if (!best || sc > best[3] || (sc === best[3] && dd < best[0])) best = [dd, cf.L, cb.L, sc]; } // pierwszeństwo ma para, w której szczyt boku wypada na linii biustu
       if (best) { F = /** @type {any} */ (swBodice(pick.F, a.Dts, pit, best[1])); B = /** @type {any} */ (swBodice(pick.B, a.Dts, pit, best[2])); }
     }
     if (F.err || B.err) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (' + (F.err ? 'przód: ' + F.err : 'tył: ' + B.err) + '). Na razie działa układ przód, tył i rękaw z ramieniem i pachą.' };
     // przód i tył muszą do siebie pasować: te same ramiona i szwy boczne; inaczej krawędzie zostały rozpoznane źle
-    if (Math.abs(F.sh - B.sh) > 1.5 || Math.abs(F.side - B.side) > Math.max(2, 0.08 * F.side)) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (ramiona albo boki przodu i tyłu nie pasują do siebie).' };
+    if (Math.abs(F.sh - B.sh) > 1.5 || (!(pre && pre.loose) && Math.abs(F.side - B.side) > Math.max(2, 0.08 * F.side))) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (ramiona albo boki przodu i tyłu nie pasują do siebie).' };
     if (!!F.strap !== !!B.strap) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (przód i tył mają różny układ góry).' };
     if (F.strap) { // góra bez ramion: zszywane są tylko boki, górną krawędź trzymają ramiączka
-      if (Math.abs(F.side - B.side) > Math.max(2.5, 0.1 * F.side)) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (szwy boczne przodu i tyłu nie pasują do siebie).' };
+      if (!(pre && pre.loose) && Math.abs(F.side - B.side) > Math.max(2.5, 0.1 * F.side)) return { err: 'Tego fasonu nie umiem jeszcze pokazać w 3D (szwy boczne przodu i tyłu nie pasują do siebie).' };
       for (const r of ['S']) if (pick[r]) skip.push(String(pick[r].name));
       const mk1 = (id, o) => ({ id, ed: o.ed, prims: [] });
       return { pieces: [mk1('przod', F), mk1('tyl', B)], dl: Math.max(F.bot, B.bot), hemC: 2 * (F.hem + B.hem), sleeve: null, strap: { F: F.strap.pk, B: B.strap.pk, yMax: pit + 8 }, gather: null, used: [String(pick.F.name || ''), String(pick.B.name || '')], skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), slErr: '', sa: F.sa };
