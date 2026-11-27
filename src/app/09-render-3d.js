@@ -389,7 +389,7 @@
             clearTimeout(g3.topT); const tp = g3.top; g3.topT = setTimeout(() => topRun(tp), 260);
           }
         }
-        if (g3.top && !g3.top.fail && !g3.top.done && !g3.top.run && g3.top.S.steps > 0) { const tp = g3.top; clearTimeout(g3.topT); g3.topT = setTimeout(() => topRun(tp), 60); }
+        if (g3.top && !g3.top.fail && !g3.top.done && !g3.top.run && (g3.top.S.steps > 0 || g3.top.idle)) { const tp = g3.top; tp.idle = false; clearTimeout(g3.topT); g3.topT = setTimeout(() => topRun(tp), 60); }
         if (g3.top && !g3.top.fail) { if (g3.top.ready) { topSim = g3.top; g3.top.prev = null; } else if (g3.top.prev && g3.top.prev.pinned === pinned && g3.top.prev.yPinW === yPinW) topSim = g3.top.prev;
           if (topSim) { // mapa promieni ułożonej tkaniny: z niej biorą położenie dodatki rysowane na górze
             const g = topSim.g, X = topSim.S.X, yA = Math.floor(topSim.pinned ? topSim.yPinW : -p.dl) - 1, nyG = Math.ceil(a.Dts + 4 - yA) + 1, NG = 120, Gm = new Float32Array(nyG * NG), czG = new Float32Array(nyG);

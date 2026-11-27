@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.97.0', n: 108, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.97.1', n: 109, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -723,7 +723,8 @@
   }
   function topRun(tp) {
     const quiet = () => { clearTimeout(tp.bzT); tp.bzT = 0; if (tp.bz) { busyOff(tp.bz); tp.bz = null; } }; // wskaźnik pracy pojawia się dopiero, gdy układanie trwa dłużej niż pół sekundy
-    if (!g3 || g3.top !== tp || state.view !== '3d') { tp.run = false; quiet(); return; }
+    if (!g3 || g3.top !== tp || state.view !== '3d') { tp.run = false; tp.idle = true; quiet(); return; } // idle: układanie przerwane przed końcem (także przed pierwszym krokiem), wróci przy następnym rysowaniu 3D
+    tp.idle = false;
     if (!tp.run && !tp.bzT && !tp.bz) tp.bzT = setTimeout(() => { tp.bzT = 0; if (tp.run) tp.bz = busyOn('Układam tkaninę na sylwetce.'); }, 500);
     tp.run = true; tp.S.step(3); tp.done = tp.S.done;
     if (tp.done && !tp.chk && tp.g && tp.g.plan) { // kontrola po ułożeniu: mocno naciągnięta siatka znaczy zwykle, że szew łączy nie te krawędzie
@@ -1227,7 +1228,7 @@
             clearTimeout(g3.topT); const tp = g3.top; g3.topT = setTimeout(() => topRun(tp), 260);
           }
         }
-        if (g3.top && !g3.top.fail && !g3.top.done && !g3.top.run && g3.top.S.steps > 0) { const tp = g3.top; clearTimeout(g3.topT); g3.topT = setTimeout(() => topRun(tp), 60); }
+        if (g3.top && !g3.top.fail && !g3.top.done && !g3.top.run && (g3.top.S.steps > 0 || g3.top.idle)) { const tp = g3.top; tp.idle = false; clearTimeout(g3.topT); g3.topT = setTimeout(() => topRun(tp), 60); }
         if (g3.top && !g3.top.fail) { if (g3.top.ready) { topSim = g3.top; g3.top.prev = null; } else if (g3.top.prev && g3.top.prev.pinned === pinned && g3.top.prev.yPinW === yPinW) topSim = g3.top.prev;
           if (topSim) { // mapa promieni ułożonej tkaniny: z niej biorą położenie dodatki rysowane na górze
             const g = topSim.g, X = topSim.S.X, yA = Math.floor(topSim.pinned ? topSim.yPinW : -p.dl) - 1, nyG = Math.ceil(a.Dts + 4 - yA) + 1, NG = 120, Gm = new Float32Array(nyG * NG), czG = new Float32Array(nyG);
@@ -2901,7 +2902,7 @@
   function libOpen(spec) {
     const r = libBuild(spec, cur()); if (r.err) { say(r.err, true); return; }
     const name = libName(spec).slice(0, 60), sn = snap(); sn.style = 'import'; sn.imp = { name, sizes: [], size: '', pieces: r.pieces, an: r.an, lib: spec }; sn.sel = {}; sn.layers = [{ role: 'wierzch' }];
-    addProj(name, sn); impFill(); $('libBox').hidden = true; homeShow(false); if (state.view !== '2d') setView('2d'); goPanel('fason');
+    if (state.view !== '2d') setView('2d'); addProj(name, sn); impFill(); $('libBox').hidden = true; homeShow(false); goPanel('fason');
     say('Otworzyłam konstrukcję z biblioteki i przeliczyłam ją na wymiary modelki „' + (cur().name || 'bez imienia') + '”.');
   }
   // zmiana ustawień projektu (inna góra, inny dół, linia odcięcia, długość, sposób połączenia)

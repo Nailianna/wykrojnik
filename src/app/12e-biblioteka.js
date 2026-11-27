@@ -261,7 +261,7 @@
   function libOpen(spec) {
     const r = libBuild(spec, cur()); if (r.err) { say(r.err, true); return; }
     const name = libName(spec).slice(0, 60), sn = snap(); sn.style = 'import'; sn.imp = { name, sizes: [], size: '', pieces: r.pieces, an: r.an, lib: spec }; sn.sel = {}; sn.layers = [{ role: 'wierzch' }];
-    addProj(name, sn); impFill(); $('libBox').hidden = true; homeShow(false); if (state.view !== '2d') setView('2d'); goPanel('fason');
+    if (state.view !== '2d') setView('2d'); addProj(name, sn); impFill(); $('libBox').hidden = true; homeShow(false); goPanel('fason');
     say('Otworzyłam konstrukcję z biblioteki i przeliczyłam ją na wymiary modelki „' + (cur().name || 'bez imienia') + '”.');
   }
   // zmiana ustawień projektu (inna góra, inny dół, linia odcięcia, długość, sposób połączenia)
