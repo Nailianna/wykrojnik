@@ -338,9 +338,10 @@ footer select{border-radius:8px}
 #anRes{margin-top:26px;border-top:1px solid var(--line);padding-top:8px}
 #anRes .f2{max-width:520px}
 #anRes .f2 input:not([type=checkbox]),#anRes .f2 select{width:260px}
-.anRow{display:grid;grid-template-columns:64px minmax(140px,1.3fr) 62px 30px 124px minmax(120px,1.6fr);gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)}
+.anRow{display:grid;grid-template-columns:64px minmax(140px,1.3fr) 62px 84px 124px minmax(120px,1.6fr);gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)}
 .anRow.h{color:var(--mute);font-size:12px;border-bottom:0;padding-bottom:0}
 .anRow input[type=checkbox]{width:18px;height:18px;padding:0}
+p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
 .anK{font-family:var(--mono,ui-monospace,monospace);font-size:12px;color:var(--mute)}.anM{font-size:13px;color:var(--mute)}
 #anUn{margin:0;padding-left:18px;font-size:13.5px}#anUn li{margin:4px 0}
 .hact button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:22px 24px;border-radius:18px;background:var(--glass);border:1px solid var(--line);position:relative;overflow:hidden}
@@ -398,7 +399,7 @@ footer select{border-radius:8px}
     <div class="f2" id="anSizeRow"><span>Rozmiar</span><select id="anSize" aria-label="Rozmiar wykroju"></select></div><p class="note" id="anSizeN" style="margin-top:0"></p>
     <div class="f2"><span>Zapas na szwy w cm</span><input id="anSa" inputmode="decimal" placeholder="nie podano"></div>
     <label class="f2"><span>Zapas jest wliczony w linie</span><input id="anSaIn" type="checkbox" style="width:18px;height:18px;padding:0"></label><p class="note" id="anSaN" style="margin-top:0"></p>
-    <h3>Elementy</h3><div class="anRow h"><span>Kontur</span><span>Nazwa</span><span>Ile</span><span title="Ze złożenia">Zł.</span><span>Nitka</span><span>Z plików</span></div><div id="anEl"></div><p class="note" id="anElN"></p>
+    <h3>Elementy</h3><div class="anRow h"><span>Kontur</span><span>Nazwa</span><span>Ile</span><span>Ze złożenia</span><span>Nitka</span><span>Z plików</span></div><div id="anEl"></div><p class="note" id="anElN"></p>
     <div id="anNotes"></div>
     <div class="row" style="margin-top:20px"><button class="primary" id="anSaveB">Zapisz jako projekt</button></div>
   </div>
