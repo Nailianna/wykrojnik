@@ -30,17 +30,22 @@ Jedna funkcja `zapytaj(polecenie, obrazy) -> tekst` z dwiema drogami:
 - poza Claude: własny klucz API użytkownika, trzymany tylko lokalnie, wywołanie z nagłówkiem `anthropic-dangerous-direct-browser-access: true`.
 Reszta analizatora nie wie, którą drogą idzie zapytanie.
 
-## Plan szycia (od wersji 0.84)
+## Plan szycia (od wersji 0.85)
 
-Każdy kontur jest dzielony w narożnikach na krawędzie o długości co najmniej 6 cm. Krawędzie mają etykiety `k<numer konturu><litera>`, na przykład `k1c`; na obrazach arkusza są zaznaczone na niebiesko, a w poleceniu jest ich lista z długościami.
+Każdy kontur jest dzielony na krawędzie w narożnikach i tam, gdzie zaczyna się albo kończy długi prosty odcinek. Krawędzie krótsze niż 6 cm są doklejane do sąsiedniej. Etykieta krawędzi to `k<numer konturu><litera>`, na przykład `k1c`; na obrazach arkusza etykiety są niebieskie, a polecenie zawiera ich listę z długościami.
 
-Dodatkowe pola odpowiedzi:
+Analiza opisuje POŁOWĘ ubrania, od środka przodu przez bok do środka tyłu. Druga połowa jest lustrzana.
 
-- `szwy`: pary `{ "a": "k1c", "b": "k3a" }`, czyli krawędzie zszywane ze sobą. Każda krawędź najwyżej w jednym szwie.
-- `srodek_przodu`, `srodek_tylu`: krawędź na środku przodu i tyłu (złożenie albo szew środkowy).
-- `dol`: krawędzie dolnego brzegu.
-- `trzymanie`: `ramiona`, `ramiaczka` albo `bez`.
+Pola odpowiedzi:
 
-Aplikacja zapisuje te wskazania jako punkty na arkuszu (środki krawędzi), żeby przetrwały zmianę rozmiaru. Podgląd 3D korzysta z nich dopiero wtedy, gdy kroju nie da się rozpoznać z samego kształtu: elementy są składane na płasko wzdłuż szwów, od środka przodu, i owijane wokół sylwetki.
+- `szwy`: lista `{ "a": [...], "b": [...], "marszczenie": false }`. Każda strona to lista krawędzi jednego elementu; kilka krawędzi oznacza jeden szew złożony z odcinków (na przykład bok przerwany zaszewką).
+- Egzemplarze: `k7#2c` to krawędź `c` drugiego egzemplarza konturu `k7` w połowie ubrania, licząc od środka przodu.
+- `rozloz`: krawędzie złożenia elementów, które trzeba rozłożyć (klin, rękaw). Krawędzie odbitej połowy mają apostrof: `k6b'`.
+- `srodek_przodu`, `srodek_tylu`: krawędzie na środku albo cały symetryczny element leżący na środku, zapisany bez litery (`k7#1`). Taki element jest dzielony wzdłuż osi symetrii.
+- `dol`, `trzymanie` (`ramiona`, `ramiaczka`, `bez`).
 
-Jeszcze nieobsługiwane: jedna krawędź zszywana z dwiema (szew w talii tylko z tyłu), dokrojone odszycia za linią zgięcia, element użyty kilka razy po jednej stronie (kliny, panele), elementy ze złożenia poza środkiem, rękawy.
+Aplikacja zapisuje wskazania jako punkty na arkuszu (środek krawędzi), numer egzemplarza i znacznik odbicia.
+
+Szycie: elementy są składane na płasko wzdłuż szwów, zaczynając od przodu; najpierw te bliżej przodu w łańcuchu szwów, wstawki rozkładane ze złożenia na końcu. Arkusz jest owijany wokół sylwetki, a wstawki startują złożone, jako płetwy przy swoim szwie. Wynik przechodzi kontrolę obwodu i długości.
+
+Jeszcze nieobsługiwane: elementy wszyte jedną krawędzią i wiszące luźno (skrzydła, treny, falbany), marszczenie do krótszej krawędzi w symulacji, dokrojone odszycia za linią zgięcia, rękawy wszywane w pachę w tej ścieżce (działają w rozpoznawaniu z kształtu).

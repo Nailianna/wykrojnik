@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.84.2', n: 90, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.85.0', n: 91, date: '2026-11-27' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -1154,15 +1154,24 @@
         const key = 'top' + JSON.stringify([state.style, pk, m, state.fabric, sil.imported ? [state.proj, state.imp && state.imp.size, sil.hemC, sil.impDl, sil.gather] : 0]);
         if (!g3.top || g3.top.key !== key) {
           const hh = topFull ? Math.max(1.7, Math.min(3, Math.sqrt(((m.ob + 8) * (a.Dts + p.dl) + (hasSl ? 70 * sil.sleeve.L : 0)) / 3300))) : 1.6; // gęstość siatki dobrana do wielkości ubrania
-          let g = null; try { g = window.Cloth.build(D, { h: hh, sleeve: hasSl, cutY, gather: sil.gather || null, holdAt: sil.strap ? { F: sil.strap.F, B: sil.strap.B } : null }); } catch (e) { g = null; }
+          const hP = D.plan && D.plan.area ? Math.max(1.7, Math.min(4, Math.sqrt((2 * D.plan.area) / 3300))) : 0; // plan szycia: gęstość siatki z łącznej powierzchni elementów
+          let g = null; try { g = window.Cloth.build(D, { h: hP || hh, sleeve: hasSl, cutY, gather: sil.gather || null, holdAt: sil.strap ? { F: sil.strap.F, B: sil.strap.B } : null }); } catch (e) { g = null; }
           if (!g) g3.top = { key, fail: true };
           else {
             const stl = p.gora === 'bez', yTopW = sil.strap ? Math.min(a.Dts - 0.3, sil.strap.yMax) : a.Dts - 0.3, FI = g.info.F, BI = g.info.B, SB = g.info.S ? g.info.S.box : null, SL = sil.sleeve, rr = SB ? (SB[2] - SB[0]) / TAU : 0;
             const phiOf = (mt, sFr) => (mt.pk === 'F' ? Math.PI / 2 - mt.sx * sFr * Math.PI / 2 : 1.5 * Math.PI + mt.sx * sFr * Math.PI / 2);
             const halfG = (y) => { let s = 0, pv = sectRaw(y, Math.PI / 2); for (let k = 1; k <= 12; k++) { const q = sectRaw(y, Math.PI / 2 - (k / 12) * Math.PI); s += Math.hypot(q[0] - pv[0], q[2] - pv[2]); pv = q; } return s; };
+            const planFin = {}; if (D.plan) for (const pt of D.plan.parts) if (pt.fin) planFin[pt.key] = pt.fin;
             const init = (mt) => {
               if (g.plan) { // plan szycia: arkusz od środka przodu (u = 0) do środka tyłu owinięty wokół połowy sylwetki
-                const yw = Math.min(-mt.v, yTopW), cl = D.plan.cbLine, span = cl ? Math.max(10, cl[0][0] + (cl[1][0] - cl[0][0]) * Math.max(0, Math.min(1, (mt.v - cl[0][1]) / (cl[1][1] - cl[0][1] || 1)))) : Math.max(20, halfG(Math.min(yw, yTopW)) + 2), fr = Math.max(0, Math.min(1, mt.u / span)), q = sectRaw(yw, Math.PI / 2 - mt.sx * fr * Math.PI);
+                const fin = planFin[mt.pk]; let fu = mt.u, fv = mt.v, rho = 0;
+                if (fin) { // wstawka: punkt trafia na szew, a odległość od szwu staje się odstawaniem od ciała
+                  let px = mt.u, py = mt.v; const A = fin.ax[0], B = fin.ax[1], dx = B[0] - A[0], dy = B[1] - A[1], l2 = dx * dx + dy * dy || 1, sideP = dx * (py - A[1]) - dy * (px - A[0]), sideE = dx * (fin.a[1] - A[1]) - dy * (fin.a[0] - A[0]);
+                  if (sideP * sideE < 0) { const t = ((px - A[0]) * dx + (py - A[1]) * dy) / l2, qx = A[0] + dx * t, qy = A[1] + dy * t; px = 2 * qx - px; py = 2 * qy - py; }
+                  const ex = fin.b[0] - fin.a[0], ey = fin.b[1] - fin.a[1], e2 = ex * ex + ey * ey || 1, te = Math.max(0, Math.min(1, ((px - fin.a[0]) * ex + (py - fin.a[1]) * ey) / e2)); fu = fin.a[0] + ex * te; fv = fin.a[1] + ey * te; rho = Math.hypot(px - fu, py - fv) * 0.6 + (sideP * sideE < 0 ? 0.5 : 0);
+                }
+                const yw = Math.min(-fv, yTopW), cl = D.plan.cbLine, span = cl ? Math.max(10, cl[0][0] + (cl[1][0] - cl[0][0]) * Math.max(0, Math.min(1, (fv - cl[0][1]) / (cl[1][1] - cl[0][1] || 1)))) : Math.max(20, halfG(Math.min(yw, yTopW)) + 2), fr = Math.max(0, Math.min(1, fu / span)), q = sectRaw(yw, Math.PI / 2 - mt.sx * fr * Math.PI);
+                if (rho) { const rl = Math.hypot(q[0], q[2]) || 1; return [q[0] + (q[0] / rl) * rho, q[1], q[2] + (q[2] / rl) * rho]; }
                 return [q[0], q[1], q[2]];
               }
               if (mt.pk === 'S') {
@@ -1823,10 +1832,10 @@
       'Warstwy PDF arkusza: ' + (d.layers.join(', ') || 'brak'),
       sq.length ? 'Kwadraty kontrolne wydruku zmierzone w rysunku wektorowym (pary współśrodkowych kwadratów):\n' + sq.join('\n') + '\nPorównaj je z opisem testu wydruku; rozbieżność zgłoś w uwagach.' : '',
       exTx.length ? 'Napisy z pozostałych dokumentów:\n' + exTx.map((x) => '[' + x.id + '] ' + x.s.replace(/\n/g, ' | ')).join('\n') : 'Instrukcji szycia nie dołączono.',
-      'Odpowiedz samym obiektem JSON w tym kształcie:\n{"nazwa":"nazwa wykroju","marka":"","typ":"sukienka|top|spodnica|gorset|spodnie|okrycie|inne","opis":"jedno zdanie po polsku","ze_skosu":false,"czytelnosc":"dobra|czesciowa|slaba","zapas":{"wliczony":true,"cm":0.7,"wyjatki":[{"gdzie":"szwy boczne","cm":1.3}],"zrodla":["arkusz:1"]},"rozmiary":[{"nazwa":"M","biust":88,"talia":68,"biodra":94,"wzrost":null,"warstwa":"Size M","zrodla":["instrukcja:3"]}],"elementy":[{"nazwa":"FRONT BODY","nazwa_pl":"Przód","rola":"przod|tyl|rekaw|mankiet|inne","kontury":["k1"],"ile":1,"ze_zlozenia":false,"para":false,"odbij":false,"nitka":"prosta|skos|poprzeczna|brak","material":"","podszewka_ile":0,"znaki":["zaszewka piersiowa"],"zrodla":["arkusz:1","instrukcja:6"]}],"nie_elementy":["k2"],"pasmanteria":["zamek kryty 40-50 cm"],"uwagi":[{"kategoria":"druk|zapas|material|do_sprawdzenia","tekst":"jedno albo dwa zdania","zrodla":["instrukcja:4"]}],"instrukcja":{"potrzebna":false,"po_co":[]},"szwy":[{"a":"k1c","b":"k3a"}],"srodek_przodu":"k1d","srodek_tylu":"k3d","dol":["k1b","k3b"],"trzymanie":"ramiona|ramiaczka|bez"}',
+      'Odpowiedz samym obiektem JSON w tym kształcie:\n{"nazwa":"nazwa wykroju","marka":"","typ":"sukienka|top|spodnica|gorset|spodnie|okrycie|inne","opis":"jedno zdanie po polsku","ze_skosu":false,"czytelnosc":"dobra|czesciowa|slaba","zapas":{"wliczony":true,"cm":0.7,"wyjatki":[{"gdzie":"szwy boczne","cm":1.3}],"zrodla":["arkusz:1"]},"rozmiary":[{"nazwa":"M","biust":88,"talia":68,"biodra":94,"wzrost":null,"warstwa":"Size M","zrodla":["instrukcja:3"]}],"elementy":[{"nazwa":"FRONT BODY","nazwa_pl":"Przód","rola":"przod|tyl|rekaw|mankiet|inne","kontury":["k1"],"ile":1,"ze_zlozenia":false,"para":false,"odbij":false,"nitka":"prosta|skos|poprzeczna|brak","material":"","podszewka_ile":0,"znaki":["zaszewka piersiowa"],"zrodla":["arkusz:1","instrukcja:6"]}],"nie_elementy":["k2"],"pasmanteria":["zamek kryty 40-50 cm"],"uwagi":[{"kategoria":"druk|zapas|material|do_sprawdzenia","tekst":"jedno albo dwa zdania","zrodla":["instrukcja:4"]}],"instrukcja":{"potrzebna":false,"po_co":[]},"szwy":[{"a":["k1c"],"b":["k3a"],"marszczenie":false}],"srodek_przodu":["k1d"],"srodek_tylu":["k3d"],"rozloz":[],"dol":["k1b","k3b"],"trzymanie":"ramiona|ramiaczka|bez"}',
       'Zasady:\n- "zrodla": przy każdym elemencie, rozmiarze, zapasie i uwadze podaj co najmniej jeden identyfikator strony, na której to widać albo jest napisane. Używaj tylko identyfikatorów podanych wyżej.\n- Jeden element wykroju może składać się z kilku konturów, gdy przechodzi przez dwie strony albo dwa arkusze: wpisz wszystkie identyfikatory. Każdy kontur należy najwyżej do jednego elementu.\n- Kontury, które na pewno nie są elementami wykroju (strzałka nitki prostej, ramka strony, legenda, test wydruku, tabela), wpisz do "nie_elementy". Konturu, co do którego nie masz pewności, nie wpisuj nigdzie.\n- "ile": ile razy wyciąć z tkaniny głównej (liczba wyciętych elementów, nie warstw). "ze_zlozenia": krawędź elementu leży na złożeniu tkaniny. "para": elementy tnie się w lustrzanej parze. "ze_zlozenia" i "para" wykluczają się: element ze szwem na środku to para, nie złożenie. "odbij": narysowana jest połowa elementu i trzeba ją odbić wzdłuż linii środka, żeby wyciąć cały element z pojedynczej warstwy.\n- "podszewka_ile": ile razy ten sam element wyciąć dodatkowo z podszewki, 0 gdy wcale.\n- "rola": "przod" i "tyl" tylko dla głównego elementu przodu i tyłu, czyli tego z ramieniem i pachą; "rekaw" dla rękawa, "mankiet" dla mankietu, wszystko inne to "inne".\n- "nazwa_pl": krótka polska nazwa krawiecka. "material": rodzaj tkaniny, jeśli źródła go podają, po polsku.\n- "rozmiary": tabela wymiarów ciała w centymetrach; "warstwa" to nazwa warstwy PDF arkusza, która zawiera linie tego rozmiaru, albo null.\n- "zapas.wliczony": true, false albo null, gdy źródła o tym milczą. "zapas.cm": null, gdy liczba nie pada.\n- "uwagi": krótkie, konkretne informacje dla osoby szyjącej. "druk": skala, test wydruku, układ arkuszy, warstwy. "zapas": zapasy według krawędzi i podłożenia. "material": zalecane tkaniny i zużycie. "do_sprawdzenia": sprzeczności między źródłami i wszystko, czego nie dało się odczytać.\n- "czytelnosc": "slaba", gdy nazw większości elementów nie da się odczytać; "czesciowa", gdy brakuje części opisów.\n- "instrukcja.potrzebna": true, gdy z tego, co masz, nie da się ustalić czegoś potrzebnego do cięcia: wielkości zapasu na szwy, liczby elementów do wycięcia, nazw elementów albo tabeli rozmiarów, oraz zawsze gdy czytelność jest słaba. W "po_co" wypisz po polsku, w mianowniku, czego brakuje. Gdy instrukcja jest dołączona, a czegoś nadal brakuje, też to wypisz i zostaw true.\n- Czego nie da się odczytać, wpisz jako null i zgłoś w uwagach "do_sprawdzenia". Niczego nie zgaduj.',
       st.edges && st.edges.length ? 'Krawędzie do zszycia. Na obrazach arkusza dłuższe krawędzie każdego konturu mają niebieskie etykiety: numer konturu i litera, na przykład k1c. Lista krawędzi z długością w centymetrach:\n' + st.pieces.map((pc, i) => { const es = st.edges.filter((e) => e.pi === i); return es.length ? 'k' + (i + 1) + ': ' + es.map((e) => 'k' + (i + 1) + e.id + ' ' + Math.round(e.len)).join(', ') : ''; }).filter(Boolean).join('\n') +
-        '\nNa podstawie instrukcji szycia i opisów na arkuszu wypełnij:\n- "szwy": pary krawędzi, które zszywa się ze sobą (szwy boczne, ramiona, szew w talii, szwy paneli). Zszywane krawędzie mają podobną długość, chyba że jedna jest marszczona. Każda krawędź najwyżej w jednym szwie. Nie wpisuj podwinięć, zaszewek, odszyć, podszewki, ramiączek ani rękawów wszywanych w pachę.\n- "srodek_przodu" i "srodek_tylu": krawędź leżąca na środku przodu i na środku tyłu, czyli linia złożenia albo szew środkowy; pusty napis, gdy nie wiadomo.\n- "dol": krawędzie dolnego brzegu ubrania.\n- "trzymanie": "ramiona", gdy ubranie ma szwy ramion, "ramiaczka", gdy wisi na ramiączkach albo wiązaniu, "bez", gdy trzyma się samo.\nJeśli nie masz pewności co do szwu, pomiń go.' : '',
+        '\nNa podstawie instrukcji szycia i opisów na arkuszu opisz, jak zszyć POŁOWĘ ubrania: od środka przodu, przez bok, do środka tyłu. Druga połowa jest lustrzana i program doda ją sam.\n- "szwy": lista szwów. "a" i "b" to dwie strony szwu, każda jako lista krawędzi JEDNEGO elementu. Jeśli jedną stronę szwu tworzy kilka kolejnych krawędzi (na przykład bok podzielony zaszewką), wpisz je wszystkie; krawędzi zaszewki nie wpisuj. Obie strony mają podobną długość; gdy jedna jest marszczona albo wdawana, ustaw "marszczenie": true. Każda krawędź najwyżej w jednym szwie. Nie wpisuj podwinięć, zaszewek, odszyć, podszewki ani ramiączek.\n- Egzemplarze: gdy ten sam element występuje w połowie ubrania kilka razy (panele, kliny), numeruj egzemplarze od środka przodu w stronę tyłu i pisz numer po znaku #, na przykład k7#2c to krawędź c drugiego egzemplarza konturu k7. Element leżący dokładnie na środku przodu albo tyłu (połowa po każdej stronie) też dostaje numer.\n- "rozloz": krawędzie złożenia elementów, które kroi się ze złożenia, ale nie leżą na środku przodu ani tyłu (klin, rękaw). Program rozłoży taki element; krawędzie jego odbitej połowy zapisuj z apostrofem, na przykład k5c\'.\n- "srodek_przodu" i "srodek_tylu": krawędzie leżące na środku przodu i tyłu (linia złożenia albo szew środkowy). Jeśli na środku leży cały symetryczny element, wpisz go bez litery, na przykład k7#1.\n- "dol": krawędzie dolnego brzegu ubrania.\n- "trzymanie": "ramiona", gdy ubranie ma szwy ramion, "ramiaczka", gdy wisi na ramiączkach albo wiązaniu, "bez", gdy trzyma się samo.\nPrzykład spódnicy z paneli k7 i klinów k6 krojonych ze złożenia (krawędź złożenia k6c, szew klina k6b): panel na środku przodu to k7#1, dalej klin k6#1, panel k7#2, klin k6#2 i tak do środka tyłu. Szwy: k7#1b z k6#1b, k6#1b\' z k7#2d, k7#2b z k6#2b, k6#2b\' z k7#3d. Do tego szew każdego panelu z górą: k4f z k7#1c, k4g z k7#2c.\nJeśli nie masz pewności co do szwu, pomiń go.' : '',
     ].filter(Boolean).join('\n\n');
   }
   // odpowiedź analizatora to dane z zewnątrz: zostają tylko pola o oczekiwanym typie i kontury, które naprawdę istnieją
@@ -1848,10 +1857,13 @@
       const nm = S(e.nazwa_pl, 40) || S(e.nazwa, 40); if (!nm || !ks.length) continue;
       out.elementy.push({ nazwa: S(e.nazwa, 60), pl: nm, role: { przod: 'F', tyl: 'B', rekaw: 'S', mankiet: 'C', inne: 'X' }[e.rola] || '', k: ks, ile: Math.max(1, Math.min(40, Math.round(+e.ile) || 1)), fold: B(e.ze_zlozenia), para: B(e.para), odbij: B(e.odbij), nitka: ['prosta', 'skos', 'poprzeczna'].includes(e.nitka) ? e.nitka : '', mat: S(e.material, 30), pod: Math.max(0, Math.min(40, Math.round(+e.podszewka_ile) || 0)), znaki: L(e.znaki, 60, 8), src: src(e.zrodla) });
     }
-    { // szwy: tylko krawędzie, które naprawdę istnieją, każda najwyżej raz
-      const E = (v) => { const x = String(v || '').trim().toLowerCase(); return eids && eids.includes(x) ? x : ''; }, usedE = new Set();
-      out.szwy = (Array.isArray(r.szwy) ? r.szwy : []).map((x) => [E(x && x.a), E(x && x.b)]).filter((x) => { if (!x[0] || !x[1] || x[0] === x[1] || usedE.has(x[0]) || usedE.has(x[1])) return false; usedE.add(x[0]); usedE.add(x[1]); return true; }).slice(0, 60);
-      out.cf = E(r.srodek_przodu); out.cb = E(r.srodek_tylu); out.dol = (Array.isArray(r.dol) ? r.dol : []).map(E).filter(Boolean).slice(0, 20); out.trzym = ['ramiona', 'ramiaczka', 'bez'].includes(r.trzymanie) ? r.trzymanie : '';
+    { // szwy: tylko krawędzie, które naprawdę istnieją; zapis k<kontur>[#egzemplarz]<litera>['], każda krawędź egzemplarza najwyżej raz
+      const RE = /^k(\d+)(?:#(\d+))?([a-z])?('?)$/, usedE = new Set(), lst = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+      const E = (v, whole) => { const mt = RE.exec(String(v || '').trim().toLowerCase().replace(/[’`]/g, "'")); if (!mt) return ''; const k = +mt[1], i = Math.max(1, Math.min(12, +mt[2] || 1)); if (mt[3]) return eids && eids.includes('k' + k + mt[3]) ? 'k' + k + '#' + i + mt[3] + mt[4] : ''; return whole && k >= 1 && k <= n ? 'k' + k + '#' + i : ''; };
+      const side = (v) => lst(v).map((x) => E(x, false)).filter(Boolean).slice(0, 8);
+      out.szwy = (Array.isArray(r.szwy) ? r.szwy : []).map((x) => ({ a: side(x && x.a), b: side(x && x.b), g: B(x && x.marszczenie) })).filter((x) => { if (!x.a.length || !x.b.length || x.a.concat(x.b).some((q) => usedE.has(q))) return false; x.a.concat(x.b).forEach((q) => usedE.add(q)); return true; }).slice(0, 80);
+      out.cf = lst(r.srodek_przodu).map((x) => E(x, true)).filter(Boolean).slice(0, 6); out.cb = lst(r.srodek_tylu).map((x) => E(x, true)).filter(Boolean).slice(0, 6);
+      out.unf = lst(r.rozloz).map((x) => E(x, false)).filter(Boolean).slice(0, 12); out.dol = lst(r.dol).map((x) => E(x, false)).filter(Boolean).slice(0, 30); out.trzym = ['ramiona', 'ramiaczka', 'bez'].includes(r.trzymanie) ? r.trzymanie : '';
     }
     out.skip = (Array.isArray(r.nie_elementy) ? r.nie_elementy : []).map((k) => +String(k).replace(/^k/i, '')).filter((k) => Number.isInteger(k) && k >= 1 && k <= n && !seen.has(k));
     if (out.czytelnosc === 'slaba') out.instrukcja.potrzebna = true;
@@ -1987,7 +1999,7 @@
       row.append(k, nm, il, fo, ni, mt); tb.appendChild(row); tb.appendChild(wn); clash();
     });
     const left = st.pieces.length - r.skip.length - r.elementy.reduce((s, e) => s + e.k.length, 0);
-    { const nS = (r.szwy || []).length; $('anSeamN').hidden = !nS; $('anSeamN').textContent = nS ? 'Szwy odczytane z instrukcji: ' + r.szwy.map((x) => x[0] + ' z ' + x[1]).join(', ') + (r.cf ? '. Środek przodu: ' + r.cf : '') + (r.cb ? ', środek tyłu: ' + r.cb : '') + '. Według nich zszyję podgląd 3D, jeśli kroju nie rozpoznam z samego kształtu.' : ''; }
+    { const nS = (r.szwy || []).length; $('anSeamN').hidden = !nS; $('anSeamN').textContent = nS ? 'Szwy odczytane z instrukcji (' + nS + '): ' + r.szwy.map((x) => x.a.join('+') + ' z ' + x.b.join('+')).join(', ').replace(/#1(?=[a-z])/g, '') + (r.cf.length ? '. Środek przodu: ' + r.cf.join(', ') : '') + (r.cb.length ? ', środek tyłu: ' + r.cb.join(', ') : '') + '. Według nich zszyję podgląd 3D, jeśli kroju nie rozpoznam z samego kształtu.' : ''; }
     $('anElN').textContent = r.elementy.length ? (left > 0 ? (left === 1 ? 'Jeden kontur został bez opisu.' : 'Bez opisu zostało konturów: ' + left + '.') + ' Wczytam je jako elementy bez nazwy.' : '') : 'Analizator nie rozpoznał żadnego elementu. Wczytam same kontury.';
     // uwagi w grupach, każda ze stroną, z której pochodzi
     const nb = $('anNotes'); nb.textContent = '';
@@ -1998,13 +2010,14 @@
     const st = anSt; if (!st || !st.res) return; const r = st.res, d = st.data, size = $('anSize').value || st.size;
     const cmv = parseFloat(String($('anSa').value).replace(',', '.')), at = (k) => { const pc = st.pieces[k - 1]; return [[(pc.box.x0 + pc.box.x1) / 2, (pc.box.y0 + pc.box.y1) / 2]]; };
     const rs = r.rozmiary.find((x) => anLayer(x, d.sizes) === size) || (d.sizes.length ? null : anSize(r.rozmiary, cur()));
-    const eAt = (id) => { const e = id ? (anSt.edges || []).find((q) => 'k' + (q.pi + 1) + q.id === id) : null; return e ? [e.mid[0], e.mid[1]] : null; };
+    // wskazanie krawędzi zapisuję jako punkt na arkuszu (środek krawędzi), numer egzemplarza i znacznik odbicia: przetrwa zmianę rozmiaru i numeracji konturów
+    const eAt = (id) => { const mt = /^k(\d+)#(\d+)([a-z])?('?)$/.exec(id || ''); if (!mt) return null; const es = (anSt.edges || []).filter((q) => q.pi === +mt[1] - 1), e = mt[3] ? es.find((q) => q.id === mt[3]) : es[0]; return e ? Object.assign({ at: [Math.round(e.mid[0] * 10) / 10, Math.round(e.mid[1] * 10) / 10], i: +mt[2] }, mt[4] ? { m: true } : {}, mt[3] ? {} : { w: true }) : null; };
     const an = {
       el: r.elementy.map((e) => ({ pl: e.pl, role: e.role, cut: anCut(e), at: e.k.reduce((a, k) => a.concat(at(k)), []) })),
       skip: r.skip.map((k) => at(k)[0]),
       sa: { inc: $('anSaIn').checked, cm: isFinite(cmv) && cmv >= 0 && cmv < 10 ? cmv : null, ex: r.zapas.wyjatki }, skos: r.ze_skosu, pasm: r.pasmanteria, marka: r.marka, uw: r.uwagi.map((u) => ({ k: u.k, t: u.t, s: anSrc(u.src) })),
       typ: r.typ || '',
-      szwy: (r.szwy || []).map((x) => { const ea = eAt(x[0]), eb = eAt(x[1]); return ea && eb ? [ea[0], ea[1], eb[0], eb[1]].map((v) => Math.round(v * 10) / 10) : null; }).filter(Boolean), srodek: { p: eAt(r.cf), t: eAt(r.cb) }, dol: (r.dol || []).map(eAt).filter(Boolean), trzym: r.trzym || '',
+      szwy: (r.szwy || []).map((x) => ({ a: x.a.map(eAt).filter(Boolean), b: x.b.map(eAt).filter(Boolean), g: x.g })).filter((x) => x.a.length && x.b.length), srodek: { p: (r.cf || []).map(eAt).filter(Boolean), t: (r.cb || []).map(eAt).filter(Boolean) }, rozloz: (r.unf || []).map(eAt).filter(Boolean).map((x) => x.at), dol: (r.dol || []).map(eAt).filter(Boolean).map((x) => x.at), trzym: r.trzym || '',
       rozm: r.rozmiary.map((x) => ({ w: anLayer(x, d.sizes), n: x.nazwa, b: x.biust, t: x.talia, h: x.biodra })).filter((x) => x.w), body: rs ? { n: rs.nazwa, b: rs.biust, t: rs.talia, h: rs.biodra } : null,
     };
     const name = ($('anName').value.trim() || d.name).slice(0, 60), pieces = anApply(window.PatImport.pick(d, size), an);
@@ -2277,7 +2290,12 @@
   const PL_MIN = 6; // krótszych krawędzi nie nazywam: to nacięcia, zakładki i ścięte rogi
   function plEdges(pc) {
     const R = swRing(pc); if (!R) return null;
-    const pts = R.pts, C = swCorners(pts).idx.slice().sort((a, b) => a - b); let raw;
+    const pts = R.pts, n0 = pts.length, cum0 = [0]; for (let i = 1; i <= n0; i++) cum0.push(cum0[i - 1] + Math.hypot(pts[i % n0][0] - pts[i - 1][0], pts[i % n0][1] - pts[i - 1][1]));
+    const C = swCorners(pts).idx.slice(), Ltot = cum0[n0], arcD = (i, j) => { const d = Math.abs(cum0[i] - cum0[j]); return Math.min(d, Ltot - d); };
+    // podział także tam, gdzie zaczyna się albo kończy długi prosty odcinek: linia środka przechodzi w dekolt łagodnie, bez narożnika
+    for (let i = 0; i < n0; i++) { let j = i, len = 0; for (let s = 1; s < n0; s++) { const k = (i + s) % n0, a = pts[i], b = pts[k], ch = Math.hypot(b[0] - a[0], b[1] - a[1]); if (ch < 1e-6) break; let ok = true; for (let q = 1; q < s && ok; q++) { const p = pts[(i + q) % n0]; if (Math.abs((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / ch > 0.1) ok = false; } if (!ok) break; j = k; len = ch; }
+      if (len >= 15) { const prev = pts[(i - 1 + n0) % n0], a = pts[i], b = pts[j], ch = len, dp = Math.abs((b[0] - a[0]) * (prev[1] - a[1]) - (b[1] - a[1]) * (prev[0] - a[0])) / ch; if (dp > 0.1) for (const q of [i, j]) if (!C.some((c) => arcD(c, q) < 3)) C.push(q); } }
+    C.sort((a, b) => a - b); let raw;
     if (C.length < 2) raw = [pts.concat([pts[0]])]; else raw = C.map((c, k) => swSub(pts, c, C[(k + 1) % C.length]));
     // krótkie odcinki doklejam do poprzedniej długiej krawędzi, żeby obrys został zamknięty
     const out = []; for (const e of raw) { if (swLen(e) >= PL_MIN || !out.length) out.push(e.slice()); else out[out.length - 1] = out[out.length - 1].concat(e.slice(1)); }
@@ -2296,68 +2314,114 @@
     return [M[0], M[1], M[2], M[3], mp[0] - (M[0] * mq[0] + M[1] * mq[1]), mp[1] - (M[2] * mq[0] + M[3] * mq[1])];
   }
   const plCen = (pts) => { let x = 0, y = 0; for (const p of pts) { x += p[0]; y += p[1]; } return [x / pts.length, y / pts.length]; };
+  // --- elementy pochodne: rozłożenie ze złożenia, połowa elementu leżącego na środku, łączenie kilku krawędzi w jedną ---
+  const plMid = (e) => ptOn(e.pts, 0.5);
+  function plUnfold(edges, f) { // odbicie względem krawędzi złożenia; odbite krawędzie mają w nazwie apostrof
+    const A = f.pts[0], B = f.pts[f.pts.length - 1], dx = B[0] - A[0], dy = B[1] - A[1], L2 = dx * dx + dy * dy || 1, mir = (p) => { const t = ((p[0] - A[0]) * dx + (p[1] - A[1]) * dy) / L2, qx = A[0] + dx * t, qy = A[1] + dy * t; return [2 * qx - p[0], 2 * qy - p[1]]; };
+    const k = edges.indexOf(f), rest = edges.slice(k + 1).concat(edges.slice(0, k)), out = rest.map((e) => ({ id: e.id, pts: e.pts.slice(), len: e.len }));
+    for (let q = rest.length - 1; q >= 0; q--) out.push({ id: rest[q].id + "'", pts: rest[q].pts.map(mir).reverse(), len: rest[q].len });
+    return out;
+  }
+  function plHalve(edges) { // element symetryczny leżący na środku przodu albo tyłu: zostaje połowa, a oś symetrii staje się krawędzią środka
+    const all = []; for (const e of edges) { const nS = Math.max(2, Math.round(e.len)); for (let k = 0; k < nS; k++) all.push(ptOn(e.pts, k / nS)); } // punkty co centymetr, żeby gęsto opisany łuk nie przeważył przy szukaniu osi
+    const c = plCen(all); let sxx = 0, sxy = 0, syy = 0; for (const p of all) { const x = p[0] - c[0], y = p[1] - c[1]; sxx += x * x; sxy += x * y; syy += y * y; }
+    const th = 0.5 * Math.atan2(2 * sxy, sxx - syy); let best = null;
+    for (const a of [th, th + Math.PI / 2]) { const d = [Math.cos(a), Math.sin(a)], mir = (p) => { const x = p[0] - c[0], y = p[1] - c[1], t = x * d[0] + y * d[1]; return [c[0] + 2 * t * d[0] - x, c[1] + 2 * t * d[1] - y]; };
+      let err = 0; for (let q = 0; q < all.length; q += Math.max(1, Math.floor(all.length / 60))) { const mp = mir(all[q]); let bd = 1e9; for (let w = 0; w < all.length; w++) { const p0 = all[w], p1 = all[(w + 1) % all.length], vx = p1[0] - p0[0], vy = p1[1] - p0[1], l2 = vx * vx + vy * vy, t = l2 > 0 ? Math.max(0, Math.min(1, ((mp[0] - p0[0]) * vx + (mp[1] - p0[1]) * vy) / l2)) : 0; bd = Math.min(bd, Math.hypot(p0[0] + vx * t - mp[0], p0[1] + vy * t - mp[1])); } err = Math.max(err, bd); }
+      if (!best || err < best.err) best = { err, d, mir }; }
+    if (!best || best.err > 2.5) return null;
+    const nrm = [-best.d[1], best.d[0]], sd = (p) => (p[0] - c[0]) * nrm[0] + (p[1] - c[1]) * nrm[1], cross = (a, b) => { const sa = sd(a), sb = sd(b), t = sa / (sa - sb); return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; };
+    const kept = [], alias = {}; // połowa po dodatniej stronie osi
+    for (const e of edges) { let cur = null; const runs = []; for (let k = 0; k < e.pts.length; k++) { const p = e.pts[k], ins = sd(p) >= 0; if (k > 0) { const pv = e.pts[k - 1], pin = sd(pv) >= 0; if (pin !== ins) { const x = cross(pv, p); if (ins) cur = [x]; else { cur.push(x); runs.push(cur); cur = null; } } } if (ins) { if (!cur) cur = []; cur.push(p); } } if (cur && cur.length > 1) runs.push(cur);
+      if (runs.length) { const pts = runs.sort((a, b) => swLen(b) - swLen(a))[0]; if (swLen(pts) > 0.5) kept.push({ id: e.id, pts, len: swLen(pts), cutA: sd(e.pts[0]) < 0, cutB: sd(e.pts[e.pts.length - 1]) < 0 }); } }
+    if (kept.length < 2) return null;
+    // kolejność wzdłuż obrysu: od krawędzi przeciętej na początku do krawędzi przeciętej na końcu
+    const st = kept.findIndex((e) => e.cutA), ord = st < 0 ? kept : kept.slice(st).concat(kept.slice(0, st)), first = ord[0].pts[0], last = ord[ord.length - 1].pts[ord[ord.length - 1].pts.length - 1];
+    ord.push({ id: '=', pts: [last, first], len: Math.hypot(last[0] - first[0], last[1] - first[1]), center: true });
+    for (const e of edges) if (!ord.some((q) => q.id === e.id)) { const mm = best.mir(plMid(e)); let b = null, bd = 1e9; for (const q of ord) if (!q.center) { const m2 = plMid(q), dd = Math.hypot(m2[0] - mm[0], m2[1] - mm[1]); if (dd < bd) { bd = dd; b = q; } } if (b) alias[e.id] = b.id; }
+    return { edges: ord, alias };
+  }
+  function plChain(edges, ids) { // kilka krawędzi jednego szwu (także rozdzielonych zaszewką) staje się jedną krawędzią
+    const idx = ids.map((id) => edges.findIndex((e) => e.id === id)).filter((k) => k >= 0); if (idx.length < 2) return idx.length ? edges[idx[0]] : null;
+    const n = edges.length; let bestS = -1, bestSpan = 1e9; for (const s0 of idx) { let span = 0; for (const k of idx) span = Math.max(span, (k - s0 + n) % n); if (span < bestSpan) { bestSpan = span; bestS = s0; } }
+    const seq = idx.slice().sort((a, b) => ((a - bestS + n) % n) - ((b - bestS + n) % n)); let pts = []; for (const k of seq) pts = pts.concat(pts.length ? edges[k].pts.slice(Math.hypot(edges[k].pts[0][0] - pts[pts.length - 1][0], edges[k].pts[0][1] - pts[pts.length - 1][1]) < 0.05 ? 1 : 0) : edges[k].pts);
+    const merged = { id: edges[bestS].id, pts, len: swLen(pts) }, drop = new Set(); for (let q = 1; q <= bestSpan; q++) drop.add((bestS + q) % n);
+    edges[bestS] = merged; const keep = edges.filter((_, k) => !drop.has(k)); edges.length = 0; keep.forEach((e) => edges.push(e)); return merged;
+  }
+  // wskazanie z analizy (punkt na arkuszu, numer egzemplarza, czy krawędź odbita) -> krawędź elementu
+  const plRef = (r) => (Array.isArray(r) ? { at: r, i: 1, m: false } : r && r.at ? { at: r.at, i: r.i || 1, m: !!r.m, w: !!r.w } : null);
   function impPlan(imp, m) {
     const an = imp && imp.an, pcs = (imp && imp.pieces) || []; if (!an || !an.szwy || !an.szwy.length || !an.srodek || !an.srodek.p) return null;
-    const a = W.full(m), all = plAll(pcs), cf = plNear(all, an.srodek.p), cb = plNear(all, an.srodek.t); if (!cf) return { err: 'Nie znalazłam krawędzi środka przodu wskazanej przez analizę.' };
-    const seams = []; for (const s of an.szwy) { const ea = plNear(all, [s[0], s[1]]), eb = plNear(all, [s[2], s[3]]); if (ea && eb && ea !== eb && ea.pi !== eb.pi && !seams.some((q) => q.a === ea || q.b === ea || q.a === eb || q.b === eb)) seams.push({ a: ea, b: eb }); }
-    for (let i = seams.length - 1; i >= 0; i--) { const q = seams[i].a.len / seams[i].b.len; if (q < 0.75 || q > 1.33) seams.splice(i, 1); } // krawędzie o wyraźnie różnej długości nie są jednym szwem
+    const a = W.full(m), all = plAll(pcs), near = (r) => plNear(all, r && r.at), L1 = (v) => (v == null ? [] : Array.isArray(v) && (typeof v[0] === 'number') ? [plRef(v)] : (Array.isArray(v) ? v : [v]).map(plRef).filter(Boolean));
+    const cfL = L1(an.srodek.p), cbL = L1(an.srodek.t), cfR = cfL.find((r) => !r.w), cbR = cbL.find((r) => !r.w), cf0 = cfR ? near(cfR) : null, cb0 = cbR ? near(cbR) : null;
+    if (!cf0) return { err: 'Nie znalazłam krawędzi środka przodu wskazanej przez analizę.' };
+    const foldE = (an.rozloz || []).map((q) => plNear(all, q)).filter(Boolean), centred = cfL.concat(cbL).filter((r) => r.w).map((r) => { const e = near(r); return e ? e.pi + '#' + r.i : ''; });
+    // części: egzemplarz elementu po rozłożeniu, przepołowieniu i połączeniu krawędzi
+    const parts = {}, part = (pi, inst) => { const key = pi + '#' + inst; if (parts[key]) return parts[key];
+      let ed = all.filter((e) => e.pi === pi).map((e) => ({ id: e.id, pts: e.pts.slice(), len: e.len })), alias = {}; const fe = foldE.find((e) => e.pi === pi && !(cf0 && e === cf0) && !(cb0 && e === cb0));
+      let unf = null; if (fe) { const f = ed.find((e) => e.id === fe.id); if (f) { unf = [f.pts[0], f.pts[f.pts.length - 1]]; ed = plUnfold(ed, f); } }
+      if (centred.includes(key)) { const h = plHalve(ed); if (h) { ed = h.edges; alias = h.alias; } }
+      return (parts[key] = { key, pi, ed, alias, unf, depth: 0 }); };
+    const edgeOf = (r) => { const e0 = near(r); if (!e0) return null; const P = part(e0.pi, r.i), id0 = e0.id + (r.m ? "'" : ''), id = P.ed.some((e) => e.id === id0) ? id0 : P.alias[id0] || P.alias[e0.id] || (P.ed.some((e) => e.id === e0.id) ? e0.id : ''); return id ? { P, id } : null; };
+    const seams = [];
+    for (const s of an.szwy) { const sa = Array.isArray(s) ? { a: [plRef([s[0], s[1]])], b: [plRef([s[2], s[3]])] } : { a: L1(s.a), b: L1(s.b), g: !!s.g }, side = (lst) => { const es = lst.map(edgeOf).filter(Boolean); if (!es.length || es.some((e) => e.P !== es[0].P)) return null; const e = plChain(es[0].P.ed, es.map((x) => x.id)); return e ? { P: es[0].P, e } : null; };
+      const A = side(sa.a), B = side(sa.b); if (!A || !B || A.P === B.P) continue; const q = A.e.len / B.e.len; if (!sa.g && (q < 0.72 || q > 1.4)) continue; seams.push({ a: A, b: B }); }
     if (!seams.length) return { err: 'Analiza nie wskazała szwów, które umiem odnaleźć na elementach.' };
-    const ring = (pi) => { const o = []; for (const e of all) if (e.pi === pi) for (const p of e.pts) o.push(p); return o; };
-    // układ elementu ze środkiem przodu: środek pionowo na U = 0, element po stronie U > 0, dół tam, gdzie leżą krawędzie dołu albo gdzie element jest szerszy
-    const T = {}; {
-      const A = cf.pts[0], B = cf.pts[cf.pts.length - 1], R0 = ring(cf.pi); let t = plFit(A, B, [0, 0], [0, Math.hypot(B[0] - A[0], B[1] - A[1])], false);
-      if (plCen(R0.map((p) => plAp(t, p)))[0] < 0) t = plFit(A, B, [0, 0], [0, Math.hypot(B[0] - A[0], B[1] - A[1])], true);
-      const Q = R0.map((p) => plAp(t, p)), L = Math.hypot(B[0] - A[0], B[1] - A[1]); let up = false;
-      const hem = (an.dol || []).map((d) => plNear(all, d)).filter((e) => e && e.pi === cf.pi);
-      if (hem.length) up = plAp(t, hem[0].mid)[1] < L / 2; else { let w0 = 0, w1 = 0; for (const p of Q) { if (p[1] < L * 0.25) w0 = Math.max(w0, p[0]); if (p[1] > L * 0.75) w1 = Math.max(w1, p[0]); } up = w0 > w1 * 1.15; }
-      if (up) t = [t[0], t[1], -t[2], -t[3], t[4], L - t[5]]; // dół wypadł u góry: odwracam pion
+    const F = part(cf0.pi, cfR.i), cfE = F.ed.find((e) => e.id === cf0.id), cbP = cb0 ? parts[cb0.pi + '#' + cbR.i] : null, cbE = cbP ? cbP.ed.find((e) => e.id === cb0.id) : null; if (!cfE) return { err: 'Krawędź środka przodu zniknęła po połączeniu szwów.' };
+    const ring = (P) => { const o = []; for (const e of P.ed) for (const p of e.pts) o.push(p); return o; }, T = {};
+    { const A = cfE.pts[0], B = cfE.pts[cfE.pts.length - 1], R0 = ring(F), L = Math.hypot(B[0] - A[0], B[1] - A[1]); let t = plFit(A, B, [0, 0], [0, L], false);
+      if (plCen(R0.map((p) => plAp(t, p)))[0] < 0) t = plFit(A, B, [0, 0], [0, L], true);
+      const Q = R0.map((p) => plAp(t, p)); let w0 = 0, w1 = 0; for (const p of Q) { if (p[1] < L * 0.25) w0 = Math.max(w0, p[0]); if (p[1] > L * 0.75) w1 = Math.max(w1, p[0]); }
+      // góra: tam, gdzie do przodu dochodzą szwy z elementami leżącymi niżej (spódnica), jest dół; bez takich szwów węższy koniec jest górą
+      const mineE = seams.filter((s) => s.a.P === F || s.b.P === F).map((s) => (s.a.P === F ? s.a.e : s.b.e)), longest = mineE.slice().sort((x, y) => y.len - x.len)[0]; let up = w0 > w1 * 1.15;
+      if (mineE.length > 1 && longest) { const others = mineE.filter((e) => e !== longest), mv = others.reduce((s2, e) => s2 + plAp(t, plMid(e))[1], 0) / others.length, sv = plAp(t, plMid(longest))[1]; up = mv < sv; }
+      if (up) t = [t[0], t[1], -t[2], -t[3], t[4], L - t[5]];
       if (plCen(R0.map((p) => plAp(t, p)))[0] < 0) t = [-t[0], -t[1], t[2], t[3], -t[4], t[5]];
-      T[cf.pi] = t;
-    }
-    // składanie na płasko: od elementu już położonego przez najdłuższy wspólny szew do następnego
-    const det = (t) => t[0] * t[3] - t[1] * t[2], used = new Set(), order = seams.slice().sort((x, y) => y.a.len - x.a.len);
-    for (let guard = 0; guard < 40; guard++) {
-      const s = order.find((q) => !used.has(q) && (T[q.a.pi] !== undefined) !== (T[q.b.pi] !== undefined)); if (!s) break; used.add(s);
-      const eP = T[s.a.pi] !== undefined ? s.a : s.b, eQ = eP === s.a ? s.b : s.a, tp = T[eP.pi], p0 = plAp(tp, eP.pts[0]), p1 = plAp(tp, eP.pts[eP.pts.length - 1]), cP = plCen(ring(eP.pi).map((p) => plAp(tp, p))), RQ = ring(eQ.pi);
+      T[F.key] = t; }
+    const det = (t) => t[0] * t[3] - t[1] * t[2], used = new Set(), order = seams.slice().sort((x, y) => y.a.e.len - x.a.e.len);
+    for (let guard = 0; guard < 80; guard++) {
+      // kolejność: najpierw elementy bliżej przodu w łańcuchu szwów, a wstawki rozkładane ze złożenia (kliny) na końcu; dzięki temu panele wiszą pod swoim szwem, a nie rozkładają się w wachlarz
+      let s = null, sc = 1e9; for (const q of order) { if (used.has(q) || (T[q.a.P.key] !== undefined) === (T[q.b.P.key] !== undefined)) continue; const pP = T[q.a.P.key] !== undefined ? q.a.P : q.b.P, pQ = pP === q.a.P ? q.b.P : q.a.P, v = (pQ.unf ? 1000 : 0) + pP.depth * 10 - q.a.e.len / 1000; if (v < sc) { sc = v; s = q; } }
+      if (!s) break; used.add(s);
+      const sP = T[s.a.P.key] !== undefined ? s.a : s.b, sQ = sP === s.a ? s.b : s.a, tp = T[sP.P.key], p0 = plAp(tp, sP.e.pts[0]), p1 = plAp(tp, sP.e.pts[sP.e.pts.length - 1]), cP = plCen(ring(sP.P).map((p) => plAp(tp, p))), RQ = ring(sQ.P), eq = sQ.e.pts;
       const sideOf = (c) => Math.sign((p1[0] - p0[0]) * (c[1] - p0[1]) - (p1[1] - p0[1]) * (c[0] - p0[0])), sp = sideOf(cP); let best = null;
       for (const rev of [false, true]) for (const flip of [false, true]) {
-        const q0 = eQ.pts[rev ? eQ.pts.length - 1 : 0], q1 = eQ.pts[rev ? 0 : eQ.pts.length - 1], t = plFit(q0, q1, p0, p1, flip); if (sideOf(plCen(RQ.map((p) => plAp(t, p)))) === sp) continue;
-        let err = 0; const N = 12; for (let k = 0; k <= N; k++) { const pa = plAp(tp, ptOn(eP.pts, k / N)), pb = plAp(t, ptOn(eQ.pts, rev ? 1 - k / N : k / N)); err += Math.hypot(pa[0] - pb[0], pa[1] - pb[1]); }
-        err = err / (N + 1) + (Math.sign(det(t)) === Math.sign(det(tp)) ? 0 : 0.15); // przy remisie element zostaje po tej samej stronie papieru co sąsiad
+        const t = plFit(eq[rev ? eq.length - 1 : 0], eq[rev ? 0 : eq.length - 1], p0, p1, flip); if (sideOf(plCen(RQ.map((p) => plAp(t, p)))) === sp) continue;
+        let err = 0; const N = 12; for (let k = 0; k <= N; k++) { const pa = plAp(tp, ptOn(sP.e.pts, k / N)), pb = plAp(t, ptOn(eq, rev ? 1 - k / N : k / N)); err += Math.hypot(pa[0] - pb[0], pa[1] - pb[1]); }
+        err = err / (N + 1) + (Math.sign(det(t)) === Math.sign(det(tp)) ? 0 : 0.15);
         if (!best || err < best.err) best = { t, err };
       }
-      if (best) T[eQ.pi] = best.t;
+      if (best) { T[sQ.P.key] = best.t; sQ.P.depth = sP.P.depth + 1; sQ.P.via = sQ.e; }
     }
-    const keys = Object.keys(T).map(Number); if (keys.length < 2) return { err: 'Szwy wskazane przez analizę nie łączą przodu z żadnym innym elementem.' };
-    // wysokość: przy ramionach punkt szyjny na wysokości szyi, bez ramion szczyt najdłuższego szwu przodu na wysokości pachy
-    const E = (e) => e.pts.map((p) => plAp(T[e.pi], p)), mine = seams.filter((s) => (s.a.pi === cf.pi || s.b.pi === cf.pi) && T[s.a.pi] !== undefined && T[s.b.pi] !== undefined).map((s) => (s.a.pi === cf.pi ? s.a : s.b));
+    const placed = Object.keys(T).map((k) => parts[k]); if (placed.length < 2) return { err: 'Szwy wskazane przez analizę nie łączą przodu z żadnym innym elementem.' };
+    const E = (P, e) => e.pts.map((p) => plAp(T[P.key], p)), mine = seams.filter((s) => (s.a.P === F || s.b.P === F) && T[s.a.P.key] !== undefined && T[s.b.P.key] !== undefined).map((s) => (s.a.P === F ? s.a.e : s.b.e));
     if (!mine.length) return { err: 'Przód nie ma żadnego szwu z innym elementem.' };
-    const pit = a.Dts - a.Gp - 1, cfQ = ring(cf.pi).map((p) => plAp(T[cf.pi], p)), v0 = Math.min(...cfQ.map((p) => p[1])), v1 = Math.max(...cfQ.map((p) => p[1])); let dV;
-    const sh = an.trzym === 'ramiona' ? mine.filter((e) => e.len < 32 && plCen(E(e))[1] < v0 + 0.25 * (v1 - v0)).sort((x, y) => plCen(E(x))[1] - plCen(E(y))[1])[0] : null;
-    if (sh) { const q = E(sh), np = q[0][0] < q[q.length - 1][0] ? q[0] : q[q.length - 1]; dV = -a.Dts - np[1]; }
-    else { const sd = mine.slice().sort((x, y) => y.len - x.len)[0], q = E(sd), top = q[0][1] < q[q.length - 1][1] ? q[0] : q[q.length - 1]; dV = -(pit - 1.5) - top[1]; }
-    for (const k of keys) T[k] = [T[k][0], T[k][1], T[k][2], T[k][3], T[k][4], T[k][5] + dV];
-    const Ucb = cb && T[cb.pi] !== undefined ? Math.max(8, plCen(E(cb))[0]) : 0;
-    // elementy i szwy w postaci dla silnika tkaniny
-    const tagOf = new Map(), outSeams = []; if (cf) tagOf.set(cf, 'center'); if (cb && T[cb.pi] !== undefined) tagOf.set(cb, 'center');
+    const pit = a.Dts - a.Gp - 1, cfQ = ring(F).map((p) => plAp(T[F.key], p)), v0 = Math.min(...cfQ.map((p) => p[1])), v1 = Math.max(...cfQ.map((p) => p[1])); let dV;
+    const sh = an.trzym === 'ramiona' ? mine.filter((e) => e.len < 32 && plCen(E(F, e))[1] < v0 + 0.25 * (v1 - v0)).sort((x, y) => plCen(E(F, x))[1] - plCen(E(F, y))[1])[0] : null;
+    if (sh) { const q = E(F, sh), np = q[0][0] < q[q.length - 1][0] ? q[0] : q[q.length - 1]; dV = -a.Dts - np[1]; }
+    else { const sd = mine.slice().sort((x, y) => y.len - x.len)[0], q = E(F, sd), top = q[0][1] < q[q.length - 1][1] ? q[0] : q[q.length - 1]; dV = -(pit - 1.5) - top[1]; }
+    for (const P of placed) { const t = T[P.key]; T[P.key] = [t[0], t[1], t[2], t[3], t[4], t[5] + dV]; }
+    const cbOk = cbP && cbE && T[cbP.key] !== undefined, cbQ = cbOk ? E(cbP, cbE) : null, Ucb = cbQ ? Math.max(8, plCen(cbQ)[0]) : 0;
+    const cbU = (v) => { if (!cbQ) return 1e9; const p0 = cbQ[0], p1 = cbQ[cbQ.length - 1]; return p0[0] + (p1[0] - p0[0]) * Math.max(0, Math.min(1, (v - p0[1]) / (p1[1] - p0[1] || 1))); };
+    const tagOf = new Map(), outSeams = []; tagOf.set(cfE, 'center'); if (cbOk) tagOf.set(cbE, 'center'); for (const P of placed) for (const e of P.ed) if (e.center) tagOf.set(e, 'center');
     const key = (u, v) => Math.abs(u[1] - v[1]) + Math.abs(Math.min(Math.abs(u[0]), Ucb ? Math.abs(Ucb - u[0]) : 1e9) - Math.min(Math.abs(v[0]), Ucb ? Math.abs(Ucb - v[0]) : 1e9));
-    seams.forEach((s, i) => { if (T[s.a.pi] === undefined || T[s.b.pi] === undefined || tagOf.has(s.a) || tagOf.has(s.b)) return; const qa = E(s.a), qb = E(s.b), a0 = qa[0], a1 = qa[qa.length - 1], b0 = qb[0], b1 = qb[qb.length - 1], rev = key(a0, b0) + key(a1, b1) > key(a0, b1) + key(a1, b0);
-      tagOf.set(s.a, 's' + i + 'a'); tagOf.set(s.b, 's' + i + 'b'); outSeams.push({ a: { key: 'p' + s.a.pi, tag: 's' + i + 'a' }, b: { key: 'p' + s.b.pi, tag: 's' + i + 'b' }, rev }); });
-    const parts = keys.map((pi) => ({ key: 'p' + pi, ed: all.filter((e) => e.pi === pi).map((e) => ({ pts: E(e), tag: tagOf.get(e) || 'free' })) }));
-    // ramiączka: tkanina wisi na najwyższym punkcie przodu i najwyższym punkcie elementu ze środkiem tyłu
-    const cbQ = Ucb ? E(cb) : null, cbU = (v) => { if (!cbQ) return 1e9; const p0 = cbQ[0], p1 = cbQ[cbQ.length - 1]; return p0[0] + (p1[0] - p0[0]) * Math.max(0, Math.min(1, (v - p0[1]) / (p1[1] - p0[1] || 1))); };
-    const hold = []; if (an.trzym !== 'ramiona') { const topOf = (pi, far) => { let b = null; for (const e of all) if (e.pi === pi) for (const p of E(e)) { const dc = far ? Math.abs(cbU(p[1]) - p[0]) : Math.abs(p[0]); if (dc > 3 && (!b || p[1] < b[1])) b = p; } return b; };
-      const hf = topOf(cf.pi, false), bp = cb && T[cb.pi] !== undefined ? cb.pi : keys.filter((k) => k !== cf.pi).sort((x, y) => Math.min(...ring(x).map((p) => plAp(T[x], p)[1])) - Math.min(...ring(y).map((p) => plAp(T[y], p)[1])))[0], hb = bp !== undefined ? topOf(bp, !!Ucb) : null;
-      if (hf && hb) hold.push({ key: 'p' + cf.pi, at: hf }, { key: 'p' + bp, at: hb }); }
-    let dl = 0, wid = 0; for (const p of parts) for (const e of p.ed) for (const q of e.pts) { dl = Math.max(dl, q[1]); wid = Math.max(wid, q[0]); }
+    seams.forEach((s, i) => { if (T[s.a.P.key] === undefined || T[s.b.P.key] === undefined || tagOf.has(s.a.e) || tagOf.has(s.b.e)) return; const qa = E(s.a.P, s.a.e), qb = E(s.b.P, s.b.e), a0 = qa[0], a1 = qa[qa.length - 1], b0 = qb[0], b1 = qb[qb.length - 1], rev = key(a0, b0) + key(a1, b1) > key(a0, b1) + key(a1, b0);
+      tagOf.set(s.a.e, 's' + i + 'a'); tagOf.set(s.b.e, 's' + i + 'b'); outSeams.push({ a: { key: 'p' + s.a.P.key, tag: 's' + i + 'a' }, b: { key: 'p' + s.b.P.key, tag: 's' + i + 'b' }, rev }); });
+    // wstawka: element rozłożony ze złożenia, wszyty obiema połówkami (klin). Na początku układania jest złożony wzdłuż osi i odstaje od ciała jak płetwa przy szwie, którym został dołożony
+    const finOf = (P) => { if (!P.unf || !P.via) return null; const base = P.via.id.replace(/'$/, ''); if (!seams.some((s) => (s.a.P === P && s.a.e.id === base) || (s.b.P === P && s.b.e.id === base)) || !seams.some((s) => (s.a.P === P && s.a.e.id === base + "'") || (s.b.P === P && s.b.e.id === base + "'"))) return null; const q = E(P, P.via), t = T[P.key]; return { a: q[0], b: q[q.length - 1], ax: [plAp(t, P.unf[0]), plAp(t, P.unf[1])] }; };
+    const outParts = placed.map((P) => ({ key: 'p' + P.key, fin: finOf(P), ed: P.ed.map((e) => ({ pts: E(P, e), tag: tagOf.get(e) || 'free' })) }));
+    const hold = []; if (an.trzym !== 'ramiona') { const topOf = (P, far) => { let b = null; for (const e of P.ed) for (const p of E(P, e)) { const dc = far ? Math.abs(cbU(p[1]) - p[0]) : Math.abs(p[0]); if (dc > 3 && (!b || p[1] < b[1])) b = p; } return b; };
+      const bp = cbOk ? cbP : placed.filter((P) => P !== F).sort((x, y) => Math.min(...ring(x).map((p) => plAp(T[x.key], p)[1])) - Math.min(...ring(y).map((p) => plAp(T[y.key], p)[1])))[0], hf = topOf(F, false), hb = bp ? topOf(bp, !!Ucb) : null;
+      if (hf && hb) hold.push({ key: 'p' + F.key, at: hf }, { key: 'p' + bp.key, at: hb }); }
+    let dl = 0, wid = 0, area = 0; for (const p of outParts) { let ar = 0; const rr = []; for (const e of p.ed) for (const q of e.pts) { dl = Math.max(dl, q[1]); wid = Math.max(wid, q[0]); rr.push(q); } for (let k = 0; k < rr.length; k++) { const q0 = rr[k], q1 = rr[(k + 1) % rr.length]; ar += q0[0] * q1[1] - q1[0] * q0[1]; } area += Math.abs(ar); }
     { const bad = swSane(Ucb ? 2 * cbU(-pit) : 0, dl, m, an); if (bad) return { err: bad }; }
-    const skip = pcs.filter((_, i) => T[i] === undefined).map((pc) => String(pc.name || '').replace(/ \(część.*$/, ''));
-    const cbLine = Ucb ? (() => { const q = E(cb), p0 = q[0], p1 = q[q.length - 1]; return p0[1] < p1[1] ? [p0, p1] : [p1, p0]; })() : null; // środek tyłu po złożeniu na płasko bywa skośny (rozkloszowanie), więc szerokość połowy ubrania liczę osobno na każdej wysokości
-    return { plan: { parts, seams: outSeams, hold, Ucb, cbLine, yMax: an.trzym === 'ramiona' ? null : pit + 8 }, dl, hemC: 4 * (Ucb || wid), used: keys.map((k) => String(pcs[k].name || '')), skip: skip.filter((x, i, arr) => x && arr.indexOf(x) === i), strap: hold.length === 2 };
+    const usedPi = new Set(placed.map((P) => P.pi)), skip = pcs.filter((_, i2) => !usedPi.has(i2)).map((pc) => String(pc.name || '').replace(/ \(część.*$/, ''));
+    const cbLine = cbQ ? (cbQ[0][1] < cbQ[cbQ.length - 1][1] ? [cbQ[0], cbQ[cbQ.length - 1]] : [cbQ[cbQ.length - 1], cbQ[0]]) : null;
+    return { plan: { parts: outParts, seams: outSeams, hold, Ucb, cbLine, area, yMax: an.trzym === 'ramiona' ? null : pit + 8 }, dl, hemC: 4 * (Ucb || wid), used: Array.from(usedPi).map((k) => String(pcs[k].name || '')), skip: skip.filter((x, i2, arr) => x && arr.indexOf(x) === i2), strap: hold.length === 2 };
   }
   // punkt na łamanej w ułamku jej długości
   function ptOn(pts, f) { const L = swLen(pts); let acc = 0; for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (acc + d >= f * L - 1e-9) { const t = (f * L - acc) / (d || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; } acc += d; } return pts[pts.length - 1]; }
-  window.__pl = { plEdges, plAll, impPlan }; // tylko do testów
+  window.__pl = { plEdges, plAll, impPlan, plHalve, plUnfold }; // tylko do testów
   // ---------- paleta poleceń (⌘K) ----------
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
   let cmdSel = 0, cmdItems = [];

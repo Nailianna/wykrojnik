@@ -337,15 +337,24 @@
         const key = 'top' + JSON.stringify([state.style, pk, m, state.fabric, sil.imported ? [state.proj, state.imp && state.imp.size, sil.hemC, sil.impDl, sil.gather] : 0]);
         if (!g3.top || g3.top.key !== key) {
           const hh = topFull ? Math.max(1.7, Math.min(3, Math.sqrt(((m.ob + 8) * (a.Dts + p.dl) + (hasSl ? 70 * sil.sleeve.L : 0)) / 3300))) : 1.6; // gęstość siatki dobrana do wielkości ubrania
-          let g = null; try { g = window.Cloth.build(D, { h: hh, sleeve: hasSl, cutY, gather: sil.gather || null, holdAt: sil.strap ? { F: sil.strap.F, B: sil.strap.B } : null }); } catch (e) { g = null; }
+          const hP = D.plan && D.plan.area ? Math.max(1.7, Math.min(4, Math.sqrt((2 * D.plan.area) / 3300))) : 0; // plan szycia: gęstość siatki z łącznej powierzchni elementów
+          let g = null; try { g = window.Cloth.build(D, { h: hP || hh, sleeve: hasSl, cutY, gather: sil.gather || null, holdAt: sil.strap ? { F: sil.strap.F, B: sil.strap.B } : null }); } catch (e) { g = null; }
           if (!g) g3.top = { key, fail: true };
           else {
             const stl = p.gora === 'bez', yTopW = sil.strap ? Math.min(a.Dts - 0.3, sil.strap.yMax) : a.Dts - 0.3, FI = g.info.F, BI = g.info.B, SB = g.info.S ? g.info.S.box : null, SL = sil.sleeve, rr = SB ? (SB[2] - SB[0]) / TAU : 0;
             const phiOf = (mt, sFr) => (mt.pk === 'F' ? Math.PI / 2 - mt.sx * sFr * Math.PI / 2 : 1.5 * Math.PI + mt.sx * sFr * Math.PI / 2);
             const halfG = (y) => { let s = 0, pv = sectRaw(y, Math.PI / 2); for (let k = 1; k <= 12; k++) { const q = sectRaw(y, Math.PI / 2 - (k / 12) * Math.PI); s += Math.hypot(q[0] - pv[0], q[2] - pv[2]); pv = q; } return s; };
+            const planFin = {}; if (D.plan) for (const pt of D.plan.parts) if (pt.fin) planFin[pt.key] = pt.fin;
             const init = (mt) => {
               if (g.plan) { // plan szycia: arkusz od środka przodu (u = 0) do środka tyłu owinięty wokół połowy sylwetki
-                const yw = Math.min(-mt.v, yTopW), cl = D.plan.cbLine, span = cl ? Math.max(10, cl[0][0] + (cl[1][0] - cl[0][0]) * Math.max(0, Math.min(1, (mt.v - cl[0][1]) / (cl[1][1] - cl[0][1] || 1)))) : Math.max(20, halfG(Math.min(yw, yTopW)) + 2), fr = Math.max(0, Math.min(1, mt.u / span)), q = sectRaw(yw, Math.PI / 2 - mt.sx * fr * Math.PI);
+                const fin = planFin[mt.pk]; let fu = mt.u, fv = mt.v, rho = 0;
+                if (fin) { // wstawka: punkt trafia na szew, a odległość od szwu staje się odstawaniem od ciała
+                  let px = mt.u, py = mt.v; const A = fin.ax[0], B = fin.ax[1], dx = B[0] - A[0], dy = B[1] - A[1], l2 = dx * dx + dy * dy || 1, sideP = dx * (py - A[1]) - dy * (px - A[0]), sideE = dx * (fin.a[1] - A[1]) - dy * (fin.a[0] - A[0]);
+                  if (sideP * sideE < 0) { const t = ((px - A[0]) * dx + (py - A[1]) * dy) / l2, qx = A[0] + dx * t, qy = A[1] + dy * t; px = 2 * qx - px; py = 2 * qy - py; }
+                  const ex = fin.b[0] - fin.a[0], ey = fin.b[1] - fin.a[1], e2 = ex * ex + ey * ey || 1, te = Math.max(0, Math.min(1, ((px - fin.a[0]) * ex + (py - fin.a[1]) * ey) / e2)); fu = fin.a[0] + ex * te; fv = fin.a[1] + ey * te; rho = Math.hypot(px - fu, py - fv) * 0.6 + (sideP * sideE < 0 ? 0.5 : 0);
+                }
+                const yw = Math.min(-fv, yTopW), cl = D.plan.cbLine, span = cl ? Math.max(10, cl[0][0] + (cl[1][0] - cl[0][0]) * Math.max(0, Math.min(1, (fv - cl[0][1]) / (cl[1][1] - cl[0][1] || 1)))) : Math.max(20, halfG(Math.min(yw, yTopW)) + 2), fr = Math.max(0, Math.min(1, fu / span)), q = sectRaw(yw, Math.PI / 2 - mt.sx * fr * Math.PI);
+                if (rho) { const rl = Math.hypot(q[0], q[2]) || 1; return [q[0] + (q[0] / rl) * rho, q[1], q[2] + (q[2] / rl) * rho]; }
                 return [q[0], q[1], q[2]];
               }
               if (mt.pk === 'S') {
