@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.99.1', n: 114, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.99.2', n: 115, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
   const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
   window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
@@ -23,7 +23,6 @@
   let state = {
     profiles: [
       { id: 'p1', name: 'Modelka przykładowa', og: 85, ot: 65, ob: 88, wb: 20, wzrost: 176, adv: {} },
-      { id: 'p2', name: 'Rozmiar 38', og: 88, ot: 68, ob: 92, wb: 21, wzrost: 168, adv: {} },
     ],
     active: 'p1', style: 'sk_prosta',
     p: /** @type {WParams} */ ({ dl: 58, kn: 55, gf: 9, fac: 'laczone', facW: 5, flare: 0, gora: 'ramiona', bk: 'prosta', bh: 6, gr: 5, gh: 9, gd: 11, gg: 5, gp: 6, ram: 'brak', ramW: 1, rekL: 0, dol: '', fit: 'regular', baza: 'wlasna', extras: [], falN: false, falR: false, marsz: false, sciag: false, tren: 0, kop: false, pasT: 0, zakK: 2.5, rek: 'brak', mank: false, bok: 0, ff: 1, zp: 'bok', kol: 'brak', kolW: 3, rozp: 0, nk: 'okragly', nkb: 'okragly', nd: 0, nw: 0, nb: 0, luzG: 4, luzB: 2, luzT: 1, saSzew: 1.5, saTalia: 1, saDol: 4, pasek: 3 }),
@@ -35,8 +34,12 @@
   const PK = ['ref', 'imp', 'style', 'p', 'active', 'fabric', 'color', 'color2', 'print', 'pscale', 'layers', 'printImg', 'sel', 'paper', 'pack', 'fabW'];
   const snap = () => { const o = {}; for (const k of PK) o[k] = state[k]; return JSON.parse(JSON.stringify(o)); };
   const projCur = () => state.projects.find((x) => x.id === state.proj);
+  // rozmiary standardowe są wbudowane i stałe: biust, talia i biodra rosną co 4 cm, wzrost 168
+  const STD = [34, 36, 38, 40].map((n, i) => ({ id: 'std' + n, name: 'Rozmiar ' + n, og: 84 + 4 * i, ot: 66 + 4 * i, ob: 90 + 4 * i, wb: 20, wzrost: 168, adv: {}, std: true }));
+  function ensureStd() { const own = (state.profiles || []).filter((x) => x && !x.std && String(x.id).indexOf('std') !== 0 && !(x.id === 'p2' && x.name === 'Rozmiar 38' && x.og === 88 && x.ot === 68)); state.profiles = STD.map((x) => JSON.parse(JSON.stringify(x))).concat(own); if (!state.profiles.some((x) => x.id === state.active)) state.active = (own[0] || state.profiles[0]).id; for (const q of state.projects || []) if (q.snap && !state.profiles.some((x) => x.id === q.snap.active)) q.snap.active = 'std38'; }
   let droppedN = 0; const BLENDER_ON = false, CMD_ON = false, HOME_MORE = false;
   function ensureProjects() {
+    ensureStd();
     if (!Array.isArray(state.projects)) state.projects = [];
     state.projects = state.projects.filter((x) => x && x.id && x.snap && x.snap.p);
     { // projekty z wyłączonych fasonów, z biblioteki, z inspiracji bez fasonu i z modelu 3D znikają z listy; ich kopia zostaje w pamięci przeglądarki

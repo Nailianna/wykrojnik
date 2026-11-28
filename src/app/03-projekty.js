@@ -100,7 +100,7 @@
   function pickStyle(st) { if (state.ref) { say('Ten projekt pokazuje gotowy model 3D. Fason wybierzesz w nowym projekcie.'); return; } if (state.style === 'import' && state.imp && state.imp.lib) state.imp = null; if (st.id !== state.style) state.sel = {}; state.fTab = tabOf(st.id); if (st.preset) { Object.assign(state.p, st.preset); if (st.preset.rek) state.p.rekL = ['krotki', '34', 'dlugi'].includes(st.preset.rek) ? rekDef(st.preset.rek) : 0; if (st.id.indexOf('to_tshirt') === 0) state.fabric = 'dzersej'; } else state.p.bok = 0; if (st.id.indexOf('to_tshirt') !== 0 && state.style.indexOf('to_tshirt') === 0 && state.fabric === 'dzersej') state.fabric = 'bawelna'; const was = W.STYLES.find((s) => s.id === state.style); state.style = st.id; state.p.flare = st.flare || 0; state.p.dol = ''; if (st.dl) state.p.dl = st.dl; else if (was && was.dl && state.p.dl === was.dl) state.p.dl = 58; fillForm(); persist(); draw(true); }
   $('addP').addEventListener('click', () => {
     const c = cur(), id = 'p' + Date.now();
-    state.profiles.push({ id, name: 'Nowa modelka', og: c.og, ot: c.ot, ob: c.ob, wb: c.wb, wzrost: c.wzrost, adv: {} });
+    state.profiles.push({ id, name: 'Nowa modelka', og: c.og, ot: c.ot, ob: c.ob, wb: c.wb, wzrost: c.wzrost, adv: {} }); say('Dodałam własną modelkę z wymiarami „' + (c.name || 'bez imienia') + '”. Wpisz jej imię i popraw wymiary.');
     state.active = id; fillForm(); persist(); draw(); $('m_name').focus(); $('m_name').select();
   });
   $('delP').addEventListener('click', () => {
@@ -109,7 +109,7 @@
     const gone = cur(), used = state.projects.filter((q) => q.id !== state.proj && q.snap && q.snap.active === gone.id).map((q) => q.name);
     if (used.length) { say('Z modelki „' + (gone.name || 'bez imienia') + '” korzystają też projekty: ' + used.join(', ') + '. Najpierw wybierz w nich inną modelkę albo je usuń.', true); return; }
     if (b.textContent === 'Usuń') { b.textContent = 'Na pewno?'; setTimeout(() => (b.textContent = 'Usuń'), 3000); return; }
-    state.profiles = state.profiles.filter((x) => x.id !== gone.id); state.active = state.profiles[0].id;
+    if (gone.std) return; state.profiles = state.profiles.filter((x) => x.id !== gone.id); state.active = (state.profiles.find((x) => !x.std) || state.profiles.find((x) => x.id === 'std38')).id;
     fillForm(); persist(); draw(true); say('Usunęłam modelkę „' + (gone.name || 'bez imienia') + '”. Ten projekt liczę teraz na wymiary modelki „' + (cur().name || 'bez imienia') + '”.', true);
   });
   function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(k === 'tiles'); }); $(id).setAttribute('aria-pressed', state[k]); }

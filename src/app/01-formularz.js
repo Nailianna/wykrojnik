@@ -70,15 +70,16 @@
   })();
   function fillForm() {
     const sel = $('prof'); sel.textContent = '';
-    for (const pr of state.profiles) { const o = document.createElement('option'); o.value = pr.id; o.textContent = pr.name || 'Bez imienia'; sel.appendChild(o); }
+    for (const [lab, std] of [['Rozmiary standardowe', true], ['Własne modelki', false]]) { const list = state.profiles.filter((x) => !!x.std === std); if (!list.length) continue; const g = document.createElement('optgroup'); g.label = String(lab); for (const pr of list) { const o = document.createElement('option'); o.value = pr.id; o.textContent = pr.name || 'Bez imienia'; g.appendChild(o); } sel.appendChild(g); }
     sel.value = cur().id; fillGallery();
+    { const lock = !!cur().std; document.querySelectorAll('[data-sec=modelka] input, #braB, #braC').forEach((e) => { /** @type {HTMLInputElement} */ (e).disabled = lock; }); $('stdNote').hidden = !lock; setTimeout(() => document.querySelectorAll('#adv input').forEach((e) => { /** @type {HTMLInputElement} */ (e).disabled = !!cur().std; }), 0); }
     $('m_name').value = cur().name;
     MF.forEach((k) => ($('m_' + k).value = cur()[k]));
     { const mn = dlMin(); if (!(state.p.dl >= mn)) state.p.dl = Math.max(mn, 58); $('p_dl').min = mn; $('s_dl').min = mn; $('s_dl').max = mn < 0 ? Math.max(70, state.p.dl) : 130; } // top może kończyć się nad talią, rybka potrzebuje długości
     if (['krotki', '34', 'dlugi'].includes(state.p.rek) && !(state.p.rekL >= 12)) state.p.rekL = rekDef(state.p.rek); // starsze projekty: długość rękawa z rodzaju
     PF.forEach((k) => { $('p_' + k).value = state.p[k]; syncSl(k); });
     fillAdv();
-    $('delP').disabled = state.profiles.length < 2; $('delP').textContent = 'Usuń';
+    $('delP').hidden = !!cur().std; $('delP').textContent = 'Usuń';
     const fl = state.style === 'pusty' ? {} : flags();
     document.querySelectorAll('[data-if]').forEach((el) => (el.hidden = !fl[el.dataset.if]));
     $('dolSec').textContent = state.style.indexOf('to_') === 0 ? 'Długość' : 'Dół'; $('dopEmpty').hidden = state.style !== 'pusty'; $('szwyBox').hidden = state.style === 'pusty' || state.style === 'import';
