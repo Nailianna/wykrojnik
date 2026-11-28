@@ -2,7 +2,7 @@
 
 Aplikacja do konstruowania wykrojów odzieży z wymiarów: spódnice, sukienki, topy, t-shirty i gorsety. Rysuje wykrój, sprawdza go z wymiarami modelki, pokazuje podgląd 3D na sylwetce i drukuje na kartkach A4 w skali 100%.
 
-Wersja 0.98.2. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
+Wersja 0.99.0. Aplikacja jest w budowie i żaden wykrój nie został jeszcze sprawdzony szyciem. Przed krojeniem właściwej tkaniny uszyj próbę z surówki.
 
 ## Uruchomienie
 
@@ -82,11 +82,9 @@ Podgląd 3D wczytanego wykroju powstaje na dwa sposoby. Kroje rozpoznawane z sam
 
 Repozytorium nie zawiera żadnych wykrojów ani kluczy, wgrywasz własne.
 
-## Biblioteka konstrukcji
+## Katalog podstawowy (od wersji 0.99)
 
-Po wczytaniu pliku biblioteki („Nowy z biblioteki”) Twoje własne, stopniowane konstrukcje pojawiają się wśród fasonów w panelu Fason, w zakładkach Góry, Doły i Sukienki. Wybierasz je tak jak każdy inny fason, a skład projektu (góra, dół, linia odcięcia) ustawiasz w Dopasowaniu. Aplikacja przelicza je na wymiary modelki, sprawdza szwy, łączy górę ze spódnicą w sukienkę, dzieli sukienkę na linii odcięcia i wymienia samą górę albo sam dół. To samo ubranie widzisz w 2D i w 3D. Wczytany z pliku wykrój jest porównywany z biblioteką element po elemencie.
-
-Plik biblioteki należy do Ciebie i zostaje na Twoim komputerze. Repozytorium ani opublikowana strona nie zawierają żadnych konstrukcji. Format pliku, zasady dopasowania i ograniczenia opisuje [docs/biblioteka.md](docs/biblioteka.md).
+Po audycie ścieżek użytkownika katalog został ograniczony do sześciu sprawdzonych fasonów: spódnica prosta, ołówkowa i z koła, top na cienkich ramiączkach, T-shirt z krótkim i z długim rękawem. Pozostałe fasony, biblioteka konstrukcji, „Nowy z inspiracji”, „Nowy z modelu 3D” i render w Blenderze są wyłączone i będą wracać pojedynczo, każdy po przejściu audytu. Stan sprzed ograniczenia jest pod tagiem `przed-resetem-0.98.2`.
 
 ## Render w Blenderze
 

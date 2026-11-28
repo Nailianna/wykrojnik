@@ -1,7 +1,10 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.98.2', n: 112, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.99.0', n: 113, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
+  const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
+  window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -32,9 +35,14 @@
   const PK = ['ref', 'imp', 'style', 'p', 'active', 'fabric', 'color', 'color2', 'print', 'pscale', 'layers', 'printImg', 'sel', 'paper', 'pack', 'fabW'];
   const snap = () => { const o = {}; for (const k of PK) o[k] = state[k]; return JSON.parse(JSON.stringify(o)); };
   const projCur = () => state.projects.find((x) => x.id === state.proj);
+  let droppedN = 0; const BLENDER_ON = false;
   function ensureProjects() {
     if (!Array.isArray(state.projects)) state.projects = [];
     state.projects = state.projects.filter((x) => x && x.id && x.snap && x.snap.p);
+    { // projekty z wyłączonych fasonów, z biblioteki, z inspiracji bez fasonu i z modelu 3D znikają z listy; ich kopia zostaje w pamięci przeglądarki
+      const live = (q) => { const sn = q.snap; if (sn.ref) return false; if (sn.style === 'import') return !!(sn.imp && sn.imp.pieces && !sn.imp.lib); return sn.style === 'pusty' || BASE.includes(sn.style); }, gone = state.projects.filter((q) => !live(q));
+      if (gone.length) { try { const old = JSON.parse(localStorage.getItem('wykrojnik.usuniete') || '[]'); localStorage.setItem('wykrojnik.usuniete', JSON.stringify(old.concat(gone))); } catch (e) { /* bez kopii, lista i tak ma być czysta */ } state.projects = state.projects.filter(live); droppedN = gone.length; } }
+    if (!BASE.includes(state.style) && state.style !== 'pusty' && state.style !== 'import') state.style = 'sk_prosta'; if (state.ref) state.ref = null; if (state.style === 'import' && state.imp && state.imp.lib) { state.style = 'pusty'; state.imp = null; }
     if (!state.projects.length) { const id = 'j' + Date.now(); state.projects = [{ id, name: 'Pierwszy projekt', updated: Date.now(), snap: snap() }]; state.proj = id; }
     if (!projCur()) state.proj = state.projects[0].id;
     if (!state.sel || typeof state.sel !== 'object') state.sel = {};

@@ -262,6 +262,7 @@
     $('blPathRow').hidden = !inApp || BL.on || !BL.why;
   }
   async function blInit(custom) {
+    if (!BLENDER_ON) { blNote(); return; } // render w Blenderze wyłączony do czasu uporządkowania podstaw
     if (!custom && (BL.mode === 'server' || (await srvInit()))) return;
     if (!desktop || !desktop.childProcess || !desktop.fs || !fileOk) { blNote(); return; }
     BL.mode = 'local';

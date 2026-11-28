@@ -95,7 +95,6 @@
       b.addEventListener('click', () => { if (!(odc && ODC.includes(state.style))) pickStyle(st); });
       boxes[st.group].appendChild(b);
     });
-    libTiles({ gora: $('galGo'), dol: $('galSk'), cale: $('galSu') }); // konstrukcje z biblioteki są fasonami jak każdy inny
   }
   function pickStyle(st) { if (state.ref) { say('Ten projekt pokazuje gotowy model 3D. Fason wybierzesz w nowym projekcie.'); return; } if (state.style === 'import' && state.imp && state.imp.lib) state.imp = null; if (st.id !== state.style) state.sel = {}; state.fTab = tabOf(st.id); if (st.preset) { Object.assign(state.p, st.preset); if (st.preset.rek) state.p.rekL = ['krotki', '34', 'dlugi'].includes(st.preset.rek) ? rekDef(st.preset.rek) : 0; if (st.id.indexOf('to_tshirt') === 0) state.fabric = 'dzersej'; } else state.p.bok = 0; if (st.id.indexOf('to_tshirt') !== 0 && state.style.indexOf('to_tshirt') === 0 && state.fabric === 'dzersej') state.fabric = 'bawelna'; const was = W.STYLES.find((s) => s.id === state.style); state.style = st.id; state.p.flare = st.flare || 0; state.p.dol = ''; if (st.dl) state.p.dl = st.dl; else if (was && was.dl && state.p.dl === was.dl) state.p.dl = 58; fillForm(); persist(); draw(true); }
   $('addP').addEventListener('click', () => {

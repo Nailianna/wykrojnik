@@ -422,19 +422,12 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
     <div class="row" style="margin-top:20px"><button class="primary" id="anSaveB">Zapisz jako projekt</button></div>
   </div>
 </div></div></div>
-<div id="libBox" hidden><div class="anBar"><b>Biblioteka konstrukcji</b><span style="flex:1"></span><button id="libAdd">Wczytaj plik biblioteki</button><button id="libX">Wróć do Wykrojnika</button></div><div class="anBody"><div class="anCol">
-  <p class="note" id="libEmpty">Biblioteka jest pusta. Wczytaj plik z konstrukcjami, a pojawią się tutaj i wśród fasonów w każdym projekcie.</p><input id="libFile" type="file" accept="application/json,.json" hidden>
-  <div id="libPair" hidden><div class="anDropZ"><div><b>Sukienka z dwóch konstrukcji</b><span>Wybierz górę i spódnicę. Sprawdzę, czy pasują do siebie w linii odcięcia.</span></div></div>
-    <div class="f2" style="max-width:520px"><span>Góra</span><select id="libPT" style="width:300px" aria-label="Góra sukienki"></select></div><div class="f2" style="max-width:520px"><span>Dół</span><select id="libPB" style="width:300px" aria-label="Dół sukienki"></select></div>
-    <div class="row" style="margin-top:10px;max-width:520px"><button class="primary" id="libPGo">Połącz w sukienkę</button></div></div>
-  <div id="libList"></div>
-</div></div></div>
 <div id="saveWarn" role="alert" hidden><span>Nie udało się zapisać zmian. Pobierz kopię, żeby ich nie stracić po zamknięciu.</span><button id="saveWarnB">Pobierz kopię</button></div>
 <div id="busy" role="status" aria-live="polite" hidden><i></i><span id="busyTx"></span><b id="busyTm"></b></div>
 <div id="emptyN" hidden style="position:fixed;left:50%;bottom:86px;transform:translateX(-50%);z-index:4;padding:10px 16px;border-radius:12px;background:var(--glass);border:1px solid var(--line);font-size:13.5px;pointer-events:none">Wybierz fason w panelu, a ubiorę w niego manekin.</div>
 <div id="home" hidden><div class="hwrap">
   <h1>Co dziś szyjemy?</h1>
-  <div class="hact"><button id="hNew"><b>Nowy projekt</b><span>Zacznij od fasonu i wymiarów modelki.</span></button><button id="hInsp"><b>Nowy z inspiracji</b><span>Wgraj zdjęcie, a dobiorę do niego wykrój.</span></button><button id="hPdf"><b>Nowy z pliku</b><span>Wgraj kupiony wykrój, a opiszę jego elementy.</span></button><button id="hLib"><b>Nowy z biblioteki</b><span>Zacznij od własnej konstrukcji przeliczonej na modelkę.</span></button><button id="hGlb"><b>Nowy z modelu 3D</b><span>Wgraj gotowy plik GLB, a pokażę go na manekinie.</span></button><input type="file" id="glbFile" accept=".glb,model/gltf-binary" hidden></div>
+  <div class="hact"><button id="hNew"><b>Nowy projekt</b><span>Zacznij od fasonu i wymiarów modelki.</span></button><button id="hInsp" hidden><b>Nowy z inspiracji</b><span>Wgraj zdjęcie, a dobiorę do niego wykrój.</span></button><button id="hPdf"><b>Nowy z pliku</b><span>Wgraj kupiony wykrój, a opiszę jego elementy.</span></button><button id="hGlb" hidden><b>Nowy z modelu 3D</b><span>Wgraj gotowy plik GLB, a pokażę go na manekinie.</span></button><input type="file" id="glbFile" accept=".glb,model/gltf-binary" hidden></div>
   <section id="hOpenS"><h3>W toku</h3><div class="hgrid" id="hOpen"></div></section>
   <section id="hDoneS"><h3>Gotowe wykroje</h3><div class="hgrid" id="hDone"></div></section>
   <div class="hcols"><section><h3>Modelki</h3><div id="hMod"></div></section><section><h3>Ostatnie inspiracje</h3><div id="hIn"></div></section></div>
@@ -523,19 +516,14 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
         <div id="inMoreBox" hidden><input id="inMore" maxlength="300" placeholder="Co poprawić? Na przykład: dekolt jest głębszy" style="margin-top:12px"><div class="row"><button id="inMoreGo">Popraw propozycję</button></div></div>
       </div>
       <div data-sec="fason">
-        <div class="seg" id="fTab"><button data-t="gory">Góry</button><button data-t="doly">Doły</button><button data-t="suk">Sukienki</button></div>
+        <div class="seg" id="fTab"><button data-t="gory">Góry</button><button data-t="doly">Doły</button></div>
         <div data-ft="gory"><div class="gal" id="galGo"></div></div>
         <div data-ft="doly"><div class="gal" id="galSk"></div></div>
         <div data-ft="suk"><div class="gal" id="galSu"></div></div>
-        <div id="impBox" hidden><h3 id="impTitle">Wykrój z pliku</h3><div class="f2" id="impSizeRow"><span>Rozmiar</span><select id="impSize" style="width:150px" aria-label="Rozmiar wykroju"></select></div><p class="note" id="impNote"></p><details id="impNotes" hidden><summary>Uwagi z analizy</summary><div id="impNotesB"></div></details>
-          <details id="libMatch" hidden><summary>Podobne konstrukcje w bibliotece</summary><div id="libMatchB"></div></details></div>
+        <div id="impBox" hidden><h3 id="impTitle">Wykrój z pliku</h3><div class="f2" id="impSizeRow"><span>Rozmiar</span><select id="impSize" style="width:150px" aria-label="Rozmiar wykroju"></select></div><p class="note" id="impNote"></p><details id="impNotes" hidden><summary>Uwagi z analizy</summary><div id="impNotesB"></div></details></div>
       </div>
       <div data-sec="wymiary">
         <p class="note" id="dopEmpty" hidden>Najpierw wybierz fason, a pokażę tu wszystko, co da się w nim dopasować.</p>
-        <div id="libPanel" hidden><h3>Z czego składa się projekt</h3><div id="libCtl"><div class="f2"><span>Góra</span><select id="libTop" style="width:190px" aria-label="Góra z biblioteki"></select></div><div class="f2"><span>Dół</span><select id="libBot" style="width:190px" aria-label="Dół z biblioteki"></select></div>
-            <div class="f2" id="libDyRow"><span>Odcięcie niżej niż talia o (cm)</span><input id="libDy" inputmode="decimal" style="width:80px"></div><div class="f2" id="libDlRow"><span>Dół dłuższy o (cm)</span><input id="libDl" inputmode="decimal" style="width:80px"></div>
-            <div id="libJoin" hidden><p class="warn" id="libJoinT" style="margin-bottom:6px"></p><select id="libMode" aria-label="Sposób dopasowania linii odcięcia"></select></div>
-            <ul id="libRep" class="libRep"></ul></div></div>
         <div id="dopImp" hidden>
           <h3>Długość</h3>
           <div id="impLenBox">

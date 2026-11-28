@@ -1,7 +1,7 @@
   // ---------- rysunek 2D ----------
   // wykrój wczytany z PDF: gotowe elementy jednego rozmiaru zamiast konstrukcji z wymiarów
   function impDraft(imp, m) {
-    const lr = imp && imp.lib ? libSync(imp, m) : null; // projekt z biblioteki: elementy przeliczone na bieżące wymiary modelki
+    const lr = /** @type {any} */ (null); // projekt z biblioteki: elementy przeliczone na bieżące wymiary modelki
     const adjK = JSON.stringify((imp && imp.adj) || {}) + [m.og, m.ot, m.ob, m.wzrost].join(',') + (lr ? lr.key : ''), planAx = lr ? null : impAxes(imp, m); if (!impAdjC || impAdjC.imp !== imp || impAdjC.k !== adjK) impAdjC = { imp, k: adjK, r: impAdj(imp, planAx) };
     const pcs = impAdjC.r.pieces, an = imp.an || null, sa = an && an.sa, bd = an && an.body;
     // opisy cięcia, zapas i wymiary ciała dla rozmiaru pochodzą z analizy arkusza
@@ -55,7 +55,7 @@
       $('impLenN').textContent = !r.body && !r.sleeve ? (state.imp.an ? 'W tym wykroju nie umiem wskazać przodu, tyłu ani rękawa, więc długości tu nie zmienisz.' : 'Długość zmienisz po analizie wykroju, bo muszę wiedzieć, który element jest przodem, tyłem i rękawem.')
         : r.body && r.body.plan ? 'Wydłużam i skracam elementy sięgające dołu, w połowie ich długości, więc dół i jego szerokość zostają jak w oryginale. Elementy doszyte luzem popraw ręcznie.' : (r.body && r.body.loose ? 'W tym fasonie nie ma pachy, więc wydłużam i skracam w dolnej połowie elementu. Sprawdź na rysunku, czy zmienił się właściwy koniec.' : 'Wydłużam i skracam pod pachą, więc dół i jego szerokość zostają jak w oryginale.') + (!r.body ? ' Przodu i tyłu nie rozpoznałam, zmienisz tylko rękaw.' : '') + ' Podszewkę i odszycia popraw ręcznie.';
     }
-    libFill(); libMatchFill(); $('impNote').textContent = state.imp.lib ? 'Ten projekt powstał z biblioteki konstrukcji. Wczytaj ją w „Nowy z biblioteki”, żeby zmieniać fason i dopasowanie.' : state.imp.raster ? 'Ten wykrój pochodzi z obrazu, więc ma jeden rozmiar: zewnętrzny obrys każdego elementu.' : sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
+    $('impNote').textContent = state.imp.lib ? 'Ten projekt powstał z biblioteki konstrukcji. Wczytaj ją w „Nowy z biblioteki”, żeby zmieniać fason i dopasowanie.' : state.imp.raster ? 'Ten wykrój pochodzi z obrazu, więc ma jeden rozmiar: zewnętrzny obrys każdego elementu.' : sel.disabled ? 'Ten plik zawiera jeden rozmiar.' : impCache[state.proj] ? '' : 'Żeby zmienić rozmiar, wczytaj plik jeszcze raz. Zapisuję tylko wybrany rozmiar.';
   }
   let model = null, vb = null, rafD = 0;
   function drawSoon() { if (rafD) return; rafD = requestAnimationFrame(() => { rafD = 0; draw(); }); }
