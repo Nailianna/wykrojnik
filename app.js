@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.99.0', n: 113, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.99.1', n: 114, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
   const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
   window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
@@ -35,7 +35,7 @@
   const PK = ['ref', 'imp', 'style', 'p', 'active', 'fabric', 'color', 'color2', 'print', 'pscale', 'layers', 'printImg', 'sel', 'paper', 'pack', 'fabW'];
   const snap = () => { const o = {}; for (const k of PK) o[k] = state[k]; return JSON.parse(JSON.stringify(o)); };
   const projCur = () => state.projects.find((x) => x.id === state.proj);
-  let droppedN = 0; const BLENDER_ON = false;
+  let droppedN = 0; const BLENDER_ON = false, CMD_ON = false, HOME_MORE = false;
   function ensureProjects() {
     if (!Array.isArray(state.projects)) state.projects = [];
     state.projects = state.projects.filter((x) => x && x.id && x.snap && x.snap.p);
@@ -277,7 +277,8 @@
   // ---------- projekty ----------
   function fillProj() {
     const box = $('prList'); box.textContent = '';
-    state.projects.slice().reverse().forEach((pr) => {
+    const shown = state.projects.filter((x) => !x.tmp); $('prNone').hidden = shown.length > 0; $('prEdit').hidden = !shown.length || !!projCur().tmp;
+    shown.slice().reverse().forEach((pr) => {
       const b = document.createElement('button'), a = document.createElement('b'), sm = document.createElement('small'); b.className = 'pj';
       const st = W.STYLES.find((x) => x.id === pr.snap.style), mo = state.profiles.find((x) => x.id === pr.snap.active);
       a.textContent = pr.name || 'Bez nazwy'; sm.textContent = (st ? GRP[st.group] + st.name.toLowerCase().replace(/ \(.*\)/, '') : '') + (mo ? ' · ' + (mo.name || 'Bez imienia') : '');
@@ -300,7 +301,7 @@
     fillForm(); persist(true); draw(true);
   }
   function addProj(name, sn) {
-    persist(true); const id = 'j' + Date.now(); state.projects.push({ id, name, updated: Date.now(), snap: sn }); state.proj = id; loadSnap(sn); histReset();
+    persist(true); state.projects = state.projects.filter((x) => !x.tmp); const id = 'j' + Date.now(); state.projects.push({ id, name, updated: Date.now(), snap: sn }); state.proj = id; loadSnap(sn); histReset();
     fillForm(); persist(true); draw(true); $('prName').focus(); $('prName').select();
   }
   // import wykrojów: pracownia Przymiarka otwierana w oknie aplikacji, z wymiarami bieżącej modelki
@@ -526,7 +527,7 @@
     $('emptyN').hidden = !d.empty || !$('home').hidden || !!state.ref; cardUi();
     if (state.view === '3d' && d.imported && !d.sewn && !d.approx) { say(d.sewErr || 'Tego wykroju nie umiem pokazać w 3D.', true); setView('2d'); return; } // po zmianie ustawień wykrój przestał się zszywać: zamiast przypadkowej bryły wraca rysunek
     { const mb = $('miniS').closest('.float') || $('miniS').parentElement; if (mb) mb.style.display = d.empty ? 'none' : ''; }
-    $('sub').textContent = (projCur().name || 'Bez nazwy') + ' · ' + d.title + ' · ' + (cur().name || 'Bez imienia');
+    $('sub').textContent = '';
     if (state.view === '3d') {
       $('miniS').innerHTML = `<svg viewBox="0 0 ${lay.w} ${lay.h}" aria-hidden="true">` + lay.prims.filter((q) => q.t === 'poly' && q.s === 'cut').map((q) => `<path d="M${q.pts.map((a) => a[0].toFixed(1) + ' ' + a[1].toFixed(1)).join('L')}Z"/>`).join('') + '</svg>';
       render3d(refit);
@@ -619,7 +620,7 @@
   function layoutUi() {
     const refOff = state.ref ? ['fason', 'wymiary', 'druk'] : []; if (refOff.includes(state.panel)) state.panel = '';
     document.querySelectorAll('nav [data-panel]').forEach((b) => (/** @type {HTMLElement} */ (b).hidden = refOff.includes(/** @type {HTMLElement} */ (b).dataset.panel)));
-    $('panel').toggleAttribute('hidden', !state.panel);
+    $('panel').toggleAttribute('hidden', !state.panel); document.body.dataset.panel = state.panel || ''; // w Projektach widać samą listę, bez wykroju i podglądu
     if (state.panel && !PT[state.panel]) state.panel = 'druk'; // starsze zapisy: Warstwy i Zapasy na szwy są teraz w jednym panelu
     if (state.panel) { $('panelT').textContent = PT[state.panel]; document.querySelectorAll('[data-sec]').forEach((el) => (el.hidden = el.dataset.sec !== state.panel)); }
     document.querySelectorAll('nav [data-panel]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.panel === state.panel));
@@ -2703,7 +2704,7 @@
     else if (e.key === 'Enter') { e.preventDefault(); cmdRun(cmdSel); }
     else if (e.key === 'Escape') { e.preventDefault(); cmdClose(); }
   });
-  document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if ($('cmd').hidden) cmdOpen(); else cmdClose(); } });
+  document.addEventListener('keydown', (e) => { if (CMD_ON && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if ($('cmd').hidden) cmdOpen(); else cmdClose(); } });
 
   // ---------- pulpit: projekty w toku i gotowe, modelki, ostatnie inspiracje ----------
   function hashStr(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return h; }
@@ -2731,7 +2732,7 @@
     instFill();
     $('hFoot').textContent = 'Wykrojnik ' + BUILD.v + ' (build ' + BUILD.n + '), ' + BUILD.date;
     const el = (tag, txt, cls) => { const e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; };
-    const list = state.projects.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)), done = list.filter(projDone), open = list.filter((x) => !projDone(x));
+    const list = state.projects.filter((x) => !x.tmp).sort((a, b) => (b.updated || 0) - (a.updated || 0)), done = list.filter(projDone), open = list.filter((x) => !projDone(x));
     const card = (pr) => {
       const w = el('div', null, 'hcard'), b = el('button', null, 'hgo'), th = el('div', null, 'hth'), body = el('div', null, 'hb'), t = projThumb(pr.snap);
       if (t && pr.thumb && pr.thumbKey === pr.key && String(pr.thumb).indexOf('data:image/') === 0) { const im = document.createElement('img'); im.src = pr.thumb; im.alt = ''; th.append(im); }
@@ -2739,23 +2740,25 @@
       body.append(el('b', pr.name || 'Bez nazwy'), el('small', t ? t.title + ' · ' + t.model : ''), el('small', projDone(pr) ? 'PDF zapisany ' + ago(pr.exported) : 'Zmieniany ' + ago(pr.updated)));
       body.append(projDone(pr) ? el('span', 'Gotowy do szycia', 'hchip ok') : pr.exported ? el('span', 'Zmieniony po zapisie PDF', 'hchip ch') : el('span', 'W toku', 'hchip'));
       b.append(th, body); b.addEventListener('click', () => { if (pr.id !== state.proj) openProj(pr.id); homeShow(false); }); w.append(b);
-      if (state.projects.length > 1) {
+      {
         const x = el('button', 'Usuń', 'hdel');
         x.addEventListener('click', () => { if (!x.classList.contains('sure')) { x.classList.add('sure'); x.textContent = 'Na pewno usunąć?'; setTimeout(() => { x.classList.remove('sure'); x.textContent = 'Usuń'; }, 3000); return; } delProj(pr.id); });
         w.append(x);
       }
       return w;
     };
-    $('hOpen').textContent = ''; open.forEach((pr) => $('hOpen').append(card(pr))); $('hOpenS').hidden = !open.length;
+    $('hOpen').textContent = ''; open.forEach((pr) => $('hOpen').append(card(pr))); $('hOpenS').hidden = false; $('hEmpty').hidden = open.length > 0;
     $('hDone').textContent = ''; done.forEach((pr) => $('hDone').append(card(pr))); $('hDoneS').hidden = !done.length;
+    if (!HOME_MORE) return; // pulpit pokazuje tylko projekty; modelki są w swoim panelu, inspiracje wrócą razem z funkcją
     $('hMod').textContent = ''; for (const mo of state.profiles) { const b = el('button'); b.append(el('b', mo.name || 'Bez imienia'), el('small', [mo.og, mo.ot, mo.ob].map((v) => f1(v)).join(' / ') + (mo.wzrost ? ' · ' + Math.round(mo.wzrost) + ' cm' : ''))); b.addEventListener('click', () => { state.active = mo.id; fillForm(); persist(); homeShow(false); goPanel('modelka'); }); $('hMod').append(b); }
     $('hIn').textContent = ''; const hi = (state.inspH || []).filter(inspOk).slice(0, 5);
     if (!hi.length) $('hIn').append(el('p', 'Tu pojawią się zdjęcia, z których dobierałaś wykrój.', 'hempty'));
     for (const e of hi) { const b = el('button'), im = document.createElement('img'); im.src = e.img; im.alt = ''; b.setAttribute('aria-label', 'Nowy projekt z tej inspiracji'); b.title = 'Nowy projekt z tej inspiracji'; b.append(im); b.addEventListener('click', () => newFromInsp(e)); $('hIn').append(b); }
   }
   function delProj(id) {
-    if (state.projects.length < 2) return;
     const wasCur = id === state.proj; state.projects = state.projects.filter((x) => x.id !== id); refDrop(id);
+    if (!state.projects.length) { // usunięty ostatni projekt: zostaje niewidoczny, pusty szkic, a pulpit pokazuje pusty stan
+      const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.ref = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {}; const nid = 'j' + Date.now(); state.projects = [{ id: nid, name: 'Nowy projekt', updated: Date.now(), snap: sn, tmp: true }]; state.proj = nid; loadSnap(sn); histReset(); fillForm(); persist(true); draw(true); homeShow(true); homeFill(); return; }
     if (wasCur) { state.proj = state.projects[state.projects.length - 1].id; loadSnap(projCur().snap); histReset(); fillForm(); persist(true); draw(true); } else { persist(true); fillProj(); }
     homeFill();
   }
@@ -2783,7 +2786,9 @@
   $('hNew').addEventListener('click', () => { homeShow(false); newProj(); if (state.view !== '3d') setView('3d'); goPanel('fason'); draw(true); });
   $('hInsp').addEventListener('click', () => newFromInsp(null));
   $('prHome').addEventListener('click', () => homeShow(true));
-  $('logoB').addEventListener('click', () => homeShow($('home').hidden));
+  $('navHome').addEventListener('click', () => homeShow(true));
+  $('hBk').addEventListener('click', () => $('bkIn').click());
+  $('prSave').addEventListener('click', () => { const pr = projCur(); if (pr) pr.tmp = false; persist(true); fillProj(); say(saveBad ? 'Nie udało się zapisać projektu.' : 'Zapisałam projekt „' + (projCur().name || 'Bez nazwy') + '”.'); });
   // ekran startowy: znika po niecałych trzech sekundach albo po kliknięciu
   (function () {
     const sp = $('splash'); if (!sp) return; const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -3249,7 +3254,7 @@
     g.globalAlpha = 1; g.fillStyle = '#fff'; g.beginPath(); g.arc(50, 14, 3.2, 0, 7); g.fill();
     return c.toDataURL('image/png');
   }
-  function showStore() { $('store').textContent = fileOk ? 'Projekty i modelki zapisują się same w Dokumenty/Wykrojnik.' : desktop && desktop.fs ? 'Projekty i modelki zapisują się teraz w pamięci aplikacji. Po zgodzie na pliki trafią do Dokumenty/Wykrojnik.' : 'Projekty i modelki zapisują się same w tej przeglądarce. Po zainstalowaniu aplikacji trafią do Dokumenty/Wykrojnik.'; }
+  function showStore() { $('store').textContent = fileOk ? 'Projekty i modelki zapisują się same na tym komputerze, w folderze Dokumenty, w podfolderze Wykrojnik.' : desktop && desktop.fs ? 'Projekty i modelki zapisują się same w pamięci aplikacji. Żeby mieć je także jako plik na dysku, włącz zapis w folderze Dokumenty.' : 'Projekty i modelki zapisują się same w tej przeglądarce.'; }
   // zapis w Dokumentach: po zgodzie na pliki. Nowsza z dwóch kopii (plik albo pamięć aplikacji) wygrywa, żeby zgoda włączona po czasie nie cofnęła pracy.
   async function fileOn(late) {
     fileOk = true; $('permRow').hidden = true;
@@ -3260,7 +3265,7 @@
   }
   async function boot() {
     const back = uiResume(); loadPrintImg(); histReset();
-    fillForm(); layoutUi(); setView(state.view === '3d' ? '3d' : '2d'); showStore(); uiReady = true; try { indexedDB.deleteDatabase('wykrojnik-biblioteka'); } catch (e) { /* nic do usunięcia */ } if (droppedN) { persist(true); say('Zostawiłam tylko podstawowe fasony. Z listy zniknęły projekty z wyłączonych fasonów: ' + droppedN + '.', true); } homeShow(!back);
+    fillForm(); layoutUi(); setView(state.view === '3d' ? '3d' : '2d'); showStore(); uiReady = true; if (projCur() && projCur().tmp) homeShow(true); try { indexedDB.deleteDatabase('wykrojnik-biblioteka'); } catch (e) { /* nic do usunięcia */ } if (droppedN) { persist(true); say('Zostawiłam tylko podstawowe fasony. Z listy zniknęły projekty z wyłączonych fasonów: ' + droppedN + '.', true); } homeShow(!back);
     if (!window.claude || !window.claude.use) { blInit(); return; }
     claude.use('downloads').then((d) => (downloads = d)).catch(() => {});
     claude.use('db').then((d) => { if (d) { dbRef = d; wishPull(); } }).catch(() => {});

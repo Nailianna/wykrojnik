@@ -8,7 +8,7 @@
     g.globalAlpha = 1; g.fillStyle = '#fff'; g.beginPath(); g.arc(50, 14, 3.2, 0, 7); g.fill();
     return c.toDataURL('image/png');
   }
-  function showStore() { $('store').textContent = fileOk ? 'Projekty i modelki zapisują się same w Dokumenty/Wykrojnik.' : desktop && desktop.fs ? 'Projekty i modelki zapisują się teraz w pamięci aplikacji. Po zgodzie na pliki trafią do Dokumenty/Wykrojnik.' : 'Projekty i modelki zapisują się same w tej przeglądarce. Po zainstalowaniu aplikacji trafią do Dokumenty/Wykrojnik.'; }
+  function showStore() { $('store').textContent = fileOk ? 'Projekty i modelki zapisują się same na tym komputerze, w folderze Dokumenty, w podfolderze Wykrojnik.' : desktop && desktop.fs ? 'Projekty i modelki zapisują się same w pamięci aplikacji. Żeby mieć je także jako plik na dysku, włącz zapis w folderze Dokumenty.' : 'Projekty i modelki zapisują się same w tej przeglądarce.'; }
   // zapis w Dokumentach: po zgodzie na pliki. Nowsza z dwóch kopii (plik albo pamięć aplikacji) wygrywa, żeby zgoda włączona po czasie nie cofnęła pracy.
   async function fileOn(late) {
     fileOk = true; $('permRow').hidden = true;
@@ -19,7 +19,7 @@
   }
   async function boot() {
     const back = uiResume(); loadPrintImg(); histReset();
-    fillForm(); layoutUi(); setView(state.view === '3d' ? '3d' : '2d'); showStore(); uiReady = true; try { indexedDB.deleteDatabase('wykrojnik-biblioteka'); } catch (e) { /* nic do usunięcia */ } if (droppedN) { persist(true); say('Zostawiłam tylko podstawowe fasony. Z listy zniknęły projekty z wyłączonych fasonów: ' + droppedN + '.', true); } homeShow(!back);
+    fillForm(); layoutUi(); setView(state.view === '3d' ? '3d' : '2d'); showStore(); uiReady = true; if (projCur() && projCur().tmp) homeShow(true); try { indexedDB.deleteDatabase('wykrojnik-biblioteka'); } catch (e) { /* nic do usunięcia */ } if (droppedN) { persist(true); say('Zostawiłam tylko podstawowe fasony. Z listy zniknęły projekty z wyłączonych fasonów: ' + droppedN + '.', true); } homeShow(!back);
     if (!window.claude || !window.claude.use) { blInit(); return; }
     claude.use('downloads').then((d) => (downloads = d)).catch(() => {});
     claude.use('db').then((d) => { if (d) { dbRef = d; wishPull(); } }).catch(() => {});

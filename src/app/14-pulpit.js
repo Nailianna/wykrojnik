@@ -24,7 +24,7 @@
     instFill();
     $('hFoot').textContent = 'Wykrojnik ' + BUILD.v + ' (build ' + BUILD.n + '), ' + BUILD.date;
     const el = (tag, txt, cls) => { const e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; };
-    const list = state.projects.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)), done = list.filter(projDone), open = list.filter((x) => !projDone(x));
+    const list = state.projects.filter((x) => !x.tmp).sort((a, b) => (b.updated || 0) - (a.updated || 0)), done = list.filter(projDone), open = list.filter((x) => !projDone(x));
     const card = (pr) => {
       const w = el('div', null, 'hcard'), b = el('button', null, 'hgo'), th = el('div', null, 'hth'), body = el('div', null, 'hb'), t = projThumb(pr.snap);
       if (t && pr.thumb && pr.thumbKey === pr.key && String(pr.thumb).indexOf('data:image/') === 0) { const im = document.createElement('img'); im.src = pr.thumb; im.alt = ''; th.append(im); }
@@ -32,23 +32,25 @@
       body.append(el('b', pr.name || 'Bez nazwy'), el('small', t ? t.title + ' · ' + t.model : ''), el('small', projDone(pr) ? 'PDF zapisany ' + ago(pr.exported) : 'Zmieniany ' + ago(pr.updated)));
       body.append(projDone(pr) ? el('span', 'Gotowy do szycia', 'hchip ok') : pr.exported ? el('span', 'Zmieniony po zapisie PDF', 'hchip ch') : el('span', 'W toku', 'hchip'));
       b.append(th, body); b.addEventListener('click', () => { if (pr.id !== state.proj) openProj(pr.id); homeShow(false); }); w.append(b);
-      if (state.projects.length > 1) {
+      {
         const x = el('button', 'Usuń', 'hdel');
         x.addEventListener('click', () => { if (!x.classList.contains('sure')) { x.classList.add('sure'); x.textContent = 'Na pewno usunąć?'; setTimeout(() => { x.classList.remove('sure'); x.textContent = 'Usuń'; }, 3000); return; } delProj(pr.id); });
         w.append(x);
       }
       return w;
     };
-    $('hOpen').textContent = ''; open.forEach((pr) => $('hOpen').append(card(pr))); $('hOpenS').hidden = !open.length;
+    $('hOpen').textContent = ''; open.forEach((pr) => $('hOpen').append(card(pr))); $('hOpenS').hidden = false; $('hEmpty').hidden = open.length > 0;
     $('hDone').textContent = ''; done.forEach((pr) => $('hDone').append(card(pr))); $('hDoneS').hidden = !done.length;
+    if (!HOME_MORE) return; // pulpit pokazuje tylko projekty; modelki są w swoim panelu, inspiracje wrócą razem z funkcją
     $('hMod').textContent = ''; for (const mo of state.profiles) { const b = el('button'); b.append(el('b', mo.name || 'Bez imienia'), el('small', [mo.og, mo.ot, mo.ob].map((v) => f1(v)).join(' / ') + (mo.wzrost ? ' · ' + Math.round(mo.wzrost) + ' cm' : ''))); b.addEventListener('click', () => { state.active = mo.id; fillForm(); persist(); homeShow(false); goPanel('modelka'); }); $('hMod').append(b); }
     $('hIn').textContent = ''; const hi = (state.inspH || []).filter(inspOk).slice(0, 5);
     if (!hi.length) $('hIn').append(el('p', 'Tu pojawią się zdjęcia, z których dobierałaś wykrój.', 'hempty'));
     for (const e of hi) { const b = el('button'), im = document.createElement('img'); im.src = e.img; im.alt = ''; b.setAttribute('aria-label', 'Nowy projekt z tej inspiracji'); b.title = 'Nowy projekt z tej inspiracji'; b.append(im); b.addEventListener('click', () => newFromInsp(e)); $('hIn').append(b); }
   }
   function delProj(id) {
-    if (state.projects.length < 2) return;
     const wasCur = id === state.proj; state.projects = state.projects.filter((x) => x.id !== id); refDrop(id);
+    if (!state.projects.length) { // usunięty ostatni projekt: zostaje niewidoczny, pusty szkic, a pulpit pokazuje pusty stan
+      const sn = snap(); sn.style = 'pusty'; sn.imp = null; sn.ref = null; sn.p = JSON.parse(JSON.stringify(DEF_P)); sn.layers = [{ role: 'wierzch' }]; sn.sel = {}; const nid = 'j' + Date.now(); state.projects = [{ id: nid, name: 'Nowy projekt', updated: Date.now(), snap: sn, tmp: true }]; state.proj = nid; loadSnap(sn); histReset(); fillForm(); persist(true); draw(true); homeShow(true); homeFill(); return; }
     if (wasCur) { state.proj = state.projects[state.projects.length - 1].id; loadSnap(projCur().snap); histReset(); fillForm(); persist(true); draw(true); } else { persist(true); fillProj(); }
     homeFill();
   }
@@ -76,7 +78,9 @@
   $('hNew').addEventListener('click', () => { homeShow(false); newProj(); if (state.view !== '3d') setView('3d'); goPanel('fason'); draw(true); });
   $('hInsp').addEventListener('click', () => newFromInsp(null));
   $('prHome').addEventListener('click', () => homeShow(true));
-  $('logoB').addEventListener('click', () => homeShow($('home').hidden));
+  $('navHome').addEventListener('click', () => homeShow(true));
+  $('hBk').addEventListener('click', () => $('bkIn').click());
+  $('prSave').addEventListener('click', () => { const pr = projCur(); if (pr) pr.tmp = false; persist(true); fillProj(); say(saveBad ? 'Nie udało się zapisać projektu.' : 'Zapisałam projekt „' + (projCur().name || 'Bez nazwy') + '”.'); });
   // ekran startowy: znika po niecałych trzech sekundach albo po kliknięciu
   (function () {
     const sp = $('splash'); if (!sp) return; const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

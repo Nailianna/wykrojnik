@@ -1,7 +1,8 @@
   // ---------- projekty ----------
   function fillProj() {
     const box = $('prList'); box.textContent = '';
-    state.projects.slice().reverse().forEach((pr) => {
+    const shown = state.projects.filter((x) => !x.tmp); $('prNone').hidden = shown.length > 0; $('prEdit').hidden = !shown.length || !!projCur().tmp;
+    shown.slice().reverse().forEach((pr) => {
       const b = document.createElement('button'), a = document.createElement('b'), sm = document.createElement('small'); b.className = 'pj';
       const st = W.STYLES.find((x) => x.id === pr.snap.style), mo = state.profiles.find((x) => x.id === pr.snap.active);
       a.textContent = pr.name || 'Bez nazwy'; sm.textContent = (st ? GRP[st.group] + st.name.toLowerCase().replace(/ \(.*\)/, '') : '') + (mo ? ' · ' + (mo.name || 'Bez imienia') : '');
@@ -24,7 +25,7 @@
     fillForm(); persist(true); draw(true);
   }
   function addProj(name, sn) {
-    persist(true); const id = 'j' + Date.now(); state.projects.push({ id, name, updated: Date.now(), snap: sn }); state.proj = id; loadSnap(sn); histReset();
+    persist(true); state.projects = state.projects.filter((x) => !x.tmp); const id = 'j' + Date.now(); state.projects.push({ id, name, updated: Date.now(), snap: sn }); state.proj = id; loadSnap(sn); histReset();
     fillForm(); persist(true); draw(true); $('prName').focus(); $('prName').select();
   }
   // import wykrojów: pracownia Przymiarka otwierana w oknie aplikacji, z wymiarami bieżącej modelki

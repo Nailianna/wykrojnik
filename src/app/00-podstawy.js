@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.99.0', n: 113, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.99.1', n: 114, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
   const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
   window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
@@ -35,7 +35,7 @@
   const PK = ['ref', 'imp', 'style', 'p', 'active', 'fabric', 'color', 'color2', 'print', 'pscale', 'layers', 'printImg', 'sel', 'paper', 'pack', 'fabW'];
   const snap = () => { const o = {}; for (const k of PK) o[k] = state[k]; return JSON.parse(JSON.stringify(o)); };
   const projCur = () => state.projects.find((x) => x.id === state.proj);
-  let droppedN = 0; const BLENDER_ON = false;
+  let droppedN = 0; const BLENDER_ON = false, CMD_ON = false, HOME_MORE = false;
   function ensureProjects() {
     if (!Array.isArray(state.projects)) state.projects = [];
     state.projects = state.projects.filter((x) => x && x.id && x.snap && x.snap.p);

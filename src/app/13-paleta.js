@@ -37,5 +37,5 @@
     else if (e.key === 'Enter') { e.preventDefault(); cmdRun(cmdSel); }
     else if (e.key === 'Escape') { e.preventDefault(); cmdClose(); }
   });
-  document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if ($('cmd').hidden) cmdOpen(); else cmdClose(); } });
+  document.addEventListener('keydown', (e) => { if (CMD_ON && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if ($('cmd').hidden) cmdOpen(); else cmdClose(); } });
 
