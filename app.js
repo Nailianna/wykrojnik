@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.99.6', n: 119, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.99.7', n: 120, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
   const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
   window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
@@ -223,6 +223,8 @@
     document.querySelectorAll('[data-pb]').forEach((c) => (c.checked = !!state.p[c.dataset.pb]));
     { // ściągacz pod biustem ma sens tylko w topie na ramiączkach; rozporek jest przełącznikiem z długością
       const sc = /** @type {HTMLElement} */ (document.querySelector('[data-pb=sciag]').closest('label')), okS = state.style === 'to_ramiaczka'; sc.hidden = !okS; if (!okS && state.p.sciag) state.p.sciag = false;
+      { const row = /** @type {HTMLElement} */ ($('kol').closest('.f2')), tee = state.style === 'to_tshirt' || state.style === 'to_tshirt_k'; if (state.style === 'to_ramiaczka') { row.hidden = true; if (state.p.kol && state.p.kol !== 'brak') state.p.kol = 'brak'; } // top na ramiączkach nie ma kołnierza; w T-shircie wybór to ściągacz albo półgolf
+        row.querySelector('span').textContent = tee ? 'Dekolt' : 'Kołnierz'; $('kol').querySelector('[data-k=brak]').textContent = tee ? 'Ściągacz' : 'Brak'; $('kol').querySelector('[data-k=stojka]').textContent = tee ? 'Półgolf' : 'Stójka'; }
       $('rozpOn').checked = state.p.rozp > 0; /** @type {HTMLElement} */ ($('p_rozp').closest('label')).hidden = !(state.p.rozp > 0) || $('rozpOn').closest('label').hidden; }
     { const kopOn = !!state.p.kop && fl.odcTop; $('kop').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', (b.dataset.w === '1') === kopOn)); $('kol').querySelectorAll('button').forEach((b) => (b.hidden = b.dataset.k === 'szal' ? !kopOn : b.dataset.k !== 'brak' && kopOn)); }
     $('rek').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.r === (state.p.rek || 'brak'))); $('mankT').checked = !!state.p.mank;
