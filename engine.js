@@ -1204,12 +1204,12 @@
 
   // ---------- zużycie tkaniny: półki wzdłuż długości, nitka prosta zachowana ----------
   function usage(pieces, width) {
-    const items = pieces.map((pc) => { const mt = /(\d+)\s*×/.exec(pc.cut || ''); return { w: pc.box.x1 - pc.box.x0, h: pc.box.y1 - pc.box.y0, cnt: mt ? +mt[1] : 1, fold: /złożenia/.test(pc.cut || ''), name: pc.name }; });
+    const items = pieces.map((pc) => { const mt = /(\d+)\s*×/.exec(pc.cut || ''); return { w: pc.box.x1 - pc.box.x0, h: pc.box.y1 - pc.box.y0, cnt: mt ? +mt[1] : 1, fold: /złożenia/.test(pc.cut || ''), name: pc.name, rect: /^dodatek-/.test(pc.id || '') }; });
     const run = (folded) => {
       const Wd = folded ? width / 2 : width, rects = [];
       for (const it of items) {
         const n = folded ? (it.fold ? it.cnt : Math.ceil(it.cnt / 2)) : it.cnt; let w = !folded && it.fold ? 2 * it.w : it.w, h = it.h;
-        if (w > Wd + 0.01 && h <= Wd && /KOŁ|KÓŁ|KOLA|FALBANA|WARSTWA/.test(it.name)) { const t = w; w = h; h = t; } // klosze można obrócić
+        if (w > Wd + 0.01 && h <= Wd && (it.rect || /KOŁ|KÓŁ|KOLA|FALBANA|WARSTWA/.test(it.name))) { const t = w; w = h; h = t; } // klosze i prostokątne dodatki (szarfa, pasek) można położyć wzdłuż beli
         for (let i = 0; i < n; i++) rects.push({ w, h });
       }
       if (rects.some((r) => r.w > Wd + 0.01)) return null;

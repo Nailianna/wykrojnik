@@ -92,6 +92,8 @@ h2{font-size:18px;font-weight:700;margin:0;letter-spacing:-.01em}
 h3{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--mute);margin:18px 0 8px}
 h3:first-child{margin-top:6px}
 #card{right:12px;top:12px;bottom:12px;width:324px;overflow:auto;padding-bottom:16px}#card .head{position:sticky;top:0;z-index:1;background:inherit}#seeN,#seeBox,#tSim,#tGrid,#tTiles,#tLab{display:none!important}footer .qk{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--mute)}footer .qk[hidden]{display:none}footer .qk select{padding:6px 10px;border-radius:10px}footer .qk input[type=color]{width:34px;height:28px;padding:0;border:0;background:none}
+#addP{white-space:nowrap;flex:1 1 auto}#delP{flex:0 0 auto;background:none;border:0;color:var(--mute);text-decoration:underline;padding:8px 6px}
+.tip{display:inline-grid;place-items:center;width:16px;height:16px;margin-left:6px;border-radius:50%;border:1px solid var(--mute);color:var(--mute);font-size:11px;line-height:1;cursor:help;position:relative;vertical-align:1px}.tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;left:-8px;top:22px;z-index:40;width:230px;padding:9px 11px;border-radius:10px;background:#0b1513;color:#f0ece1;font-size:12.5px;line-height:1.4;font-weight:400;text-align:left;box-shadow:0 8px 26px rgba(0,0,0,.4);white-space:normal}
 #kol [data-k=bebe],#kol [data-k=szal]{display:none}#sub{display:none}#rtTab{display:flex;width:100%}#rtTab button{flex:1}#panelF #next{width:100%}
 #card .body{padding:0 18px}
 #cardBtn{position:absolute;right:12px;top:12px;z-index:2;background:var(--surface);box-shadow:var(--shadow)}
@@ -589,7 +591,8 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
         <label class="f" data-if="flare"><span>Poszerzenie dołu na szwie</span><span class="num"><input id="p_flare" type="number" min="-6" max="30" step="0.5"></span></label>
           <div id="zakSl" data-if="zakl"></div>
         <label class="f" data-if="tren"><span>Tren z tyłu</span><span class="num"><input id="p_tren" type="number" min="0" max="80" step="1"></span></label>
-        <label class="f" data-if="rozp"><span>Rozporek z tyłu</span><span class="num"><input id="p_rozp" type="number" min="0" max="40" step="1"></span></label>
+        <label class="chk" data-if="rozp"><input type="checkbox" id="rozpOn">Rozporek z tyłu</label>
+        <label class="f" data-if="rozp"><span>Długość rozporka</span><span class="num"><input id="p_rozp" type="number" min="0" max="40" step="1"></span></label>
         </div>
         <div data-if="luz">
           <h3>Luz</h3>
@@ -633,7 +636,7 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
         <label class="f"><span>Wysokość bioder</span><span class="num"><input id="m_wb" type="number" min="14" max="30" step="0.5"></span></label>
         <label class="f"><span>Wzrost</span><span class="num"><input id="m_wzrost" type="number" min="140" max="205" step="1"></span></label>
         <details id="advBox">
-          <summary>Wymiary góry do sukienek <small id="advN" style="font-weight:400;color:var(--mute)"></small></summary>
+          <summary>Dokładniejsze wymiary góry <small id="advN" style="font-weight:400;color:var(--mute)"></small></summary>
           <p class="note">Puste pola liczę z obwodu biustu i wzrostu. Wpisz zmierzone, żeby góra leżała.</p>
           <div id="adv"></div>
         </details>

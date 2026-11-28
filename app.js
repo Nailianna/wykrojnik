@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.99.5', n: 118, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.99.6', n: 119, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
   const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
   window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
@@ -141,6 +141,10 @@
       else state.style = f === 2 ? 'su_2kola' : f === 1 ? 'su_kolo' : 'su_polkole';
       fillForm(); persist(); draw(true);
     }));
+    $('rozpOn').addEventListener('change', () => { state.p.rozp = $('rozpOn').checked ? 15 : 0; fillForm(); persist(); draw(true); });
+    { // krótkie objaśnienia przy polach, których nazwa sama nie wystarcza
+      const TIPS = { 'Wysokość bioder': 'Odległość w pionie od talii do najszerszego miejsca bioder. Zwykle 18 do 22 cm.', 'Podwinięcie dołu': 'Ile centymetrów tkaniny zawijasz pod spód na dole.', 'Układ ciasny': 'Elementy leżą bliżej siebie, więc wydruk ma mniej stron, ale trudniej je rozciąć.', 'Szerokość odszycia': 'Szerokość paska tkaniny, który wykańcza dekolt i pachy od środka.', 'Dekolt głębokość przód': 'Mierzona w dół od dołka między obojczykami.', 'Przy kolanie': 'Obwód spódnicy na wysokości kolan. Im mniejszy, tym krótszy krok.' };
+      document.querySelectorAll('label.f > span:first-child, .f2 > span:first-child, label.chk').forEach((sp) => { const t = TIPS[(sp.textContent || '').trim()]; if (!t) return; const q = mkEl('span'); q.className = 'tip'; q.tabIndex = 0; q.textContent = '?'; q.dataset.tip = t; q.setAttribute('aria-label', t); sp.appendChild(q); }); }
     document.querySelectorAll('[data-pb]').forEach((c) => c.addEventListener('change', () => { state.p[c.dataset.pb] = c.checked; fillForm(); persist(); draw(true); }));
     $('kop').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { state.p.kop = b.dataset.w === '1'; if (state.p.kop && (state.p.kol === 'stojka' || state.p.kol === 'bebe')) state.p.kol = 'brak'; if (!state.p.kop && state.p.kol === 'szal') state.p.kol = 'brak'; fillForm(); persist(); draw(true); }));
     $('rek').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { state.p.rek = b.dataset.r; state.p.rekL = ['krotki', '34', 'dlugi'].includes(b.dataset.r) ? rekDef(b.dataset.r) : 0; if (b.dataset.r !== 'brak') state.p.bok = 0; fillForm(); persist(); draw(true); }));
@@ -217,6 +221,9 @@
     }
     impFill(); // na końcu: wykrój z pliku chowa galerie fasonów, które blok wyżej właśnie pokazał
     document.querySelectorAll('[data-pb]').forEach((c) => (c.checked = !!state.p[c.dataset.pb]));
+    { // ściągacz pod biustem ma sens tylko w topie na ramiączkach; rozporek jest przełącznikiem z długością
+      const sc = /** @type {HTMLElement} */ (document.querySelector('[data-pb=sciag]').closest('label')), okS = state.style === 'to_ramiaczka'; sc.hidden = !okS; if (!okS && state.p.sciag) state.p.sciag = false;
+      $('rozpOn').checked = state.p.rozp > 0; /** @type {HTMLElement} */ ($('p_rozp').closest('label')).hidden = !(state.p.rozp > 0) || $('rozpOn').closest('label').hidden; }
     { const kopOn = !!state.p.kop && fl.odcTop; $('kop').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', (b.dataset.w === '1') === kopOn)); $('kol').querySelectorAll('button').forEach((b) => (b.hidden = b.dataset.k === 'szal' ? !kopOn : b.dataset.k !== 'brak' && kopOn)); }
     $('rek').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.r === (state.p.rek || 'brak'))); $('mankT').checked = !!state.p.mank;
     $('kol').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.k === (state.p.kol || 'brak'))); $('zp').value = state.p.zp || 'bok';
