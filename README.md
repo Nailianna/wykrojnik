@@ -84,7 +84,7 @@ Repozytorium nie zawiera żadnych wykrojów ani kluczy, wgrywasz własne.
 
 ## Katalog podstawowy (od wersji 0.99)
 
-Po audycie ścieżek użytkownika katalog został ograniczony do sześciu sprawdzonych fasonów: spódnica prosta, ołówkowa i z koła, top na cienkich ramiączkach, T-shirt z krótkim i z długim rękawem. Pozostałe fasony, biblioteka konstrukcji, „Nowy z inspiracji”, „Nowy z modelu 3D” i render w Blenderze są wyłączone i będą wracać pojedynczo, każdy po przejściu audytu. Stan sprzed ograniczenia jest pod tagiem `przed-resetem-0.98.2`.
+Po audycie ścieżek użytkownika katalog został ograniczony do sześciu sprawdzonych fasonów: spódnica prosta, ołówkowa i z koła, top na cienkich ramiączkach, T-shirt z krótkim i z długim rękawem. Pozostałe fasony, biblioteka konstrukcji, „Nowy z inspiracji”, „Nowy z modelu 3D” i render w Blenderze są wyłączone i będą wracać pojedynczo, każdy po przejściu audytu. Stan sprzed ograniczenia to commit `efcf598` (wersja 0.98.2).
 
 ## Render w Blenderze
 
