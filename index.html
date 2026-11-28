@@ -91,7 +91,8 @@ h2{font-size:18px;font-weight:700;margin:0;letter-spacing:-.01em}
 #card summary{font-size:13px;margin-bottom:8px}
 h3{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--mute);margin:18px 0 8px}
 h3:first-child{margin-top:6px}
-#card{right:12px;top:12px;bottom:12px;width:324px;overflow:auto;padding-bottom:16px}#card .head{position:sticky;top:0;z-index:1;background:inherit}#kol [data-k=bebe],#kol [data-k=szal]{display:none}#sub{display:none}#rtTab{display:flex;width:100%}#rtTab button{flex:1}#panelF #next{width:100%}
+#card{right:12px;top:12px;bottom:12px;width:324px;overflow:auto;padding-bottom:16px}#card .head{position:sticky;top:0;z-index:1;background:inherit}#seeN,#seeBox,#tSim,#tGrid,#tTiles,#tLab{display:none!important}footer .qk{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--mute)}footer .qk[hidden]{display:none}footer .qk select{padding:6px 10px;border-radius:10px}footer .qk input[type=color]{width:34px;height:28px;padding:0;border:0;background:none}
+#kol [data-k=bebe],#kol [data-k=szal]{display:none}#sub{display:none}#rtTab{display:flex;width:100%}#rtTab button{flex:1}#panelF #next{width:100%}
 #card .body{padding:0 18px}
 #cardBtn{position:absolute;right:12px;top:12px;z-index:2;background:var(--surface);box-shadow:var(--shadow)}
 
@@ -671,6 +672,7 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
 </section>
 <div id="cmd" hidden><div class="float cmdBox" role="dialog" aria-label="Paleta poleceń"><input id="cmdIn" placeholder="Co chcesz zrobić?" aria-label="Szukaj polecenia" autocomplete="off"><div id="cmdList" role="listbox"></div></div></div>
 <footer>
+  <label class="qk" data-v="3d" hidden><span>Tkanina</span><select id="fabQ" aria-label="Rodzaj tkaniny"></select></label><label class="qk" data-v="3d" hidden><span>Kolor</span><input id="colQ" type="color" aria-label="Kolor tkaniny"></label>
   <button id="tGrid" aria-pressed="false" data-v="2d">Siatka konstrukcyjna</button>
   <button id="tTiles" aria-pressed="true" data-v="2d">Strony A4</button>
   <button id="tLab" aria-pressed="true" data-v="2d">Opisy</button>

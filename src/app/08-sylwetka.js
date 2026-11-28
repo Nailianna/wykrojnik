@@ -15,8 +15,9 @@
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
       const scene = new T3.Scene(), camera = new T3.PerspectiveCamera(32, 1, 30, 1500);
       scene.add(new T3.HemisphereLight(0xfff4e6, 0x20242e, 0.95));
-      const d1 = new T3.DirectionalLight(0xffffff, 0.75); d1.position.set(120, 200, 180); scene.add(d1);
-      const d2 = new T3.DirectionalLight(0x9fb4ff, 0.3); d2.position.set(-160, 60, -120); scene.add(d2);
+      // światła są przypięte do kamery: przy obracaniu modelu oświetlenie zostaje po tej samej stronie ekranu
+      const d1 = new T3.DirectionalLight(0xffffff, 0.75); d1.position.set(190, 170, 20); camera.add(d1);
+      const d2 = new T3.DirectionalLight(0x9fb4ff, 0.3); d2.position.set(-220, -30, -60); camera.add(d2); scene.add(camera);
       g3 = { canvas, renderer, scene, camera, group: null, mid: 0 };
       let dr = null;
       canvas.addEventListener('pointerdown', (e) => { dr = { x: e.clientX, y: e.clientY, yaw: cam.yaw, pitch: cam.pitch }; canvas.setPointerCapture(e.pointerId); canvas.classList.add('drag'); });

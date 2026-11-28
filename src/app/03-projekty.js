@@ -112,8 +112,9 @@
     if (gone.std) return; state.profiles = state.profiles.filter((x) => x.id !== gone.id); state.active = (state.profiles.find((x) => !x.std) || state.profiles.find((x) => x.id === 'std38')).id;
     fillForm(); persist(); draw(true); say('Usunęłam modelkę „' + (gone.name || 'bez imienia') + '”. Ten projekt liczę teraz na wymiary modelki „' + (cur().name || 'bez imienia') + '”.', true);
   });
-  function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(k === 'tiles'); }); $(id).setAttribute('aria-pressed', state[k]); }
-  toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); $('tFig').addEventListener('click', () => { state.figure = !state.figure; $('tFig').setAttribute('aria-pressed', state.figure); persist(); draw(true); }); $('tFig').setAttribute('aria-pressed', state.figure);
+  function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(true); }); $(id).setAttribute('aria-pressed', state[k]); }
+  toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); const figLab = () => { $('tFig').textContent = state.figure ? 'Pokaż manekin' : 'Pokaż sylwetkę'; $('tFig').setAttribute('aria-pressed', 'false'); }; $('tFig').addEventListener('click', () => { state.figure = !state.figure; figLab(); persist(); draw(true); }); figLab();
+  $('fabQ').addEventListener('change', () => { state.fabric = $('fabQ').value; persist(); fillFabricPanel(); draw(true); }); $('colQ').addEventListener('input', () => { $('colA').value = $('colQ').value; $('colA').dispatchEvent(new Event('input', { bubbles: true })); });
   function setView(v) {
     if (v === '3d' && state.style === 'import') {
       const d = model && model.d; // wczytany wykrój ma podgląd tylko jako zszyta tkanina na sylwetce
@@ -131,6 +132,7 @@
   $('v3d').addEventListener('click', () => setView('3d'));
   const P = window.WykrojPrints; let customImg = null, swT = 0;
   function fillFabricPanel() {
+    { const q = $('fabQ'); if (!q.options.length) for (const k in FAB) { const o = document.createElement('option'); o.value = k; o.textContent = FAB[k].name; q.appendChild(o); } q.value = state.fabric; $('colQ').value = state.color; $('tFig').textContent = state.figure ? 'Pokaż manekin' : 'Pokaż sylwetkę'; }
     $('fabC').textContent = '';
     for (const k in FAB) { const b = document.createElement('button'); b.textContent = FAB[k].name; b.setAttribute('aria-pressed', k === state.fabric); b.addEventListener('click', () => { state.fabric = k; persist(); fillFabricPanel(); draw(); }); $('fabC').appendChild(b); }
     $('colA').value = state.color; $('colB').value = state.color2; $('pscale').value = state.pscale; $('o_pscale').textContent = state.pscale + '%';

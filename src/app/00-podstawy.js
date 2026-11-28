@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.99.3', n: 116, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.99.4', n: 117, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
   const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
   window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
@@ -39,7 +39,7 @@
   function ensureStd() { const own = (state.profiles || []).filter((x) => x && !x.std && String(x.id).indexOf('std') !== 0 && !(x.id === 'p2' && x.name === 'Rozmiar 38' && x.og === 88 && x.ot === 68)); state.profiles = STD.map((x) => JSON.parse(JSON.stringify(x))).concat(own); if (!state.profiles.some((x) => x.id === state.active)) state.active = (own[0] || state.profiles[0]).id; for (const q of state.projects || []) if (q.snap && !state.profiles.some((x) => x.id === q.snap.active)) q.snap.active = 'std38'; }
   let droppedN = 0; const BLENDER_ON = false, CMD_ON = false, HOME_MORE = false;
   function ensureProjects() {
-    ensureStd();
+    ensureStd(); state.sim = true; state.grid = true; state.tiles = true; state.labels = true; // symulacja, siatka, strony i opisy są zawsze włączone
     if (!Array.isArray(state.projects)) state.projects = [];
     state.projects = state.projects.filter((x) => x && x.id && x.snap && x.snap.p);
     { // projekty z wyłączonych fasonów, z biblioteki, z inspiracji bez fasonu i z modelu 3D znikają z listy; ich kopia zostaje w pamięci przeglądarki

@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.99.3', n: 116, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.99.4', n: 117, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
   const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
   window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
@@ -39,7 +39,7 @@
   function ensureStd() { const own = (state.profiles || []).filter((x) => x && !x.std && String(x.id).indexOf('std') !== 0 && !(x.id === 'p2' && x.name === 'Rozmiar 38' && x.og === 88 && x.ot === 68)); state.profiles = STD.map((x) => JSON.parse(JSON.stringify(x))).concat(own); if (!state.profiles.some((x) => x.id === state.active)) state.active = (own[0] || state.profiles[0]).id; for (const q of state.projects || []) if (q.snap && !state.profiles.some((x) => x.id === q.snap.active)) q.snap.active = 'std38'; }
   let droppedN = 0; const BLENDER_ON = false, CMD_ON = false, HOME_MORE = false;
   function ensureProjects() {
-    ensureStd();
+    ensureStd(); state.sim = true; state.grid = true; state.tiles = true; state.labels = true; // symulacja, siatka, strony i opisy są zawsze włączone
     if (!Array.isArray(state.projects)) state.projects = [];
     state.projects = state.projects.filter((x) => x && x.id && x.snap && x.snap.p);
     { // projekty z wyłączonych fasonów, z biblioteki, z inspiracji bez fasonu i z modelu 3D znikają z listy; ich kopia zostaje w pamięci przeglądarki
@@ -393,8 +393,9 @@
     if (gone.std) return; state.profiles = state.profiles.filter((x) => x.id !== gone.id); state.active = (state.profiles.find((x) => !x.std) || state.profiles.find((x) => x.id === 'std38')).id;
     fillForm(); persist(); draw(true); say('Usunęłam modelkę „' + (gone.name || 'bez imienia') + '”. Ten projekt liczę teraz na wymiary modelki „' + (cur().name || 'bez imienia') + '”.', true);
   });
-  function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(k === 'tiles'); }); $(id).setAttribute('aria-pressed', state[k]); }
-  toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); $('tFig').addEventListener('click', () => { state.figure = !state.figure; $('tFig').setAttribute('aria-pressed', state.figure); persist(); draw(true); }); $('tFig').setAttribute('aria-pressed', state.figure);
+  function toggle(id, k) { $(id).addEventListener('click', () => { state[k] = !state[k]; $(id).setAttribute('aria-pressed', state[k]); persist(); draw(true); }); $(id).setAttribute('aria-pressed', state[k]); }
+  toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); const figLab = () => { $('tFig').textContent = state.figure ? 'Pokaż manekin' : 'Pokaż sylwetkę'; $('tFig').setAttribute('aria-pressed', 'false'); }; $('tFig').addEventListener('click', () => { state.figure = !state.figure; figLab(); persist(); draw(true); }); figLab();
+  $('fabQ').addEventListener('change', () => { state.fabric = $('fabQ').value; persist(); fillFabricPanel(); draw(true); }); $('colQ').addEventListener('input', () => { $('colA').value = $('colQ').value; $('colA').dispatchEvent(new Event('input', { bubbles: true })); });
   function setView(v) {
     if (v === '3d' && state.style === 'import') {
       const d = model && model.d; // wczytany wykrój ma podgląd tylko jako zszyta tkanina na sylwetce
@@ -412,6 +413,7 @@
   $('v3d').addEventListener('click', () => setView('3d'));
   const P = window.WykrojPrints; let customImg = null, swT = 0;
   function fillFabricPanel() {
+    { const q = $('fabQ'); if (!q.options.length) for (const k in FAB) { const o = document.createElement('option'); o.value = k; o.textContent = FAB[k].name; q.appendChild(o); } q.value = state.fabric; $('colQ').value = state.color; $('tFig').textContent = state.figure ? 'Pokaż manekin' : 'Pokaż sylwetkę'; }
     $('fabC').textContent = '';
     for (const k in FAB) { const b = document.createElement('button'); b.textContent = FAB[k].name; b.setAttribute('aria-pressed', k === state.fabric); b.addEventListener('click', () => { state.fabric = k; persist(); fillFabricPanel(); draw(); }); $('fabC').appendChild(b); }
     $('colA').value = state.color; $('colB').value = state.color2; $('pscale').value = state.pscale; $('o_pscale').textContent = state.pscale + '%';
@@ -848,8 +850,9 @@
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
       const scene = new T3.Scene(), camera = new T3.PerspectiveCamera(32, 1, 30, 1500);
       scene.add(new T3.HemisphereLight(0xfff4e6, 0x20242e, 0.95));
-      const d1 = new T3.DirectionalLight(0xffffff, 0.75); d1.position.set(120, 200, 180); scene.add(d1);
-      const d2 = new T3.DirectionalLight(0x9fb4ff, 0.3); d2.position.set(-160, 60, -120); scene.add(d2);
+      // światła są przypięte do kamery: przy obracaniu modelu oświetlenie zostaje po tej samej stronie ekranu
+      const d1 = new T3.DirectionalLight(0xffffff, 0.75); d1.position.set(190, 170, 20); camera.add(d1);
+      const d2 = new T3.DirectionalLight(0x9fb4ff, 0.3); d2.position.set(-220, -30, -60); camera.add(d2); scene.add(camera);
       g3 = { canvas, renderer, scene, camera, group: null, mid: 0 };
       let dr = null;
       canvas.addEventListener('pointerdown', (e) => { dr = { x: e.clientX, y: e.clientY, yaw: cam.yaw, pitch: cam.pitch }; canvas.setPointerCapture(e.pointerId); canvas.classList.add('drag'); });
