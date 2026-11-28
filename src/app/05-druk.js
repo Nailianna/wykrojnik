@@ -1,5 +1,8 @@
   // ---------- druk: wybór elementów, papier, zużycie tkaniny, dodatki ----------
+  // elementy bez przypisanej warstwy (pasek, szarfy i inne dodatki) należą do wierzchu: inaczej znikały z metrażu i z listy krojenia
+  function lyFix(d) { if (!d.layers || d.layers.fixed) return; d.layers.fixed = true; const top = W.ROLES.wierzch, c = d.layers.cut.find((x) => x.name === top); for (const pc of d.pieces) if (!d.layers.notes[pc.id]) { d.layers.notes[pc.id] = [top.toLowerCase()]; if (c) c.items.push(pc.name.charAt(0) + pc.name.slice(1).toLowerCase() + ': ' + (pc.cut || 'według opisu')); }  if (c && d.info && d.info.cut) for (const r of d.info.cut) if (!d.pieces.some((pc) => pc.name.toLowerCase() === String(r[0]).toLowerCase())) c.items.push(r[0] + ': ' + r[1]); }
   function fabricRows(d) {
+    lyFix(d);
     const rows = [], m = (v) => (Math.ceil(v / 10) / 10).toFixed(1).replace('.', ',') + ' m';
     const one = (label, pcs) => {
       if (!pcs.length) return; const u = W.usage(pcs, state.fabW);
@@ -44,7 +47,10 @@
     vb = { x: cx - (vb.w * k) / 2, y: cy - (vb.h * k) / 2, w: nw, h: vb.h * k }; applyVb();
   });
   // panele i motyw
-  const FLOW = ['modelka', 'fason', 'tkanina', 'druk'];
+  const FLOW = ['modelka', 'fason', 'tkanina', 'druk', 'wydruk'];
+  { // Druk jako osobny panel: wybór elementów, papier i układ; metraż, pasmanteria i lista krojenia zostają w Krojeniu
+    const sec = /** @type {HTMLElement} */ (document.querySelector('[data-sec=druk]')), nw = mkEl('div'), hs = [...sec.querySelectorAll('h3')], from = hs.find((h) => h.textContent === 'Elementy do druku'), to = hs.find((h) => h.textContent === 'Ile tkaniny'); nw.dataset.sec = 'wydruk'; nw.hidden = true;
+    if (from) { let n = /** @type {any} */ (from); while (n && n !== to) { const nx = n.nextElementSibling; nw.appendChild(n); n = nx; } } sec.after(nw); }
   // prawy panel: Dopasowanie i Sprawdzenie jako dwie zakładki, stale widoczne obok wykroju i podglądu
   let rt = 'fit';
   { const fitSec = /** @type {HTMLElement} */ (document.querySelector('[data-sec=wymiary]')), cb = $('card').querySelector('.body'), chk = mkEl('div'), fit = mkEl('div'), hd = $('card').querySelector('.head'), tabs = mkEl('div');
@@ -52,7 +58,7 @@
     tabs.className = 'seg'; tabs.id = 'rtTab'; for (const [k, t] of [['fit', 'Dopasowanie'], ['chk', 'Sprawdzenie']]) { const b = mkEl('button'); b.dataset.rt = k; b.textContent = t; b.addEventListener('click', () => { rt = k; rtUi(); }); tabs.appendChild(b); }
     hd.querySelector('h2').replaceWith(tabs); $('cardX').hidden = true; }
   function rtUi() { $('rtFit').hidden = rt !== 'fit'; $('rtChk').hidden = rt !== 'chk'; $('rtTab').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rt === rt))); }
-  const PT = { proj: 'Projekty', druk: 'Krojenie i druk', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Dopasowanie', modelka: 'Modelka' };
+  const PT = { proj: 'Projekty', wydruk: 'Druk', druk: 'Krojenie', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Dopasowanie', modelka: 'Modelka' };
   function cardUi() { const none = state.style === 'pusty' || state.panel === 'proj'; state.card = true; $('card').toggleAttribute('hidden', none); $('cardBtn').hidden = true; rtUi(); }
   function layoutUi() {
     const refOff = state.ref ? ['fason', 'wymiary', 'druk'] : []; if (refOff.includes(state.panel)) state.panel = '';

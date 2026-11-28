@@ -32,6 +32,7 @@
     }
     if (!d.layers) { out.append(el('p', 'Dodaj warstwę, a pokażę, co kroić z której tkaniny i w jakiej kolejności szyć. To samo trafi do PDF.', 'note')); return; }
     out.append(el('h3', 'Krojenie'));
+    lyFix(d);
     for (const c of d.layers.cut) {
       const h4 = el('h4', c.name + ' '); h4.append(el('small', c.fabric + (c.scope ? ' · ' + c.scope : ''))); out.append(h4);
       const ul = el('ul'); c.items.forEach((t) => ul.append(el('li', t))); c.notes.forEach((t) => ul.append(el('li', t, 'n'))); out.append(ul);

@@ -444,6 +444,7 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
   <button data-panel="fason"><svg viewBox="0 0 24 24"><path d="M12 7a2 2 0 1 0-2-2M12 7v2l8.5 6a1.5 1.5 0 0 1-.9 2.700H4.400a1.5 1.5 0 0 1-.9-2.700L12 9"/></svg>Fason</button>
   <button data-panel="tkanina"><svg viewBox="0 0 24 24"><path d="M4 5q4-2 8 0t8 0v14q-4 2-8 0t-8 0ZM4 10q4-2 8 0t8 0M4 14.5q4-2 8 0t8 0"/></svg>Tkanina</button>
   <button data-panel="druk"><svg viewBox="0 0 24 24"><path d="M7 8.500v-4.500h10v4.500M7 17.500h-1.500a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1.500M7 14h10v6h-10Z"/></svg>Krojenie</button>
+  <button data-panel="wydruk"><svg viewBox="0 0 24 24"><path d="M7 8V4h10v4M6 17H4.500a1.5 1.5 0 0 1-1.500-1.500v-6A1.5 1.5 0 0 1 4.500 8h15a1.500 1.500 0 0 1 1.500 1.500v6a1.500 1.500 0 0 1-1.500 1.500H18M7 14h10v6H7Z"/></svg>Druk</button>
   <span class="grow"></span>
   <button id="theme" aria-label="Przełącz motyw jasny i ciemny"><svg viewBox="0 0 24 24"><path d="M20 14.500A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.500Z"/></svg>Motyw</button>
 </nav>
@@ -478,6 +479,7 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
       </div>
       <div data-sec="druk">
         <h3>Warstwy</h3>
+        <p class="note">Warstwa to osobna tkanina w tym samym ubraniu, na przykład podszewka pod wierzchem. Każda ma własną listę krojenia i własny metraż.</p>
         <div id="lyList"></div>
         <p class="lab">Dodaj warstwę</p>
         <div class="chips" id="lyAdd"></div>
@@ -490,7 +492,7 @@ p.anClash{margin:6px 0 8px 72px;max-width:560px}p.anClash[hidden]{display:none}
           <h3>Odszycia dekoltu i pach</h3>
           <div class="seg" id="fac" style="margin-bottom:8px"><button data-v3="laczone">Łączone</button><button data-v3="osobne">Osobne</button><button data-v3="brak">Brak</button></div>
           <label class="f" data-if="facw"><span>Szerokość odszycia</span><span class="num"><input id="p_facW" type="number" min="3" max="8" step="0.5"></span></label>
-          <p class="note">Odszycia podklej fizeliną. Wewnętrzną krawędź obrzuć, nie ma na niej zapasu.</p>
+          <p class="note">Odszycie to pasek tkaniny, który od środka wykańcza dekolt i pachy. Łączone: jeden element na dekolt i pachy. Osobne: dwa węższe. Brak: wykończysz brzegi lamówką albo podwinięciem. Odszycia podklej fizeliną, a wewnętrzną krawędź obrzuć, bo nie ma na niej zapasu.</p>
         </div>
         <label class="f" data-if="pasek"><span>Szerokość paska</span><span class="num"><input id="p_pasek" type="number" min="0" max="10" step="0.5"></span></label>
         </div>

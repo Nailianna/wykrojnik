@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.99.4', n: 117, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.99.5', n: 118, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
   const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
   window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
@@ -576,7 +576,10 @@
   }
 
   // ---------- druk: wybór elementów, papier, zużycie tkaniny, dodatki ----------
+  // elementy bez przypisanej warstwy (pasek, szarfy i inne dodatki) należą do wierzchu: inaczej znikały z metrażu i z listy krojenia
+  function lyFix(d) { if (!d.layers || d.layers.fixed) return; d.layers.fixed = true; const top = W.ROLES.wierzch, c = d.layers.cut.find((x) => x.name === top); for (const pc of d.pieces) if (!d.layers.notes[pc.id]) { d.layers.notes[pc.id] = [top.toLowerCase()]; if (c) c.items.push(pc.name.charAt(0) + pc.name.slice(1).toLowerCase() + ': ' + (pc.cut || 'według opisu')); }  if (c && d.info && d.info.cut) for (const r of d.info.cut) if (!d.pieces.some((pc) => pc.name.toLowerCase() === String(r[0]).toLowerCase())) c.items.push(r[0] + ': ' + r[1]); }
   function fabricRows(d) {
+    lyFix(d);
     const rows = [], m = (v) => (Math.ceil(v / 10) / 10).toFixed(1).replace('.', ',') + ' m';
     const one = (label, pcs) => {
       if (!pcs.length) return; const u = W.usage(pcs, state.fabW);
@@ -621,7 +624,10 @@
     vb = { x: cx - (vb.w * k) / 2, y: cy - (vb.h * k) / 2, w: nw, h: vb.h * k }; applyVb();
   });
   // panele i motyw
-  const FLOW = ['modelka', 'fason', 'tkanina', 'druk'];
+  const FLOW = ['modelka', 'fason', 'tkanina', 'druk', 'wydruk'];
+  { // Druk jako osobny panel: wybór elementów, papier i układ; metraż, pasmanteria i lista krojenia zostają w Krojeniu
+    const sec = /** @type {HTMLElement} */ (document.querySelector('[data-sec=druk]')), nw = mkEl('div'), hs = [...sec.querySelectorAll('h3')], from = hs.find((h) => h.textContent === 'Elementy do druku'), to = hs.find((h) => h.textContent === 'Ile tkaniny'); nw.dataset.sec = 'wydruk'; nw.hidden = true;
+    if (from) { let n = /** @type {any} */ (from); while (n && n !== to) { const nx = n.nextElementSibling; nw.appendChild(n); n = nx; } } sec.after(nw); }
   // prawy panel: Dopasowanie i Sprawdzenie jako dwie zakładki, stale widoczne obok wykroju i podglądu
   let rt = 'fit';
   { const fitSec = /** @type {HTMLElement} */ (document.querySelector('[data-sec=wymiary]')), cb = $('card').querySelector('.body'), chk = mkEl('div'), fit = mkEl('div'), hd = $('card').querySelector('.head'), tabs = mkEl('div');
@@ -629,7 +635,7 @@
     tabs.className = 'seg'; tabs.id = 'rtTab'; for (const [k, t] of [['fit', 'Dopasowanie'], ['chk', 'Sprawdzenie']]) { const b = mkEl('button'); b.dataset.rt = k; b.textContent = t; b.addEventListener('click', () => { rt = k; rtUi(); }); tabs.appendChild(b); }
     hd.querySelector('h2').replaceWith(tabs); $('cardX').hidden = true; }
   function rtUi() { $('rtFit').hidden = rt !== 'fit'; $('rtChk').hidden = rt !== 'chk'; $('rtTab').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rt === rt))); }
-  const PT = { proj: 'Projekty', druk: 'Krojenie i druk', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Dopasowanie', modelka: 'Modelka' };
+  const PT = { proj: 'Projekty', wydruk: 'Druk', druk: 'Krojenie', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Dopasowanie', modelka: 'Modelka' };
   function cardUi() { const none = state.style === 'pusty' || state.panel === 'proj'; state.card = true; $('card').toggleAttribute('hidden', none); $('cardBtn').hidden = true; rtUi(); }
   function layoutUi() {
     const refOff = state.ref ? ['fason', 'wymiary', 'druk'] : []; if (refOff.includes(state.panel)) state.panel = '';
@@ -1557,6 +1563,7 @@
     }
     if (!d.layers) { out.append(el('p', 'Dodaj warstwę, a pokażę, co kroić z której tkaniny i w jakiej kolejności szyć. To samo trafi do PDF.', 'note')); return; }
     out.append(el('h3', 'Krojenie'));
+    lyFix(d);
     for (const c of d.layers.cut) {
       const h4 = el('h4', c.name + ' '); h4.append(el('small', c.fabric + (c.scope ? ' · ' + c.scope : ''))); out.append(h4);
       const ul = el('ul'); c.items.forEach((t) => ul.append(el('li', t))); c.notes.forEach((t) => ul.append(el('li', t, 'n'))); out.append(ul);
@@ -1774,25 +1781,27 @@
   let msgT = 0;
   function say(t, keep) { $('msg').textContent = t; clearTimeout(msgT); if (!keep) msgT = setTimeout(() => ($('msg').textContent = ''), 7000); }
   function buildPdf() {
-    const { d, lay, tl } = compute(), m = cur(), p = state.p, fl = flags();
+    const { d, lay, tl } = compute(), m = cur(), p = state.p, fl = flags(); lyFix(d);
+    const part = d.pieces.filter((pc) => state.sel && state.sel[pc.id]).length > 0, inFile = d.pieces.filter((pc) => !(state.sel && state.sel[pc.id])).map((pc) => pc.name.toLowerCase());
     const rows = [['Modelka', 'biust ' + f1(m.og) + ', talia ' + f1(m.ot) + ', biodra ' + f1(m.ob) + ', wysokość bioder ' + f1(m.wb) + ' cm']];
     rows.push(['Długość od talii', f1(p.dl) + ' cm']);
     rows.push(['Luz', (fl.dress ? 'biust ' + f1(p.luzG) + ', ' : '') + 'talia ' + f1(p.luzT) + (fl.hip ? ', biodra ' + f1(p.luzB) : '') + ' cm']);
     rows.push(['Zapasy na szwy', 'szwy ' + f1(p.saSzew) + ', talia i wykończenia ' + f1(p.saTalia) + ', dół ' + f1(p.saDol) + ' cm']);
-    rows.push(['Do wycięcia', d.info.cut.map((c) => c[0].toLowerCase() + ' ' + c[1]).join('; ')]);
+    if (part) rows.unshift(['Dodruk', 'ten plik zawiera tylko: ' + inFile.join(', ') + '. Pozostałe elementy są w pełnym wydruku projektu.']);
+    rows.push([part ? 'Cały projekt, do wycięcia' : 'Do wycięcia', d.info.cut.map((c) => c[0].toLowerCase() + ' ' + c[1]).join('; ')]);
     rows.push(['Tkanina (bela ' + state.fabW + ' cm)', fabricRows(d).map((r) => r[0].toLowerCase() + ': ' + r[1] + ', ' + r[2]).join('; ')]);
     rows.push(['Dodatki', (d.notions || []).map((r) => r[0].toLowerCase() + ' ' + r[1]).join('; ')]);
     for (const r of d.info.rows) rows.push([r[0], f1(r[1]) + ' cm']);
     const howto = [
       '1. Drukuj w skali 100% („rozmiar rzeczywisty”), bez dopasowywania do strony.',
-      '2. Na pierwszej kartce zmierz odcinek kontrolny. Ma mieć dokładnie 10 cm.',
+      '2. Na pierwszym arkuszu wykroju (strona 2 tego pliku) zmierz odcinek kontrolny. Ma mieć dokładnie 10 cm.',
       '3. Przytnij kartki wzdłuż ramek i sklej je według schematu poniżej. Romby na krawędziach muszą się zejść.',
       'Linia ciągła to linia cięcia (z zapasem), przerywana to linia szycia.',
     ];
     const extra = d.layers ? [{ title: 'Warstwy i kolejność szycia', blocks: d.layers.cut.map((c) => ({ h: c.name + ' · ' + c.fabric + (c.scope ? ' · ' + c.scope : ''), lines: c.items.map((t) => '• ' + t).concat(c.notes) })).concat([{ h: 'Kolejność szycia', lines: d.layers.steps.map((t, i) => (i + 1) + '. ' + t) }]) }] : [];
     const buf = W.makePdf(window.jspdf.jsPDF, window.WYKROJ_FONT, lay, tl, { extra, labels: state.labels, title: d.title, sub: (projCur().name ? projCur().name + ' · ' : '') + (m.name || 'Bez imienia') + ' · ' + new Date().toLocaleDateString('pl-PL') + ' · Wykrojnik', rows, howto });
     const slug = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/Ł/g, 'L').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
-    return { buf, name: slug(d.title) + '-' + (slug(m.name || '') || 'modelka') + '.pdf' };
+    return { buf, name: slug(d.title) + '-' + (slug(m.name || '') || 'modelka') + (part ? '-dodruk' : '') + '.pdf' };
   }
   // zapis pliku: w aplikacji do Dokumenty/Wykrojnik, w przeglądarce zwykłe pobieranie
   async function saveFile(name, bytes, mime, open, okDisk, okDl) {
@@ -1815,6 +1824,7 @@
     catch (e) { say('W tym widoku nie mogę zapisać pliku. Zainstaluj Wykrojnik jako aplikację.'); }
   }
   $('pdf').addEventListener('click', async () => {
+    if (state.style === 'pusty') { say('Ten projekt nie ma jeszcze fasonu, więc nie ma czego drukować. Wybierz fason w panelu Fason.', true); return; }
     let out; const bz = busyOn('Składam PDF z wykrojem.'); await paintTick();
     try { out = buildPdf(); } catch (e) { say('Nie udało się zbudować PDF: ' + e.message); return; } finally { busyOff(bz); }
     saveFile(out.name, new Uint8Array(out.buf), 'application/pdf', true, 'Zapisałam wykrój w Dokumenty/Wykrojnik/' + out.name + '. Drukuj w skali 100%.', 'Wykrój pobrany. Drukuj w skali 100%.')

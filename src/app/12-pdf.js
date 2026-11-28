@@ -2,25 +2,27 @@
   let msgT = 0;
   function say(t, keep) { $('msg').textContent = t; clearTimeout(msgT); if (!keep) msgT = setTimeout(() => ($('msg').textContent = ''), 7000); }
   function buildPdf() {
-    const { d, lay, tl } = compute(), m = cur(), p = state.p, fl = flags();
+    const { d, lay, tl } = compute(), m = cur(), p = state.p, fl = flags(); lyFix(d);
+    const part = d.pieces.filter((pc) => state.sel && state.sel[pc.id]).length > 0, inFile = d.pieces.filter((pc) => !(state.sel && state.sel[pc.id])).map((pc) => pc.name.toLowerCase());
     const rows = [['Modelka', 'biust ' + f1(m.og) + ', talia ' + f1(m.ot) + ', biodra ' + f1(m.ob) + ', wysokość bioder ' + f1(m.wb) + ' cm']];
     rows.push(['Długość od talii', f1(p.dl) + ' cm']);
     rows.push(['Luz', (fl.dress ? 'biust ' + f1(p.luzG) + ', ' : '') + 'talia ' + f1(p.luzT) + (fl.hip ? ', biodra ' + f1(p.luzB) : '') + ' cm']);
     rows.push(['Zapasy na szwy', 'szwy ' + f1(p.saSzew) + ', talia i wykończenia ' + f1(p.saTalia) + ', dół ' + f1(p.saDol) + ' cm']);
-    rows.push(['Do wycięcia', d.info.cut.map((c) => c[0].toLowerCase() + ' ' + c[1]).join('; ')]);
+    if (part) rows.unshift(['Dodruk', 'ten plik zawiera tylko: ' + inFile.join(', ') + '. Pozostałe elementy są w pełnym wydruku projektu.']);
+    rows.push([part ? 'Cały projekt, do wycięcia' : 'Do wycięcia', d.info.cut.map((c) => c[0].toLowerCase() + ' ' + c[1]).join('; ')]);
     rows.push(['Tkanina (bela ' + state.fabW + ' cm)', fabricRows(d).map((r) => r[0].toLowerCase() + ': ' + r[1] + ', ' + r[2]).join('; ')]);
     rows.push(['Dodatki', (d.notions || []).map((r) => r[0].toLowerCase() + ' ' + r[1]).join('; ')]);
     for (const r of d.info.rows) rows.push([r[0], f1(r[1]) + ' cm']);
     const howto = [
       '1. Drukuj w skali 100% („rozmiar rzeczywisty”), bez dopasowywania do strony.',
-      '2. Na pierwszej kartce zmierz odcinek kontrolny. Ma mieć dokładnie 10 cm.',
+      '2. Na pierwszym arkuszu wykroju (strona 2 tego pliku) zmierz odcinek kontrolny. Ma mieć dokładnie 10 cm.',
       '3. Przytnij kartki wzdłuż ramek i sklej je według schematu poniżej. Romby na krawędziach muszą się zejść.',
       'Linia ciągła to linia cięcia (z zapasem), przerywana to linia szycia.',
     ];
     const extra = d.layers ? [{ title: 'Warstwy i kolejność szycia', blocks: d.layers.cut.map((c) => ({ h: c.name + ' · ' + c.fabric + (c.scope ? ' · ' + c.scope : ''), lines: c.items.map((t) => '• ' + t).concat(c.notes) })).concat([{ h: 'Kolejność szycia', lines: d.layers.steps.map((t, i) => (i + 1) + '. ' + t) }]) }] : [];
     const buf = W.makePdf(window.jspdf.jsPDF, window.WYKROJ_FONT, lay, tl, { extra, labels: state.labels, title: d.title, sub: (projCur().name ? projCur().name + ' · ' : '') + (m.name || 'Bez imienia') + ' · ' + new Date().toLocaleDateString('pl-PL') + ' · Wykrojnik', rows, howto });
     const slug = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/Ł/g, 'L').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
-    return { buf, name: slug(d.title) + '-' + (slug(m.name || '') || 'modelka') + '.pdf' };
+    return { buf, name: slug(d.title) + '-' + (slug(m.name || '') || 'modelka') + (part ? '-dodruk' : '') + '.pdf' };
   }
   // zapis pliku: w aplikacji do Dokumenty/Wykrojnik, w przeglądarce zwykłe pobieranie
   async function saveFile(name, bytes, mime, open, okDisk, okDl) {
@@ -43,6 +45,7 @@
     catch (e) { say('W tym widoku nie mogę zapisać pliku. Zainstaluj Wykrojnik jako aplikację.'); }
   }
   $('pdf').addEventListener('click', async () => {
+    if (state.style === 'pusty') { say('Ten projekt nie ma jeszcze fasonu, więc nie ma czego drukować. Wybierz fason w panelu Fason.', true); return; }
     let out; const bz = busyOn('Składam PDF z wykrojem.'); await paintTick();
     try { out = buildPdf(); } catch (e) { say('Nie udało się zbudować PDF: ' + e.message); return; } finally { busyOff(bz); }
     saveFile(out.name, new Uint8Array(out.buf), 'application/pdf', true, 'Zapisałam wykrój w Dokumenty/Wykrojnik/' + out.name + '. Drukuj w skali 100%.', 'Wykrój pobrany. Drukuj w skali 100%.')
