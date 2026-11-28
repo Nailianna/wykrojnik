@@ -288,6 +288,7 @@
   // wybór konstrukcji w panelu Fason zmienia fason bieżącego projektu, tak jak wybór każdego innego fasonu
   function libUse(id) {
     if (state.ref) { say('Ten projekt pokazuje gotowy model 3D. Fason wybierzesz w nowym projekcie.'); return; } const k = libGet(id), spec = { all: { k: id } }, r = k ? libBuild(spec, cur()) : { err: 'Tej konstrukcji nie ma już w bibliotece.' }; if (r.err) { say(r.err, true); return; }
+    const pr = projCur(), auto = pr && state.imp && state.imp.lib && pr.name === state.imp.name; if (auto) { pr.name = libName(spec).slice(0, 60); } // projekt nazwany automatycznie idzie za fasonem
     state.style = 'import'; state.imp = { name: libName(spec).slice(0, 60), sizes: [], size: '', pieces: r.pieces, an: r.an, lib: spec }; state.sel = {}; state.layers = [{ role: 'wierzch' }]; state.fTab = libKind(k) === 'dol' ? 'doly' : libKind(k) === 'cale' ? 'suk' : 'gory';
     fillForm(); persist(); draw(true);
   }

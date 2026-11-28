@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.98.1', n: 111, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.98.2', n: 112, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   const W = window.Wykroj, $ = /** @type {(id: string) => any} */ ((id) => document.getElementById(id));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mkEl = /** @type {(tag: string) => any} */ ((tag) => document.createElement(tag));
@@ -442,7 +442,7 @@
         if (pl && !pl.err) sw = { partial: pl.partial, plan: pl.plan, used: pl.used, pieces: [], dl: pl.dl, hemC: pl.hemC, sleeve: null, gather: null, skip: pl.skip, strap: pl.strap ? { F: true, B: true, yMax: pl.plan.yMax } : null, byPlan: true };
         else if (pl && pl.err) sw = { err: (sw.err === 'plan' ? '' : sw.err + ' ') + pl.err }; else if (sw.err === 'plan') sw = { err: 'Po tej zmianie nie umiem zszyć wykroju według szwów z analizy.' };
       } impSewC = { k: sk + (lr ? lr.key : ''), imp, sw }; }
-    const sw = impSewC.sw; let ap = null; if (sw.err || sw.partial) { try { ap = impApprox(imp, m, pcs); } catch (e) { ap = null; } }
+    const sw = impSewC.sw; let ap = null; if (!imp.lib && (sw.err || sw.partial)) { try { ap = impApprox(imp, m, pcs); }  /* konstrukcji z biblioteki nie przybliżam bryłą: zgadnięty kształt udawałby inny fason */ catch (e) { ap = null; } }
     const low = !sw.err && sw.partial && ap && ap.how === 'dol' ? ap : null; if (!sw.err) ap = null; // zszyta góra z przybliżonym dołem: bryła dołu z elementów, których nie udało się doszyć // elementów nie da się zszyć: podgląd pokaże przybliżoną bryłę zamiast odmowy
     const sew3 = low ? ' Podgląd 3D pokazuje górę zszytą według szwów z analizy' + (sw.strap ? ', na ramiączkach' : '') + (sw.used && sw.used.length ? ' (' + sw.used.map((x) => x.toLowerCase()).join(', ') + ')' : '') + '. Dołu nie udało się doszyć, więc ma przybliżoną bryłę: długość od talii ' + low.dl + ' cm' + (low.floor ? ' (sięga podłogi)' : '') + ', obwód dołu ' + low.hemC + ' cm.' : ap ? ' Elementów nie udało się zszyć, więc podgląd 3D pokazuje przybliżoną bryłę' + (ap.syl ? ' opartą na ilustracji z instrukcji' : '') + ': długość od talii ' + ap.dl + ' cm, obwód dołu ' + ap.hemC + ' cm.' : !sw.err ? (sw.byPlan ? ' Podgląd 3D jest zszyty według szwów z analizy' + (sw.strap ? ', na ramiączkach' : '') : ' Podgląd 3D pokazuje przód' + (sw.strap ? (sw.strap.F && sw.strap.B ? ' i tył na ramiączkach' : ' i tył z górną krawędzią przytrzymaną na miejscu') : ', tył') + (sw.kim ? ' razem z rękawami' : sw.sleeve ? ' i rękawy' + (sw.gather ? ' zmarszczone do długości mankietu' : '') : '') + '') + (sw.used && sw.used.length ? '. Zszyte elementy: ' + sw.used.map((x) => x.toLowerCase()).join(', ') : '') + (sw.skip.length ? '; bez elementów: ' + sw.skip.join(', ').toLowerCase() : '') + '.' : '';
     return { pieces: pcs, sewn: sw.err ? null : { pieces: sw.pieces, plan: sw.plan || null }, sewErr: sw.err || '', info: { rows: [], darts: [], cut: pcs.map((q) => [q.name, q.cut ? q.cut.replace(/^wytnij /, '') : 'według oryginału']), warn: (imp.lib ? 'Konstrukcja z biblioteki przeliczona na wymiary modelki. ' : 'Wykrój wczytany z pliku, rozmiar ' + (imp.size || 'jedyny') + '. ') + saT + (imp.lib ? '' : fit) + sew3 },
@@ -2947,6 +2947,7 @@
   // wybór konstrukcji w panelu Fason zmienia fason bieżącego projektu, tak jak wybór każdego innego fasonu
   function libUse(id) {
     if (state.ref) { say('Ten projekt pokazuje gotowy model 3D. Fason wybierzesz w nowym projekcie.'); return; } const k = libGet(id), spec = { all: { k: id } }, r = k ? libBuild(spec, cur()) : { err: 'Tej konstrukcji nie ma już w bibliotece.' }; if (r.err) { say(r.err, true); return; }
+    const pr = projCur(), auto = pr && state.imp && state.imp.lib && pr.name === state.imp.name; if (auto) { pr.name = libName(spec).slice(0, 60); } // projekt nazwany automatycznie idzie za fasonem
     state.style = 'import'; state.imp = { name: libName(spec).slice(0, 60), sizes: [], size: '', pieces: r.pieces, an: r.an, lib: spec }; state.sel = {}; state.layers = [{ role: 'wierzch' }]; state.fTab = libKind(k) === 'dol' ? 'doly' : libKind(k) === 'cale' ? 'suk' : 'gory';
     fillForm(); persist(); draw(true);
   }
