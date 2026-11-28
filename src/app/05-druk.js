@@ -57,7 +57,8 @@
     chk.id = 'rtChk'; fit.id = 'rtFit'; while (cb.firstChild) chk.appendChild(cb.firstChild); fitSec.removeAttribute('data-sec'); fitSec.hidden = false; fit.appendChild(fitSec); cb.append(fit, chk);
     tabs.className = 'seg'; tabs.id = 'rtTab'; for (const [k, t] of [['fit', 'Dopasowanie'], ['chk', 'Sprawdzenie']]) { const b = mkEl('button'); b.dataset.rt = k; b.textContent = t; b.addEventListener('click', () => { rt = k; rtUi(); }); tabs.appendChild(b); }
     hd.querySelector('h2').replaceWith(tabs); $('cardX').hidden = true; }
-  function rtUi() { $('rtFit').hidden = rt !== 'fit'; $('rtChk').hidden = rt !== 'chk'; $('rtTab').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rt === rt))); }
+  function rtUi() { { let n = $('wzFitN'); const on = state.style === 'import' && !!state.imp && !!state.imp.wz; if (on && !n) { n = mkEl('p'); n.id = 'wzFitN'; n.className = 'note'; n.textContent = 'Ten wykrój dobieram do obwodu talii modelki. Zmień modelkę albo jej wymiary, a przeliczę elementy.'; $('rtFit').prepend(n); } if (n) n.hidden = !on; }
+    $('rtFit').hidden = rt !== 'fit'; $('rtChk').hidden = rt !== 'chk'; $('rtTab').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rt === rt))); }
   const PT = { proj: 'Projekty', wydruk: 'Druk', druk: 'Krojenie', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Dopasowanie', modelka: 'Modelka' };
   function cardUi() { const none = state.style === 'pusty' || state.panel === 'proj'; state.card = true; $('card').toggleAttribute('hidden', none); $('cardBtn').hidden = true; rtUi(); }
   function layoutUi() {

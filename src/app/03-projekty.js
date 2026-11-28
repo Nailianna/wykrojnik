@@ -82,6 +82,7 @@
   const TINTS = ['#f7e3ee', '#e6ebfb', '#e9f4e1', '#fbefd9', '#efe6fa'];
   let galT = 0;
   function fillGallery() {
+    setTimeout(wzFill, 0);
     const boxes = { 'Spódnice': $('galSk'), 'Sukienki': $('galSu'), 'Gorsety': $('galGo'), 'Topy': $('galGo') };
     for (const k in boxes) boxes[k].textContent = '';
     W.STYLES.forEach((st, i) => {
@@ -118,7 +119,7 @@
   toggle('tGrid', 'grid'); toggle('tTiles', 'tiles'); toggle('tLab', 'labels'); toggle('tBust', 'bust'); toggle('tSeams', 'seams'); toggle('tSim', 'sim'); const figLab = () => { $('tFig').textContent = state.figure ? 'Pokaż manekin' : 'Pokaż sylwetkę'; $('tFig').setAttribute('aria-pressed', 'false'); }; $('tFig').addEventListener('click', () => { state.figure = !state.figure; figLab(); persist(); draw(true); }); figLab();
   $('fabQ').addEventListener('change', () => { state.fabric = $('fabQ').value; persist(); fillFabricPanel(); draw(true); }); $('colQ').addEventListener('input', () => { $('colA').value = $('colQ').value; $('colA').dispatchEvent(new Event('input', { bubbles: true })); });
   function setView(v) {
-    if (v === '3d' && state.style === 'import') {
+    if (v === '3d' && state.style === 'import' && !(state.imp && state.imp.wz)) {
       const d = model && model.d; // wczytany wykrój ma podgląd tylko jako zszyta tkanina na sylwetce
       if (!d || (!d.sewn && !d.approx)) { say((d && d.sewErr) || 'Tego wykroju nie umiem jeszcze pokazać w 3D.', true); v = '2d'; }
       else if (!state.figure) { state.figure = true; say('Włączyłam sylwetkę, bo wczytany wykrój układa się tylko na niej.'); }

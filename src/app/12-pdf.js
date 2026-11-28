@@ -5,9 +5,11 @@
     const { d, lay, tl } = compute(), m = cur(), p = state.p, fl = flags(); lyFix(d);
     const part = d.pieces.filter((pc) => state.sel && state.sel[pc.id]).length > 0, inFile = d.pieces.filter((pc) => !(state.sel && state.sel[pc.id])).map((pc) => pc.name.toLowerCase());
     const rows = [['Modelka', 'biust ' + f1(m.og) + ', talia ' + f1(m.ot) + ', biodra ' + f1(m.ob) + ', wysokość bioder ' + f1(m.wb) + ' cm']];
+    if (d.cover) for (const r of d.cover) rows.push(r); else {
     rows.push(['Długość od talii', f1(p.dl) + ' cm']);
     rows.push(['Luz', (fl.dress ? 'biust ' + f1(p.luzG) + ', ' : '') + 'talia ' + f1(p.luzT) + (fl.hip ? ', biodra ' + f1(p.luzB) : '') + ' cm']);
     rows.push(['Zapasy na szwy', 'szwy ' + f1(p.saSzew) + ', talia i wykończenia ' + f1(p.saTalia) + ', dół ' + f1(p.saDol) + ' cm']);
+    }
     if (part) rows.unshift(['Dodruk', 'ten plik zawiera tylko: ' + inFile.join(', ') + '. Pozostałe elementy są w pełnym wydruku projektu.']);
     rows.push([part ? 'Cały projekt, do wycięcia' : 'Do wycięcia', d.info.cut.map((c) => c[0].toLowerCase() + ' ' + c[1]).join('; ')]);
     rows.push(['Tkanina (bela ' + state.fabW + ' cm)', fabricRows(d).map((r) => r[0].toLowerCase() + ': ' + r[1] + ', ' + r[2]).join('; ')]);

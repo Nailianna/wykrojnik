@@ -304,7 +304,7 @@
       const stiffTop = sil.top === 'corset' || sil.lower === 'none' || state.style === 'su_rybka_kliny';
       let spec = null;
       if (!state.sim || stiffTop || sil.tren || topFull) spec = null;
-      else if (sil.lower === 'circle') spec = { yPin: 0, L: p.dl, C: sil.pleat ? (d) => Tw + (sil.hemC - Tw) * Math.min(1, d / 3) : (d) => Tw + TAU * sil.frac * d };
+      else if (sil.lower === 'circle') spec = { yPin: 0, L: p.dl, C: sil.pleatOpen ? (d) => Tw + (sil.pleatOpen - Tw) * Math.pow(Math.min(1, d / p.dl), 0.6) /* płaskie fałdy: tkanina zostaje złożona i otwiera się stopniowo ku dołowi */ : sil.pleat ? (d) => Tw + (sil.hemC - Tw) * Math.min(1, d / 3) : (d) => Tw + TAU * sil.frac * d };
       else if (sil.lower === 'mermaid') spec = { yPin: -sil.kn, L: p.dl - sil.kn, C: (d) => sil.kneeC + (sil.grow || TAU) * d };
       else if (sil.lower === 'empire') { const Le = sil.yE + p.dl; spec = { yPin: sil.yE, L: Le, C: sil.frac ? (d) => sil.seamC + TAU * sil.frac * d : (d) => sil.seamC + ((sil.hemC - sil.seamC) * d) / Le }; }
       else if (sil.hemC && p.dl - m.wb > 6) { const c0 = sil.hipC || m.ob + p.luzB, Ls = p.dl - m.wb; spec = { yPin: -m.wb, L: Ls, C: (d) => c0 + ((sil.hemC - c0) * d) / Ls }; }

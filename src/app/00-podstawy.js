@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.99.8', n: 121, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.100.0', n: 122, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
   const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
   window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
@@ -37,15 +37,15 @@
   // rozmiary standardowe są wbudowane i stałe: biust, talia i biodra rosną co 4 cm, wzrost 168
   const STD = [34, 36, 38, 40].map((n, i) => ({ id: 'std' + n, name: 'Rozmiar ' + n, og: 84 + 4 * i, ot: 66 + 4 * i, ob: 90 + 4 * i, wb: 20, wzrost: 168, adv: {}, std: true }));
   function ensureStd() { const own = (state.profiles || []).filter((x) => x && !x.std && String(x.id).indexOf('std') !== 0 && !(x.id === 'p2' && x.name === 'Rozmiar 38' && x.og === 88 && x.ot === 68)); state.profiles = STD.map((x) => JSON.parse(JSON.stringify(x))).concat(own); if (!state.profiles.some((x) => x.id === state.active)) state.active = (own[0] || state.profiles[0]).id; for (const q of state.projects || []) if (q.snap && !state.profiles.some((x) => x.id === q.snap.active)) q.snap.active = 'std38'; }
-  let droppedN = 0; const BLENDER_ON = false, CMD_ON = false, HOME_MORE = false;
+  let droppedN = 0; const WZ_ON = true, BLENDER_ON = false, CMD_ON = false, HOME_MORE = false;
   function ensureProjects() {
     ensureStd(); state.sim = true; state.grid = true; state.tiles = true; state.labels = true; // symulacja, siatka, strony i opisy są zawsze włączone
     if (!Array.isArray(state.projects)) state.projects = [];
     state.projects = state.projects.filter((x) => x && x.id && x.snap && x.snap.p);
     { // projekty z wyłączonych fasonów, z biblioteki, z inspiracji bez fasonu i z modelu 3D znikają z listy; ich kopia zostaje w pamięci przeglądarki
-      const live = (q) => { const sn = q.snap; if (sn.ref) return false; if (sn.style === 'import') return !!(sn.imp && sn.imp.pieces && !sn.imp.lib); return sn.style === 'pusty' || BASE.includes(sn.style); }, gone = state.projects.filter((q) => !live(q));
+      const live = (q) => { const sn = q.snap; if (sn.ref) return false; if (sn.style === 'import') return !!(sn.imp && sn.imp.pieces && (!sn.imp.lib || sn.imp.wz)); return sn.style === 'pusty' || BASE.includes(sn.style); }, gone = state.projects.filter((q) => !live(q));
       if (gone.length) { try { const old = JSON.parse(localStorage.getItem('wykrojnik.usuniete') || '[]'); localStorage.setItem('wykrojnik.usuniete', JSON.stringify(old.concat(gone))); } catch (e) { /* bez kopii, lista i tak ma być czysta */ } state.projects = state.projects.filter(live); droppedN = gone.length; } }
-    if (!BASE.includes(state.style) && state.style !== 'pusty' && state.style !== 'import') state.style = 'sk_prosta'; if (state.ref) state.ref = null; if (state.style === 'import' && state.imp && state.imp.lib) { state.style = 'pusty'; state.imp = null; }
+    if (!BASE.includes(state.style) && state.style !== 'pusty' && state.style !== 'import') state.style = 'sk_prosta'; if (state.ref) state.ref = null; if (state.style === 'import' && state.imp && state.imp.lib && !state.imp.wz) { state.style = 'pusty'; state.imp = null; }
     if (!state.projects.length) { const id = 'j' + Date.now(); state.projects = [{ id, name: 'Pierwszy projekt', updated: Date.now(), snap: snap() }]; state.proj = id; }
     if (!projCur()) state.proj = state.projects[0].id;
     if (!state.sel || typeof state.sel !== 'object') state.sel = {};

@@ -1,6 +1,7 @@
   // ---------- rysunek 2D ----------
   // wykrój wczytany z PDF: gotowe elementy jednego rozmiaru zamiast konstrukcji z wymiarów
   function impDraft(imp, m) {
+    if (imp && imp.wz) return wzDraft(imp, m); /* wykrój z bazy ma własną, pełną konstrukcję */
     const lr = /** @type {any} */ (null); // projekt z biblioteki: elementy przeliczone na bieżące wymiary modelki
     const adjK = JSON.stringify((imp && imp.adj) || {}) + [m.og, m.ot, m.ob, m.wzrost].join(',') + (lr ? lr.key : ''), planAx = lr ? null : impAxes(imp, m); if (!impAdjC || impAdjC.imp !== imp || impAdjC.k !== adjK) impAdjC = { imp, k: adjK, r: impAdj(imp, planAx) };
     const pcs = impAdjC.r.pieces, an = imp.an || null, sa = an && an.sa, bd = an && an.body;
@@ -44,11 +45,11 @@
     } catch (e) { say(e && e.message ? e.message : 'Nie udało się wczytać tego pliku.', true); } finally { busyOff(bz); }
   }
   function impFill() {
-    const on = state.style === 'import' && !!state.imp, box = $('impBox'), gal = on && !!state.imp.lib && LIB.list.length > 0; // projekt z biblioteki zostawia galerię fasonów, żeby dało się przejść do innego
+    const on = state.style === 'import' && !!state.imp, box = $('impBox'), gal = on && !!state.imp.wz; // projekt z biblioteki zostawia galerię fasonów, żeby dało się przejść do innego
     box.hidden = !on || gal; if (!on) $('dopImp').hidden = true; $('fTab').hidden = on && !gal; document.querySelectorAll('[data-ft]').forEach((el) => { if (on && !gal) el.hidden = true; }); if (on) $('fOpts').hidden = true; if (!on) return;
     const sel = $('impSize'); sel.textContent = ''; for (const z of state.imp.sizes || []) { const o = document.createElement('option'); o.value = z; o.textContent = z; sel.appendChild(o); } sel.value = state.imp.size || ''; sel.disabled = !(state.imp.sizes || []).length; $('impSizeRow').hidden = sel.disabled;
     { const uw = (state.imp.an && state.imp.an.uw) || [], nb = $('impNotesB'); $('impNotes').hidden = !uw.length; nb.textContent = ''; for (const [k, title] of [['spr', 'Do sprawdzenia'], ['zapas', 'Zapasy na szwy'], ['druk', 'Druk'], ['material', 'Materiał']]) { const it = uw.filter((u) => u.k === k); if (!it.length) continue; const b = document.createElement('b'); b.textContent = title; nb.appendChild(b); it.forEach((u) => { const p = document.createElement('p'); p.textContent = u.t + (u.s ? ' (' + u.s + ')' : ''); nb.appendChild(p); }); } }
-    $('impTitle').textContent = state.imp.lib ? 'Z biblioteki' : 'Wykrój z pliku';
+    $('impTitle').textContent = state.imp.lib ? 'Wykrój z bazy' : 'Wykrój z pliku';
     if (state.imp.lib) $('dopImp').hidden = true; else { // długość: suwaki działają, gdy wiem, który element jest przodem, tyłem i rękawem
       const r = impAdj(state.imp, impAxes(state.imp, cur())), adj = state.imp.adj || {}, set = (id, o, v) => { for (const e of [$('i_' + id), $('is_' + id)]) { e.min = o ? o.min : 0; if (document.activeElement !== e) e.value = o ? o.d : 0; } };
       $('dopImp').hidden = false; $('impLbT').textContent = r.body && r.body.plan ? 'Dół dłuższy o' : 'Przód i tył dłuższe o'; $('impLenBox').hidden = !r.body && !r.sleeve; $('i_lb').closest('label').hidden = !r.body; $('impLsRow').hidden = !r.sleeve; set('lb', r.body, adj.b); set('ls', r.sleeve, adj.s);

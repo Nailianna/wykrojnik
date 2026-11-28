@@ -1378,7 +1378,7 @@
     return doc.output('arraybuffer');
   }
 
-  const api = { starkBase, withStark, draft, STYLES, ADV, ROLES, estimate, full, layout, pack, usage, tiles, makePdf, fmt, A4 };
+  const api = { mkPiece, starkBase, withStark, draft, STYLES, ADV, ROLES, estimate, full, layout, pack, usage, tiles, makePdf, fmt, A4 };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.Wykroj = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
