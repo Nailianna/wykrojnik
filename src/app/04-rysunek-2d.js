@@ -78,7 +78,7 @@
   let fitScale = 1, fitDist = 230;
   function insets() {
     const wide = $('stage').getBoundingClientRect().width > 760;
-    return { l: state.panel && wide ? 348 : 12, r: state.card && wide && state.style !== 'pusty' ? 300 : 12 };
+    return { l: state.panel && wide ? 348 : 12, r: wide && state.style !== 'pusty' && state.panel !== 'proj' ? 348 : 12 };
   }
   function showZoom() {
     let z = 1;

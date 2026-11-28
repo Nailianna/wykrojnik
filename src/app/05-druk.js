@@ -44,14 +44,21 @@
     vb = { x: cx - (vb.w * k) / 2, y: cy - (vb.h * k) / 2, w: nw, h: vb.h * k }; applyVb();
   });
   // panele i motyw
-  const FLOW = ['modelka', 'fason', 'wymiary', 'tkanina', 'druk'];
+  const FLOW = ['modelka', 'fason', 'tkanina', 'druk'];
+  // prawy panel: Dopasowanie i Sprawdzenie jako dwie zakładki, stale widoczne obok wykroju i podglądu
+  let rt = 'fit';
+  { const fitSec = /** @type {HTMLElement} */ (document.querySelector('[data-sec=wymiary]')), cb = $('card').querySelector('.body'), chk = mkEl('div'), fit = mkEl('div'), hd = $('card').querySelector('.head'), tabs = mkEl('div');
+    chk.id = 'rtChk'; fit.id = 'rtFit'; while (cb.firstChild) chk.appendChild(cb.firstChild); fitSec.removeAttribute('data-sec'); fitSec.hidden = false; fit.appendChild(fitSec); cb.append(fit, chk);
+    tabs.className = 'seg'; tabs.id = 'rtTab'; for (const [k, t] of [['fit', 'Dopasowanie'], ['chk', 'Sprawdzenie']]) { const b = mkEl('button'); b.dataset.rt = k; b.textContent = t; b.addEventListener('click', () => { rt = k; rtUi(); }); tabs.appendChild(b); }
+    hd.querySelector('h2').replaceWith(tabs); $('cardX').hidden = true; }
+  function rtUi() { $('rtFit').hidden = rt !== 'fit'; $('rtChk').hidden = rt !== 'chk'; $('rtTab').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rt === rt))); }
   const PT = { proj: 'Projekty', druk: 'Krojenie i druk', insp: 'Inspiracja', tkanina: 'Tkanina', fason: 'Fason', wymiary: 'Dopasowanie', modelka: 'Modelka' };
-  function cardUi() { const none = state.style === 'pusty'; $('card').toggleAttribute('hidden', !state.card || none); $('cardBtn').toggleAttribute('hidden', state.card || none); }
+  function cardUi() { const none = state.style === 'pusty' || state.panel === 'proj'; state.card = true; $('card').toggleAttribute('hidden', none); $('cardBtn').hidden = true; rtUi(); }
   function layoutUi() {
     const refOff = state.ref ? ['fason', 'wymiary', 'druk'] : []; if (refOff.includes(state.panel)) state.panel = '';
     document.querySelectorAll('nav [data-panel]').forEach((b) => (/** @type {HTMLElement} */ (b).hidden = refOff.includes(/** @type {HTMLElement} */ (b).dataset.panel)));
     $('panel').toggleAttribute('hidden', !state.panel); document.body.dataset.panel = state.panel || ''; // w Projektach widać samą listę, bez wykroju i podglądu
-    if (state.panel && !PT[state.panel]) state.panel = 'druk'; // starsze zapisy: Warstwy i Zapasy na szwy są teraz w jednym panelu
+    if (state.panel === 'wymiary') state.panel = ''; if (state.panel && !PT[state.panel]) state.panel = 'druk'; // starsze zapisy: Warstwy i Zapasy na szwy są teraz w jednym panelu
     if (state.panel) { $('panelT').textContent = PT[state.panel]; document.querySelectorAll('[data-sec]').forEach((el) => (el.hidden = el.dataset.sec !== state.panel)); }
     document.querySelectorAll('nav [data-panel]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.panel === state.panel));
     { const fl = FLOW.filter((x) => !refOff.includes(x)), k = fl.indexOf(state.panel), nx = k >= 0 && k < fl.length - 1 ? fl[k + 1] : null; $('panelF').hidden = !nx; $('next').textContent = nx ? 'Dalej: ' + PT[nx].toLowerCase() : ''; $('next').dataset.to = nx || ''; }
