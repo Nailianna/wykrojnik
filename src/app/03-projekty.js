@@ -63,13 +63,15 @@
   document.querySelector('[data-sec="modelka"]').addEventListener('focusin', (e) => { $('hint').textContent = HINT[e.target.id] || ''; });
   function rekDef(r) { const armL = 0.345 * (cur().wzrost || 168); return Math.round((r === 'krotki' ? 22 : r === '34' ? armL * 0.75 : armL) * 2) / 2; }
   function dlMin() { const s = state.style; return s.indexOf('to_') === 0 && s !== 'to_stanik' ? -10 : s === 'su_rybka' || s === 'su_rybka_kliny' ? 50 : 25; }
+  // pola liczbowe: przecinek działa jak kropka niezależnie od języka przeglądarki, a po wyjściu z pola ze złą wartością mówimy, jaki jest zakres
+  document.addEventListener('keydown', (e) => { const el = /** @type {HTMLInputElement} */ (e.target); if (e.key !== ',' || !el || el.type !== 'number') return; e.preventDefault(); if (!/[.,]/.test(el.value) && el.value !== '') document.execCommand('insertText', false, '.'); });
   function bindNum(el, obj, k) {
     el.addEventListener('input', () => {
       const v = parseFloat(el.value.replace(',', '.'));
       if (!isFinite(v) || !el.checkValidity()) return;
       obj()[k] = v; persist(); fillAdv(); syncSl(k); draw(); clearTimeout(galT); galT = setTimeout(fillGallery, 500);
     });
-    el.addEventListener('change', () => { const v = parseFloat(el.value.replace(',', '.')); if (!isFinite(v) || !el.checkValidity()) el.value = obj()[k]; });
+    el.addEventListener('change', () => { const v = parseFloat(el.value.replace(',', '.')); if (!isFinite(v) || !el.checkValidity()) { el.value = obj()[k]; const lab = el.closest('label'), sp = lab && lab.querySelector('span'); if (el.min && el.max) say((sp ? (sp.childNodes[0].textContent || '').trim() : 'To pole') + ': wpisz wartość od ' + el.min + ' do ' + el.max + '. Zostawiłam poprzednią.'); } });
   }
   MF.forEach((k) => bindNum($('m_' + k), cur, k));
   $('p_bok').addEventListener('input', () => { if (state.p.bok > 0 && state.p.rek && state.p.rek !== 'brak') { state.p.rek = 'brak'; state.p.falR = false; fillForm(); persist(); draw(true); } });

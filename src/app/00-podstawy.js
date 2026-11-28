@@ -1,7 +1,7 @@
 /* Wykrojnik: interfejs */
 (function () {
   'use strict';
-  const BUILD = { v: '0.99.7', n: 120, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
+  const BUILD = { v: '0.99.8', n: 121, date: '2026-11-28' }; // wersja: główna.funkcje.poprawki; build rośnie przy każdej publikacji
   // katalog ograniczony do sprawdzonych fasonów podstawowych; kolejne wracają pojedynczo, po przejściu audytu
   const BASE = ['sk_prosta', 'sk_olowkowa', 'sk_kolo', 'to_ramiaczka', 'to_tshirt_k', 'to_tshirt'];
   window.Wykroj.STYLES.splice(0, window.Wykroj.STYLES.length, ...window.Wykroj.STYLES.filter((x) => BASE.includes(x.id)));
